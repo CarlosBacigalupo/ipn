@@ -1,0 +1,193 @@
+{
+ "metadata": {
+  "name": ""
+ },
+ "nbformat": 3,
+ "nbformat_minor": 0,
+ "worksheets": [
+  {
+   "cells": [
+    {
+     "cell_type": "code",
+     "collapsed": false,
+     "input": [
+      "import glob\n",
+      "import os\n",
+      "import numpy as np\n",
+      "import scipy.constants as const\n",
+      "import commands\n",
+      "# import pyfits as pf\\n\",\n",
+      "# import toolbox\\n\",\n",
+      "# from scipy import signal, interpolate, optimize, constants\\n\",\n",
+      "# import pylab as plt\\n\",\n",
+      "import pickle\n",
+      "from red_tools import *\n",
+      "import asteroseismology as ast\n",
+      "import HERMES\n",
+      "# reload(red_tools)\\n\",\n",
+      "reload(ast)\n"
+     ],
+     "language": "python",
+     "metadata": {},
+     "outputs": []
+    },
+    {
+     "cell_type": "code",
+     "collapsed": false,
+     "input": [
+      "os.chdir('/Users/Carlos/Documents/HERMES/reductions/m67_all_4cams')"
+     ],
+     "language": "python",
+     "metadata": {},
+     "outputs": []
+    },
+    {
+     "cell_type": "code",
+     "collapsed": false,
+     "input": [
+      "filehandler = open('M67-S49.obj', 'r')\n",
+      "thisStar = pickle.load(filehandler)\n"
+     ],
+     "language": "python",
+     "metadata": {},
+     "outputs": []
+    },
+    {
+     "cell_type": "code",
+     "collapsed": false,
+     "input": [
+      "thisStar = star('M67-S49', xDef = 100, booWrite = True)\n"
+     ],
+     "language": "python",
+     "metadata": {},
+     "outputs": []
+    },
+    {
+     "cell_type": "code",
+     "collapsed": false,
+     "input": [
+      "xDef = 100 #resampling point s per pixel\n",
+      "CCMaskWidth = 50 #half width of the cc curve to be gaussian fitted\n"
+     ],
+     "language": "python",
+     "metadata": {},
+     "outputs": []
+    },
+    {
+     "cell_type": "code",
+     "collapsed": false,
+     "input": [
+      "#Debuging CC - resampling and cleaning tests\n",
+      "flux1 = thisStar.exposures.cam1_fluxes[0]\n",
+      "lambda1 = thisStar.exposures.cam1_wavelengths[0]\n",
+      "# lambda1Clean_1, flux1Clean_1 = RVs().clean_flux(flux1, 1, lambda1)\n",
+      "lambda1Clean_10, flux1Clean_10 = RVs().clean_flux(flux1, xDef, lambda1)\n",
+      "# lambda1Clean_100, flux1Clean_100 = RVs().clean_flux(flux1, 100, lambda1)\\n\",\n",
+      "plt.plot(lambda1,flux1/np.max(flux1), label= 'Reduced')\n",
+      "# plt.plot(lambda1Clean_1,flux1Clean_1)\n",
+      "plt.plot(lambda1Clean_10,flux1Clean_10, label= 'Clean')\n",
+      "# plt.plot(lambda1Clean_100,flux1Clean_100)\n",
+      "plt.title('Reduced and Clean flux')\n",
+      "plt.xlabel('Wavelength [Ang.]')\n",
+      "plt.ylabel('Relatuve Flux')\n",
+      "plt.legend(loc=0)\n",
+      "plt.show()\n"
+     ],
+     "language": "python",
+     "metadata": {},
+     "outputs": []
+    },
+    {
+     "cell_type": "code",
+     "collapsed": false,
+     "input": [
+      "#Debuging CC - cross correlation - create clean fluxes\\n\",\n",
+      "cleanFluxes = []\n",
+      "cleanWavelengths = []\n",
+      "for i in range(thisStar.exposures.cam1_fluxes.shape[0]):\n",
+      "    print thisStar.exposures.JDs[i], \n",
+      "    thisFlux = thisStar.exposures.cam1_fluxes[i]\n",
+      "    thisLambdas = thisStar.exposures.cam1_wavelengths[i]\n",
+      "    lambda1Clean, flux1Clean = RVs().clean_flux(thisFlux, xDef, thisLambdas)\n",
+      "    cleanFluxes.append(flux1Clean)\n",
+      "    cleanWavelengths.append(lambda1Clean)\n",
+      "\n",
+      "cleanFluxes = np.array(cleanFluxes)\n",
+      "cleanWavelengths = np.array(cleanWavelengths)\n"
+     ],
+     "language": "python",
+     "metadata": {},
+     "outputs": []
+    },
+    {
+     "cell_type": "code",
+     "collapsed": false,
+     "input": [
+      "#Debuging CC - cross correlation - create cross correlation curves\n",
+      "CCCurves = []\n",
+      "for i in range(cleanFluxes.shape[0]):\n",
+      "    print thisStar.exposures.JDs[i], \n",
+      "    flux1 = cleanFluxes[0]\n",
+      "    lamba1 = cleanWavelengths[0]\n",
+      "    flux2 = cleanFluxes[i]\n",
+      "    lamba2 = cleanWavelengths[i]\n",
+      "    a = signal.fftconvolve(flux1, flux2[::-1], mode='same')\n",
+      "    CCCurves.append(a)\n",
+      "CCCurves = np.array(CCCurves)\n"
+     ],
+     "language": "python",
+     "metadata": {},
+     "outputs": []
+    },
+    {
+     "cell_type": "code",
+     "collapsed": false,
+     "input": [
+      "#Debuging CC - cross correlation - fit gaussian in CCCurves\n",
+      "def gaussian(x, mu, sig):\n",
+      "    return np.exp(-np.power(x - mu, 2.) / 2 / np.power(sig, 2.))\n",
+      "\n",
+      "def fit_gaussian(p, flux, x_range):\n",
+      "    a = optimize.leastsq(diff_gausian, p, args= [flux, x_range])\n",
+      "    return a\n",
+      "\n",
+      "def diff_gausian(p, args):\n",
+      "    flux = args[0]\n",
+      "    x_range = args[1]\n",
+      "    diff = gaussian(x_range, p[0],p[1]) - flux/np.max(flux)\n",
+      "    return diff\n",
+      "\n",
+      "def get_wavelength(wavelengths, pixel):\n",
+      "    intPx = int(pixel)\n",
+      "    fracPx = pixel - int(pixel)\n",
+      "\n",
+      "    return (wavelengths[intPx+1] - wavelengths[intPx])/fracPx + wavelengths[intPx]\n",
+      "\n",
+      "Ps = []\n",
+      "shiftedWavelength = []\n",
+      "for i in range(CCCurves.shape[0]):\n",
+      "# for i in range(2):\\n\",\n",
+      "    print thisStar.exposures.JDs[i], \n",
+      "    thisCCCurve = CCCurves[i]\n",
+      "    corrMax = np.where(thisCCCurve==max(thisCCCurve))[0][0]\n",
+      "    p_guess = [corrMax,xDef]\n",
+      "#     print 'p_guess',p_guess,\\n\",\n",
+      "    x_mask = np.arange(corrMax-CCMaskWidth, corrMax+CCMaskWidth+1)\n",
+      "    p = fit_gaussian(p_guess, thisCCCurve[x_mask], np.arange(len(thisCCCurve))[x_mask])[0]\n",
+      "#     print '    final p', p\\n\",\n",
+      "    print 'Lambda', get_wavelength(cleanWavelengths[i], p[0])\n",
+      "    Ps.append(p)\n",
+      "    shiftedWavelength.append(get_wavelength(cleanWavelengths[i], p[0]))\n",
+      "\n",
+      "Ps = np.array(Ps)\n",
+      "shiftedWavelength = np.array(shiftedWavelength)"
+     ],
+     "language": "python",
+     "metadata": {},
+     "outputs": []
+    }
+   ],
+   "metadata": {}
+  }
+ ]
+}

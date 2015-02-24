@@ -7,21 +7,10 @@ import glob
 import os
 import numpy as np
 import pyfits as pf
-# from scipy import signal, interpolate, optimize, constants
-# import pylab as plt
 import pickle
 import TableBrowser as tb
 import toolbox
 import pandas
-
-# <codecell>
-
-# os.chdir('/Users/Carlos/Documents/HERMES/reductions/rhoTuc_long/combined/')
-# os.chdir('/Users/Carlos/Documents/HERMES/reductions/HD1581_6.0/combined/')
-# os.chdir('/Users/Carlos/Documents/HERMES/reductions/HD1581_6.0/single_exposures/')
-# os.chdir('/Users/Carlos/Documents/HERMES/reductions/HD1581_6.0/uncombined/')
-# os.chdir('/Users/Carlos/Documents/HERMES/reductions/HD285507_6.0/uncombined/')
-# os.chdir('/Users/Carlos/Documents/HERMES/reductions/HD285507_6.0/combined/')
 
 # <codecell>
 

@@ -17,16 +17,16 @@ reduceMode = 'one_arc'
 
 
 #path to 2dfdr
-dr_dir = '/Users/Carlos/Documents/workspace/2dfdr/6.0/src_code/2dfdr-6.0/bin'
+dr_dir = '/home/staff/mq20101889/2dfdr/6.2/2dfdr_install/bin'
 
 #target directory. It will copy the data files to sub-directories branching from this directory
-target_root = '~/HERMES/reductions/test/'
+target_root = '/home/staff/mq20101889/HERMES/reductions/test/'
 
 #all science reduced (*red.fits) files will be copied to this directory
-final_dir = '~/HERMES/reductions/test/'
+final_dir = '/home/staff/mq20101889/HERMES/reductions/test/'
 
 #path to data source
-galah_data_root = '~/galah_data/'
+galah_data_root = '/home/staff/mq20101889/galah_data/'
 
 
 #len(date_list) = number of observations (can have more than 1 science file per observation)
@@ -52,6 +52,21 @@ date_list = ['131217',
             '140109',
             '140109']
 
+date_list = ['140209',
+            '140209',
+            '140210',
+            '140211',
+            '140211',
+            '140107',
+            '140107',
+            '140107',
+            '140107',
+            '140109',
+            '140109',
+            '140109',
+            '140109',
+            '140109']
+
 
 #Filenumbers for each dataset FLAT_IDX, ARC_IDX, SCIENCE_IDX[S]. Asumes [flat, arc, sci, sci, ...]
 ix_array = [[42,43]+range(39,42),
@@ -62,6 +77,21 @@ ix_array = [[42,43]+range(39,42),
             [37,36]+range(38,41),
             [29,28]+range(30,33),
             [27,28]+range(29,32),
+            [32,33]+range(34,37),
+            [25,26]+range(27,34),
+            [11,12]+range(13,19),
+            [19,20]+range(21,27),
+            [48,47]+range(49,52),
+            [53,52]+range(54,57),
+            [58,57]+range(59,62),
+            [63,62]+[64],
+            [29,28]+range(26,28),
+            [35,34]+range(30,34),
+            [38,37]+[36],
+            [47,46]+[45],
+            [52,51]+range(48,51)]
+
+ix_array = [[27,28]+range(29,32),
             [32,33]+range(34,37),
             [25,26]+range(27,34),
             [11,12]+range(13,19),

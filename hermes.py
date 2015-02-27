@@ -1,1269 +1,1578 @@
-"""This module contains the HERMES data reduction class.
-"""
-
-#Example setup analysis for a full night: blue		
-#hm = hermes.HERMES('/Users/mireland/data/hermes/140310/data/ccd_1/', '/Users/mireland/tel/hermes/140310/ccd_1/', '/Users/mireland/python/pyhermes/cal/ccd_1/')
-
-#Example setup analysis for a full night: green.
-#hm = hermes.HERMES('/Users/mireland/data/hermes/140310/data/ccd_2/', '/Users/mireland/tel/hermes/140310/ccd_2/', '/Users/mireland/python/pyhermes/cal/ccd_2/')
-
-#Example setup analysis for a full night: red.
-#hm = hermes.HERMES('/Users/mireland/data/hermes/140310/data/ccd_3/', '/Users/mireland/tel/hermes/140310/ccd_3/', '/Users/mireland/python/pyhermes/cal/ccd_3/')
-
-#Example setup analysis for a full night: ir.
-#hm = hermes.HERMES('/Users/mireland/data/hermes/140310/data/ccd_4/', '/Users/mireland/tel/hermes/140310/ccd_4/', '/Users/mireland/python/pyhermes/cal/ccd_4/')
-
-#Then go!
-#hm.go()
-
-try: 
-	import pyfits
-except:
-	import astropy.io.fits as pyfits
-try:
-	from PyAstronomy import pyasl
-	barycorr = True
-except:
-	print("WARNING: PyAstronomy is required for barycentric corrections, or combining multiple epochs.")
-	barycorr = False
+import pyfits as pf
+import scipy.constants as const
+import scipy.optimize as opt
 import numpy as np
-import matplotlib.pyplot as plt
-import scipy.ndimage as nd
-import matplotlib.cm as cm
-import time
-import glob
+import pylab as plt
 import os
-	
-class HERMES():
-	"""The HERMES Class. It must always be initiated with
-	a data, reduction and calibration directory. """
-	def __init__(self, ddir, rdir, cdir):
-		self.ddir = ddir
-		self.rdir = rdir
-		self.cdir = cdir
-		#Each release should increment this number.
-		self.release = 0.1
-		#A dictionary of central wavelengths (can be changed)
-		#This comes from the SPECTID
-		self.fixed_wave0 = {'BL':4700.0,'GN':5630.0,'RD':6460.0,'RR':7570.0}
-		self.fixed_R = 200000
-		self.fixed_nwave = 9000
-		
-	def basic_process(self, infile):
-		"""Read in the file, correct the over-scan region (and do anything else
-		that can be done prior to bias subtraction (e.g. removal of obscure
-		readout artifacts/pattern noise could go here as an option)
-		
-		Parameters
-		----------
-		infile:	The input filename (no directory)
-	
-		Returns
-		-------
-		d: (ny,nx) array
-		"""
-		d=pyfits.getdata(self.ddir + infile)
-		header=pyfits.getheader(self.ddir + infile)
-		overscan_mns = np.mean(d[:,header['WINDOXE1']:],axis=1)
-		d = d[:,:header['WINDOXE1']]
-		for i in range(d.shape[0]):
-			d[i,:] -= overscan_mns[i]
-		return d
-		
-	def find_badpix(self, infiles, var_threshold=10.0, med_threshold=10.0):
-		"""Find the bad pixels from a set of dark files. All we care about are pixels
-		that vary a lot or are very hot. We will give pixels the benefit of the doubt if they are 
-		only bright once (e.g. cosmic ray during readout...)
-		
-		Parameters
-		----------
-		infiles: An array of input filenames
-		
-		var_threshold: float (optional)
-			A pixel has to have a variance more than var_threshold times the median to be
-			considered bad (NB the frame with largest flux is removed in this calculation,
-			in case of cosmic rays)
-		med_threshold: float (optional)
-			A pixel has to have a value more than med_threshold above the median to be
-			considered bad. This should be particularly relevant for finding hot pixels
-			in darks.
-		
-		Returns
-		-------
-		badpix: float array
-			The 2D image which is 0 for good pixels and 1 for bad pixels.
-		"""
-		header = pyfits.getheader(self.ddir + infiles[0])
-		nx = header['WINDOXE1']
-		ny = header['NAXIS2']
-		nf = len(infiles)
-		if nf < 4:
-			print("ERROR: At least 4 files needed to find bad pixels")
-			raise UserWarning
-		cube = np.zeros((nf,ny,nx),dtype=np.uint8)
-		for i in range(nf):
-			cube[i,:,:] = self.basic_process(infiles[i])
-		medim = np.median(cube, axis=0)
-		varcube = np.zeros((ny,nx))
-		for i in range(nf):
-			cube[i,:,:] -= medim
-			varcube += cube[i,:,:]**2
-		maxcube = np.amax(cube,axis=0)
-		varcube -= maxcube**2
-		varcube /= (nf-2)
-		medvar = np.median(varcube)
-		medval = np.median(medim)
-		medsig = np.sqrt(medvar)
-		print("Median pixel standard deviation: " + str(medsig))
-		ww = np.where( (varcube > var_threshold*medvar) * (medim > med_threshold*medsig + medval) )
-		print(str(len(ww[0])) + " bad pixels identified.")
-		badpix = np.zeros((ny,nx),dtype=np.uint8)
-		badpix[ww]=1
-		for i in range(nf):
-			header['HISTORY'] = 'Input: ' + infiles[i]
-		hl = pyfits.HDUList()
-		hl.append(pyfits.ImageHDU(badpix,header))
-		hl.writeto(self.rdir+'badpix.fits',clobber=True)
-		return badpix
-		
-	def median_combine(self, infiles, outfile):
-		"""Median combine a set of files. Most useful for creating a master bias. 
-		Parameters
-		----------
-		infiles: string array
-			Input files
-			
-		outfile: string
-			The output file (goes in the reduction directory rdir)
-		
-		Returns
-		-------
-		image: float array
-			The median combined image.
-		"""
-		header = pyfits.getheader(self.ddir + infiles[0])
-		nx = header['WINDOXE1']
-		ny = header['NAXIS2']
-		nf = len(infiles)
-		cube = np.zeros((nf,ny,nx))
-		for i in range(nf):
-			cube[i,:,:] = self.basic_process(infiles[i])
-		medcube = np.median(cube, axis=0)
-		for i in range(nf):
-			header['HISTORY'] = 'Input: ' + infiles[i]
-		hl = pyfits.HDUList()
-		hl.append(pyfits.ImageHDU(medcube.astype('f4'),header))
-		hl.writeto(self.rdir+outfile,clobber=True)
-		return medcube
-		
-	def clobber_cosmic(self, image, threshold=3.0):
-		"""Remove cosmic rays and reset the pixel values to something sensible.
-		As a general rule, cosmic rays should be flagged rather than clobbered,
-		but this routine is here as a placeholder."""
-		smoothim = nd.filters.median_filter(image,size=5)
-		ww = np.where(image > smoothim*threshold)
-		image[ww] = smoothim[ww]
-		return image
-				
-	def make_cube_and_bad(self,infiles, badpix=[], threshold=6.0, mad_smooth=64):
-		"""Based on at least 2 input files, find outlying bright pixels and flag them
-		as bad.
-		
-		Parameters
-		----------
-		
-		infiles: string array
-			The array of input files to be cubed and have their bad pixels flagged.
-		
-		mad_smooth: int, optional
-			The distance in the x-direction that the median absolute deviation (MAD)
-			is smoothed over in order to determine image statistics
-		
-		threshold: float, optional
-			The threshold in units of standard deviation to identify bad pixels.
-		
-		Notes
-		-----
-		This routine has 1/3 its time up to the reference_im and 1/3 the time
-		in the loop beyond, on several lines. So tricky to optimise.
-		"""
-		if len(infiles) < 2:
-			print("Error: make_cube_and_bad needs at least 2 input files")
-			raise UserWarning
-		if len(badpix)==0:
-			badpix = pyfits.getdata(self.cdir + 'badpix.fits')
-		header = pyfits.getheader(self.ddir + infiles[0])
-		szy = header['NAXIS2']
-		szx = header['WINDOXE1']
-		if (szx % mad_smooth != 0):
-			print("ERROR: x axis length must be divisible by mad_smooth")
-			raise UserWarning
-		cube = np.empty((len(infiles),szy,szx))
-		normalised_cube = np.empty((len(infiles),szy,szx))
-		bad = np.empty((len(infiles),szy,szx), dtype=np.uint8)
-		for i,infile in enumerate(infiles):
-			im = self.basic_process(infile)
-			cube[i,:,:]=im
-			normalised_cube[i,:,:]= im/np.median(im)
-			bad[i,:,:] = badpix
-		reference_im = (np.sum(normalised_cube,axis=0) - np.max(normalised_cube,axis=0))/(len(infiles) - 1.0)
-		szy = cube.shape[1]
-		for i in range(len(infiles)):
-			diff = normalised_cube[i,:,:] - reference_im
-			#Entire rows can't be used for a row_deviation, as tramlines curve. But
-			#a pretty large section can be used. Unfortunately, a straight median filter
-			#on a large section is slow...
-			row_deviation = np.abs(diff).reshape( (szy,szx/mad_smooth, mad_smooth) )
-			row_deviation = np.repeat(np.median(row_deviation, axis=2),mad_smooth).reshape( (szy,szx) )
-			tic = time.time()
-#Slow line... even with only 21 pixels.
-#			row_deviation = nd.filters.median_filter(np.abs(diff),size=[1,21])
-			ww = np.where(diff > 1.4826*threshold*row_deviation)
-			bad[i,ww[0],ww[1]] = 1
-#Another slow alternative...
-# 			row_deviation = np.median(np.abs(diff),axis=1)
-# 			for j in range(szy):
-# 				ww = np.where(diff[j,:] > 1.4826*threshold*row_deviation[j])[0]
-# 				if len(ww)>0:
-# 					bad[i,j,ww]=1
-# 					#for w in ww:
-						
-		return cube,bad
-		
-	def make_psf(self,npix=15, oversamp=3, fibre_radius=2.5, optics_psf_fwhm=1.0):
-		"""Make a 1-dimensional collapsed PSF provile based on the physics of image 
-		formation. This does not include effects of variable magnification across the chip...
-		(i.e. it applies to a Littrow image).  
-		
-		Parameters
-		----------
-		npix: int, optional
-			The number of pixels to create the PSF profile. Must be odd.
-		
-		oversamp: int, optional
-			The oversampling factor for the PSF. In order for interpolation to work
-			reasonably well, 3 is a default.
-			
-		fibre_radius: float, optional
-			The radius of the fiber in pixels. 
-			
-		optics_psf_fwhm: float, optional
-			The FWHM of a Gaussian approximation to the optical aberration function.
-		
-		Returns
-		-------
-		A point-spread function normalised to the maximum value.
-		
-		Notes
-		-----
-		This is far from complete: the PSF is variable etc, but it is a good
-		approximation
-		"""
-		x = ( np.arange(npix*oversamp) - npix*oversamp/2 )/float(oversamp)
-		psf = np.sqrt( np.maximum( fibre_radius**2 - x**2 ,0) )
-		g = np.exp(-x**2/2/(optics_psf_fwhm/2.35482)**2 )
-		psf = np.convolve(psf,g, mode='same')
-		psf = np.convolve(psf,np.ones(oversamp), mode='same')
-		return psf/np.max(psf)
-		
-	def extract(self,infiles,cube=[],flux_on_ron_var=10.0,fix_badpix=True,badpix=[]):
-		"""Extract spectra from an image or a cube. Note that we do *not* apply a fibre flat
-		at this point, because that can only done after (optional) cross-talk and scattered-light
-		correction.
-		
-		Parameters
-		----------
-		infiles: string array
-			An array of input filenames
-			
-		cube: float array, optional
-			The data, coming from a cleaned version of the input files.
-			
-		flux_on_ron_var: float, optional
-			The target pixel flux divided by the readout noise variance. This determines
-			the (fixed) extraction profile - extraction is only optimal for this value
-			of signal-to-noise. It should be set to the minimum useable signal level.
-			
-		fix_badpix: bool, optional
-			Does this routine attempt to fix bad pixels?
-			
-		badpix: float array, optional
-			A *cube* of bad pixels (including a flag of where cosmic rays are in
-			each frame.
-		
-		Returns
-		-------
-		(flux,sigma): (float array, float array)
-			The extracted flux, and the standard deviation of the extracted flux.
-		"""
-		if fix_badpix:
-			if len(badpix)==0:
-				badpix = pyfits.getdata(self.cdir + 'badpix.fits')
-		return_im=False
-		if len(cube)==0:
-			cube = []
-			for infile in infiles:
-				cube.append(self.basic_process(infile))
-			cube = np.array(cube)
-			if len(infiles)==1:
-				return_im=True
-		header = pyfits.getheader(self.ddir + infiles[0])
-		ftable = pyfits.getdata(self.ddir + infiles[0],1)	
-		if len(cube.shape) == 2:
-			return_im=True
-			cube = cube[None,:]
-		if len(badpix.shape) == 2:
-			badpix = badpix[None,:]
-		#Now create the extraction subimages.
-		oversamp = 3
-		nslitlets=40
-		nfibres=10
-		npix_extract=15
-		nx = cube.shape[2]
-		psf = self.make_psf(npix=npix_extract, oversamp=oversamp)
-		#The following indices have a 0 for the middle index (
-		y_ix_oversamp = np.arange(oversamp*npix_extract) - oversamp*npix_extract/2
-		y_ix = ( np.arange(npix_extract) - npix_extract/2 )*oversamp
-		#The extracted flux
-		extracted_flux = np.zeros((cube.shape[0],nfibres*nslitlets,nx))
-		extracted_sigma = np.zeros((cube.shape[0],nfibres*nslitlets,nx))
-		#Much of this is copied from fit_tramlines - so could be streamlined !!!
-		try:
-			p_tramline = np.loadtxt(self.rdir + 'tramlines_p' + header['SOURCE'][6] + '.txt')
-		except:
-			print("No tramline file in reduction directory! Using default from calibration directory")
-			p_tramline = np.loadtxt(self.cdir + 'tramlines_p' + header['SOURCE'][6] + '.txt')
-		#Make a matrix that maps p_tramline numbers to dy
-		tramline_matrix = np.zeros((nfibres,nx,4))
-		for i in range(nfibres):
-			tramline_matrix[i,:,0] = np.arange(nx)**2
-			tramline_matrix[i,:,1] = np.arange(nx)
-			tramline_matrix[i,:,2] = np.ones( nx )
-		for k in range(nx):
-			tramline_matrix[:,k,3] = np.arange(nfibres)+0.5-nfibres/2
-		psfim = np.zeros((npix_extract,nx))
-		psfim_yix = np.repeat(np.arange(npix_extract)*oversamp + oversamp/2,nx).reshape((npix_extract,nx))
-		print("Beginning extraction...")
-		for i in range(nslitlets):
-			ypix = np.dot(tramline_matrix, p_tramline[i,:])
-			ypix_int = np.mean(ypix,axis=1).astype(int)
-			ypix_int = np.maximum(ypix_int,npix_extract/2)
-			ypix_int = np.minimum(ypix_int,cube.shape[1]-npix_extract/2)
-			for j in range(nfibres):
-				#This image has an odd number of pixels. Lets extract in units of electrons, not DN.
-				subims = cube[:,ypix_int[j] - npix_extract/2:ypix_int[j] + npix_extract/2 + 1,:]*header['RO_GAIN']
-				subbad = badpix[:,ypix_int[j] - npix_extract/2:ypix_int[j] + npix_extract/2 + 1,:]
-				#Start off with a slow interpolation for simplicity. Now removed...
-				#for k in range(nx):
-				#	psfim[:,k]  = np.interp(y_ix - (ypix[j,k] - ypix_int[j])*oversamp, y_ix_oversamp, psf)
-				#A fast interpolation... A centered PSF will have ypix=ypix_int 
-				ypix_diff_oversamp = -(ypix[j,:] - ypix_int[j])*oversamp
-				ypix_diff_int = np.floor(ypix_diff_oversamp)
-				ypix_diff_rem = ypix_diff_oversamp - ypix_diff_int
-				ix0 = (psfim_yix + np.tile(ypix_diff_int,npix_extract).reshape((npix_extract,nx))).astype(int)
-				ix1 = ix0+1
-				ix0 = np.maximum(ix0,0)
-				ix0 = np.minimum(ix0,npix_extract*oversamp-1)
-				ix1 = np.maximum(ix1,0)
-				ix1 = np.minimum(ix1,npix_extract*oversamp-1)
-				frac = np.tile(ypix_diff_rem,npix_extract).reshape((npix_extract,nx))
-				psfim = psf[ix0]*(1 - frac) + psf[ix1]*frac
-				#Now we turn the psf into weights
-				weights = flux_on_ron_var*psfim/(1 + flux_on_ron_var*psfim) 
-				psfim /= np.sum(psfim,axis=0)
-				for cube_ix in range( cube.shape[0] ):
-					good_weights = weights*(1-subbad[cube_ix,:,:])
-					#Normalise so that a flux of 1 with the shape of the model PSF will
-					#give an extracted flux of 1. If the sum of the weights is zero (e.g. a bad
-					#column, then this is a zero/zero error. A typical weight is of order unity.
-					#There will be some divide by zeros... which we'll fix later.
-					ww = np.where(np.sum(good_weights,axis=0)==0)[0]
-					with np.errstate(invalid='ignore'):
-						good_weights /= np.sum(good_weights*psfim,axis=0)
-					#Now do the extraction!    
-					extracted_flux[cube_ix,i*nfibres + j,:] = np.sum(good_weights*subims[cube_ix,:,:],axis=0)
-					extracted_sigma[cube_ix,i*nfibres + j,:] = np.sqrt(np.sum(good_weights**2*(subims[cube_ix,:,:] + header['RO_NOISE']**2), axis=0))
-					extracted_sigma[cube_ix,i*nfibres + j,ww]=np.inf
-		print("Finished extraction...")
-		#!!! TODO: We can check for bad pixels that were missed at this point, e.g.
-		#bad columns that weren't very bad and didn't show up pre-extraction. If we really
-		#want to have fun with this, smoothing by windowing the Fourier transform of
-		#the data may work best.
-		if return_im:
-			return extracted_flux[0,:,:], extracted_sigma[0,:,:]
-		else:
-			return extracted_flux, extracted_sigma
-	
-	def create_fibre_flat(self, infile, smooth_threshold=1e3, smoothit=0, sigma_cut=5.0):
-		"""Based on a single flat, compute the fiber flat field, corrected for
-		individual fibre throughputs. 
-		
-		NB the ghost images turn up in this also. 
-		
-		Parameters
-		----------
-		infile: string
-			The input filename
-			
-		smooth_threshold:
-			If average counts are lower than this, we smooth the fibre flat 
-			(no point dividing by noise).
-			
-		smoothit:
-			The width of the smoothing filter.
-			
-		sigma_cut:
-			The cut in standard deviations to look for bad extracted pixels, when compared
-			to median-filtered extracted pixels.
-		
-		Returns
-		-------
-		fibre_flux: float (nfibres, nx) array
-			The fiber flat field.
-		"""
-		fibre_flux, fibre_sigma = self.extract([infile])
-		if np.median(fibre_flux) < smooth_threshold:
-			smoothit = 25
-		#First, reject outliers in individual rows rather agressively
-		#(remember the spectra are smooth)
-		fibre_sigma = nd.filters.median_filter(fibre_sigma, size=(1,25))
-		fibre_flux_medfilt = nd.filters.median_filter(fibre_flux, size=(1,25))
-		ww = np.where(np.abs(fibre_flux - fibre_flux_medfilt) > sigma_cut*fibre_sigma)
-		fibre_flux[ww] = fibre_flux_medfilt[ww]
-		if smoothit>0:
-			fibre_flux = np.convolve(fibre_flux,np.ones(smoothit)/smoothit,mode='same')
-		#Find dead fibres.
-		fib_table = pyfits.getdata(self.ddir + infile,1)
-		#Check for an obscure bug, where the extension orders are changed...
-		if len(fib_table)==1:
-			fib_table = pyfits.getdata(self.ddir + infile,2)
-		off_sky = np.where( (fib_table['TYPE'] != 'S') * (fib_table['TYPE'] != 'P'))[0]
-		on_sky  = np.where( 1 - (fib_table['TYPE'] != 'S') * (fib_table['TYPE'] != 'P'))[0]
-		med_fluxes = np.median(fibre_flux,axis=1)
-		wbad = np.where(med_fluxes[on_sky] < 0.1*np.median(med_fluxes[on_sky]))[0]
-		if len(wbad)>0:
-			print("Bad fibres (<10% throughput): " + str(wbad))
-		#!!! Unsure what to do with this. At the moment the data will just look bad
-		#and will be cut due to S/N later.
+import shutil
+import subprocess 
+import math
+import glob
 
-		#We always return a *normalised* fiber flux, so that we're at least close to
-		#the raw data.
-		return fibre_flux/np.median(fibre_flux[on_sky,:])
-		
-	def sky_subtract(self, infiles, extracted_flux,extracted_sigma, wavelengths, sigma_cut=5.0, fibre_flat=[]):
-		"""Subtract the sky from each extracted spectrum. This should be done after 
-		cross-talk and scattered light removal, but is in itself a crude way to 
-		remove scattered light. Note that all files input are assumed to have
-		the same wavelength scale and fiber table.
-		
-		The fibre flat correction is also done at this time.
-		
-		Notes
-		-----
-		There appears to be real structure in the flat at the 0.5% level... but
-		this has to be confirmed with multiple epoch tests. It is a little suspicious
-		as the structure is more or less white.
-		
-		TODO: !!!
-		1) Uncertainties in sky, based on input sigma and interpolating past the chip edge.
-		2) Uncertainties in data, based on sky subtraction.
-		3) bad pixels! """
-		#Find the list of sky and object fibres.
-		fib_table = pyfits.getdata(self.ddir + infiles[0],1)
-		#Check for an obscure bug, where the extension orders are changed...
-		if len(fib_table)==1:
-			fib_table = pyfits.getdata(self.ddir + infiles[0],2)
-		sky = np.where(fib_table['TYPE']=='S')[0]
-		ns = len(sky)
-		#Apply fibre flat.
-		if len(fibre_flat)>0:
-			sky_fibre_variance = 1.0/np.median(fibre_flat[sky,:],axis=1)**2
-			for cube_ix in range(len(infiles)):
-					extracted_flux[cube_ix,:,:] /= fibre_flat
-					extracted_sigma[cube_ix,:,:] /= fibre_flat
-		else:
-			sky_fibre_variance = np.ones(ns)
-		#Go through sky fibres one at a time and reconstruct their spectra from the other
-		#sky fibres.
-		nx = wavelengths.shape[1]
-		nf = len(infiles)
-		sky_flux = extracted_flux[:,sky,:]
-		sky_sigma = extracted_sigma[:,sky,:]
-		bad_skies = []
-		for j,s in enumerate(sky):
-			ww = sky[np.where(sky != s)[0]]
-			sky_spectra_interp = np.zeros((nf,ns-1,nx))
-			sky_sigma_interp = np.zeros((nf,ns-1,nx))
-			for k, sky_other in enumerate(ww):
-				#Another manual interpolation... Find the index corresponding to the 
-				#wavelength of our target sky fiber. e.g. if pixel 10 for s correponds
-				#to pixel 11 for sky_other, we want ix=11
-				ix = np.interp(wavelengths[s,:], wavelengths[sky_other,:],np.arange(nx))
-				#Divide this into integer and fractional parts.
-				ix_int = np.floor(ix).astype(int)
-				#!!! This currently has edge effects !!!
-				ix_int = np.maximum(ix_int,0)
-				ix_int = np.minimum(ix_int,nx-2)
-				ix_frac = ix - ix_int
-				for i in range(nf):
-					sky_spectra_interp[i,k,:] = extracted_flux[i,sky_other,ix_int]*(1-ix_frac) + extracted_flux[i,sky_other,ix_int+1]*ix_frac
-					sky_sigma_interp[i,k,:] = extracted_sigma[i,sky_other,ix_int]*(1-ix_frac) + extracted_sigma[i,sky_other,ix_int+1]*ix_frac
-			sky_spectra_recon = np.median(sky_spectra_interp, axis=1)
-			sky_sigma_recon = np.median(sky_sigma_interp, axis=1)
-			#Now find outliers and correct them. It is important that the sky_sigma is also a robust statistic.
-			#... for this to work for nan values... and gradients (up to a factor of 2 for scattered light) to be fine.
-			#ww = np.where(np.abs(extracted_flux[:,s,:] - sky_spectra_recon) > sigma_cut*sky_sigma_recon)
-			#The debugger lines below show that there is still some work to do !!!
-			for i in range(nf):
-				scaling_factor = np.median(extracted_flux[i,s,:]/sky_spectra_recon[i,:])
-				if np.abs(np.log(scaling_factor)) > np.log(2):
-					print("Unusual sky fiber! Scaling factor required: " + str(scaling_factor))
-					bad_skies.append(j)
-				ww = np.where(np.logical_not(np.abs(extracted_flux[i,s,:] - scaling_factor*sky_spectra_recon[i,:]) < scaling_factor*sigma_cut*sky_sigma_recon[i,:]))[0]
-				#Look for invalid values... 
-				if len(ww) > 400:
-					print("Crazy number of bad pixels in reconstructing sky!")
-					import pdb; pdb.set_trace()
-				sky_flux[i,j,ww] = sky_spectra_recon[i,ww]*scaling_factor
-				sky_sigma[i,j,ww] = sky_sigma_recon[i,ww]*scaling_factor
-		#If we've flagged a bad sky fiber, remove it now.
-		good_skies = np.arange(ns)
-		for abad in bad_skies:
-			good_skies = good_skies[np.where(good_skies != abad)[0]]
-		sky = sky[good_skies]
-		sky_flux = sky_flux[:,good_skies,:]
-		sky_sigma = sky_sigma[:,good_skies,:]
-		sky_fibre_variance = sky_fibre_variance[good_skies]
-		ns = len(sky)
-		#Now do the same for the extracted object fibers... except in this case we use a weighted average.
-		#Include sky fibers as "objects" as a sanity check.
-		objects = np.where(np.logical_or(fib_table['TYPE']=='P',fib_table['TYPE']=='S'))[0]
-		for o in objects:
-			#Find the dx and dy values for the positioner.
-			dx_pos = fib_table['X'][sky] - fib_table['X'][o]
-			dy_pos = fib_table['Y'][sky] - fib_table['Y'][o]
-			#Create the quadratic programming problem.
-			#http://en.wikipedia.org/wiki/Quadratic_programming
-			#Start with equality constraints...
-			E = np.array([dx_pos,dy_pos,np.ones(ns)])
-			c_d = np.zeros( ns+3 )
-			c_d[-1] = 1.0
-			the_matrix = np.zeros( (ns+3, ns+3) )
-			ix = np.arange(ns)
-			#Weight by inverse fiber throughput squared - appropriate for
-			#readout-noise limited sky data, typical of HERMES.
-			the_matrix[ix,ix] = sky_fibre_variance
-			the_matrix[ns:,0:ns] = E
-			the_matrix[0:ns,ns:] = np.transpose(E)
-			x_lambda = np.linalg.solve(the_matrix, c_d)
-			weights = x_lambda[0:ns]
-			old_flux = extracted_flux.copy()
-			#Lets save the weighted average sky separately... great for
-			#bug-shooting.
-			sky_to_subtract = np.zeros( (nf,nx) )
-			for k,s in enumerate(sky):
-				#Interpolate the wavelength scale for each fiber, subtracting off the interpolated
-				#sky fiber flux multiplied by our pre-computed weights.
-				#!!! This currently has edge effects !!! 
-				#!!! And is copied from above... should be its own routine once uncertainties are sorted !!!
-				ix = np.interp(wavelengths[o,:], wavelengths[s,:],np.arange(nx))
-				ix_int = np.floor(ix).astype(int)
-				ix_int = np.maximum(ix_int,0)
-				ix_int = np.minimum(ix_int,nx-2)
-				ix_frac = ix - ix_int
-				for i in range(nf):
-					sky_to_subtract[i,:] += weights[k]*(sky_flux[i,k,ix_int]*(1-ix_frac) + sky_flux[i,k,ix_int+1]*ix_frac )
-			#Now subtract the sky!
-			extracted_flux[:,o,:] -= sky_to_subtract
-		return extracted_flux, extracted_sigma
-	
-	def save_extracted(self, infiles, extracted_flux,extracted_sigma, wavelengths):
-		"""Save extracted spectra from a set of input files in individual
-		files, labelled similarly to 2dFDR
-		
-		NOT IMPLEMENTED YET"""
-		raise UserWarning
-	
-	def combine_single_epoch_spectra(self, extracted_flux, extracted_sigma, wavelengths, infiles=[], csvfile='observation_table.csv'):
-		""" If spectra were taken in a single night with a single arc, we can approximate 
-		the radial velocity as constant between frames, and combine the spectra in
-		pixel space. 
-		
-		infiles: string list (optional)
-			If given, the combined spectrum is output to a combined fits file that 
-			contains the combined flux and the combined single epoch spectra.
-			
-		csvfile: string
-			If given, key parameters are appended to the observations table. 
-			NB At this point, no checking is done to see if the software runs multiple times,
-			over-writing previous files.
-		"""
-		#The combination is simply a weighted arithmetic mean, as we already
-		#have the variance as an input parameter.
-		weights = 1/extracted_sigma**2
-		ww = np.where(extracted_flux != extracted_flux)
-		extracted_flux[ww] = 0.0
-		flux_comb = np.sum(weights*extracted_flux,0)/np.sum(weights,0)
-		extracted_flux[ww] = np.nan
-		flux_comb_sigma = np.sqrt(1.0/np.sum(weights,0))
-		#Save the data if necessary.
-		if len(infiles)>0:
-			headers = []
-			for infile in infiles:
-				headers.append(pyfits.getheader(self.ddir + infile))
-			runs = [header['RUN'] for header in headers]
-			start = np.argmin(runs)
-			end = np.argmax(runs)
-			header = headers[start]
-			#To keep a record of which files went in to this.
-			header['RUNLIST'] = str(runs)[1:-1]
-			#Start and end
-			header['HAEND'] = headers[end]['HAEND']
-			header['ZDEND'] = headers[end]['ZDEND']
-			header['UTEND'] = headers[end]['UTEND']
-			header['STEND'] = headers[end]['STEND']
-			header['HASTART'] = headers[start]['HASTART']
-			header['ZDSTART'] = headers[start]['ZDSTART']
-			header['UTSTART'] = headers[start]['UTSTART']
-			header['STSTART'] = headers[start]['STSTART']
-			#Means. If more accuracy than this is needed, then individual
-			#(i.e. non-combined) files should be used!
-			header['EPOCH'] = np.mean([header['EPOCH'] for header in headers])
-			header['UTMJD'] = np.mean([header['UTMJD'] for header in headers])
-			#Lets always name the file by the first file in the set.
-			outfile = infiles[start]
-			spos = outfile.find('.fits')
-			if spos < 0:
-				print("Weird file name... no fits extension")
-				raise UserWarning
-			outfile = outfile[:spos] + 'comb' + outfile[spos:]
-			
-			#The header and fiber table of the first input file is retained, with
-			#key parameters averaged from each header 
-			#The first fits image (zeroth extension) is the combined flux.
-			#The first fits extension is the fiber table
-			#The second fits extension is the uncertainty in the combined flux.
-			#The third fits extension is the wavelength scale.
-			hl = pyfits.HDUList()
-			hl.append(pyfits.ImageHDU(flux_comb.astype('f4'),header))
-			hl.append(pyfits.open(self.ddir + infiles[start])[1])
-			hl.append(pyfits.ImageHDU(flux_comb_sigma.astype('f4')))
-			hl.append(pyfits.ImageHDU(wavelengths))
-			fib_table = pyfits.getdata(self.ddir + infiles[start],1)
-			#Check for an obscure bug, where the extension orders are changed...
-			if len(fib_table)==1:
-				fib_table = pyfits.getdata(self.ddir + infiles[start],2)
-			if barycorr:
-				new_flux_hdu, new_sigma_hdu = self.create_barycentric_spectra(header, fib_table, flux_comb, flux_comb_sigma, wavelengths)
-				hl.append(new_flux_hdu)
-				hl.append(new_sigma_hdu)
-			hl.writeto(self.rdir + outfile,clobber=True)
-			objects = np.where(fib_table['TYPE']=='P')[0]
-			#See if we need to write a csv file header line...
-			if not os.path.isfile(self.rdir + csvfile):
-				f_csvfile = open(self.rdir + csvfile, 'a')
-				f_csvfile.write('obsdate, run_start, run_end, fib_num, galahic_num, idname, snr, software,file, rdate\n')
-				f_csvfile.close()
-			f_csvfile = open(self.rdir + csvfile, 'a') 
-			for o in objects:
-				strpos = fib_table[o]['NAME'].find('galahic_')
-				try:
-					galahic = int(fib_table[o]['NAME'][strpos+8:])
-				except:
-					galahic=-1		 
-				#date, minimum file number, maximum file number, fiber number, 
-				#input catalog number, input catalog name, signal-to-noise,
-				#software release version, output file, analysis date
-				#NB: The detector isn't here... a separate program has to take all these files
-				#and add those details. 
-				data_date = header['UTDATE'][2:4] + header['UTDATE'][5:7] + header['UTDATE'][8:10]
-				now = time.gmtime()
-				analysis_date = '{0:02d}{1:02d}{2:02d}'.format(now.tm_year-2000, now.tm_mon, now.tm_mday)
-				f_csvfile.write('{0:s},{1:d},{2:d},{3:d},{4:d},{5:s},{6:6.1f},{7:5.2f},{8:s},{9:s}\n'.format(
-					data_date,runs[start], runs[end], o, galahic, fib_table[o]['NAME'],
-					np.median(flux_comb[o,:]/flux_comb_sigma[o,:]), self.release,outfile,analysis_date)) 
-			f_csvfile.close()
-						
-		return flux_comb, flux_comb_sigma
-			
-	def create_barycentric_spectra(self, header, fib_table, flux, flux_sigma, wavelengths):
-		"""Interpolate flux onto a wavelength grid spaced regularly in log(wavelength),
-		after shifting to the solar system barycenter"""
-		if not barycorr:
-			print "ERROR: Need PyAstronomy for create_barycentric_spectra()"
-			raise UserWarning
-		#The bcorr is the barycentric correction in km/s, with a sign convenction
-		#with positive meaning moving towards the star. This means that we have to red-shift
-		#the interpolated spectra, meaning that the new wavelength scale has to be shifted
-		#to the blue.
-		hcorr, bcorr = pyasl.baryCorr(header['UTMJD'], np.degrees(fib_table['RA']),np.degrees(fib_table['DEC']), deq=2000.0)
-		nfib = wavelengths.shape[0]
-		new_flux = np.zeros( (nfib,self.fixed_nwave) )
-		new_flux_sigma = np.zeros( (nfib,self.fixed_nwave) )
-		for i in range(nfib):
-			new_wave = self.fixed_wave0[header['SPECTID']]*np.exp(-bcorr[i]/2.9979e5 + np.arange(self.fixed_nwave)/float(self.fixed_R))
-			dnew_wave = new_wave[1:]-new_wave[:-1]
-			dnew_wave = np.append(dnew_wave, dnew_wave[-1])
-			dwave = wavelengths[i,1:]-wavelengths[i,:-1]
-			dwave = np.append(dwave, dwave[-1])
-			dwave = np.interp(new_wave, wavelengths[i,:], dwave)
-			new_flux[i,:] = np.interp(new_wave, wavelengths[i,:], flux[i,:], left=np.nan, right=np.nan)
-			#Preserve the meaning of sigma if many samples are averaged together. 
-			new_flux_sigma[i,:] = np.interp(new_wave, wavelengths[i,:], flux_sigma[i,:], 
-				left=np.nan, right=np.nan) * np.sqrt(dnew_wave/dwave)
-		new_hdu = pyfits.ImageHDU(new_flux.astype('f4'))
-		sig_hdu = pyfits.ImageHDU(new_flux_sigma.astype('f4'))
-		new_hdu.header['CRVAL1']=np.log(self.fixed_wave0[header['SPECTID']])
-		new_hdu.header['CDELT1']=1.0/self.fixed_R
-		new_hdu.header['CRPIX1']=1.0
-		new_hdu.header['CRVAL2']=0.0
-		new_hdu.header['CDELT2']=1.0
-		new_hdu.header['CRPIX2']=1.0
-		new_hdu.header['CTYPE1']='log(Wavelength)'
-		new_hdu.header['CUNIT1']='Angstroms'
-		new_hdu.header['CTYPE2']='Fibre Number'
-		new_hdu.header['CUNIT2'] = ''
-		sig_hdu.header = new_hdu.header
-		return new_hdu, sig_hdu
-			
-	def fit_tramlines(self, infile, subtract_bias=False, fix_badpix=False):
-		"""Make a linear fit to tramlines, based on a simplified PSF model """
-		im = self.basic_process(infile)
-		header = pyfits.getheader(self.ddir + infile)
-		ftable = pyfits.getdata(self.ddir + infile,1)
-		if subtract_bias:
-			im -= pyfits.getdata(self.rdir + 'bias.fits')
-		if fix_badpix:
-			medim = nd.filters.median_filter(im,size=5)
-			badpix = pyfits.getdata(self.cdir + 'badpix.fits')
-			ww = np.where(badpix)
-			im[ww] = medim[ww]
-		nsamp = 8
-		nslitlets=40
-		nfibres=10
-		#Maximum number of pixels for extraction, including tramline tilt.
-		npix_extract = 20
-		#Oversampling of the PSF - should be an odd number due to symmetrical 
-		#convolutions.
-		oversamp = 3
-		dely_deriv = 0.01
-		flux_min = 10
-		nx = im.shape[1]
-		psf = self.make_psf(npix=npix_extract, oversamp=oversamp)
-		#Manually set the index for the samples to the median filtered image.
-		#!!! Hardwired numbers
-		x_ix = 256 + np.arange(nsamp,dtype=int)*512
-		y_ix_oversamp = np.arange(oversamp*npix_extract) + 0.5 - (oversamp*npix_extract)/2.0
-		y_ix = ( np.arange(npix_extract) + 0.5 - (npix_extract)/2.0 )*oversamp
-		#Filtered image
-		imf = nd.filters.median_filter(im,size=(1,11))
-		imf = imf[:,x_ix]
-		psfim_plus  = np.zeros((npix_extract, nsamp))
-		psfim_minus = np.zeros((npix_extract, nsamp))
-		dy        = np.zeros((nslitlets,nfibres,nsamp))
-		weight_dy = np.zeros((nslitlets,nfibres,nsamp))
-		#Read in the tramline initial parameters from the calibration directory
-		p_tramline = np.loadtxt(self.cdir + 'tramlines_p' + header['SOURCE'][6] + '.txt')
-		#Make a matrix that maps p_tramline numbers to dy
-		tramline_matrix = np.zeros((nfibres*nsamp,4))
-		tramline_matrix[:,0] = np.tile(x_ix**2,nfibres)
-		tramline_matrix[:,1] = np.tile(x_ix,nfibres)
-		tramline_matrix[:,2] = np.ones( nfibres*nsamp )
-		tramline_matrix[:,3] = np.repeat( (np.arange(nfibres)+0.5-nfibres/2), nsamp )
-		for count in range(0,3):
-		 for i in range(nslitlets):
-			for j in range(nfibres):
-				center_int = np.int(p_tramline[i,2] + p_tramline[i,3]*(j+0.5-nfibres/2))
-				center_int = np.maximum(center_int,npix_extract/2)
-				center_int = np.minimum(center_int,nx-npix_extract/2)
-				subim = imf[center_int - npix_extract/2:center_int + npix_extract/2,:]
-				#Start off with a slow interpolation for simplicity. 
-				for k in range(nsamp):
-					offset = p_tramline[i,2] + p_tramline[i,1]*x_ix[k] + p_tramline[i,0]*x_ix[k]**2 + p_tramline[i,3]*(j+0.5-nfibres/2) - center_int
-					psfim_plus[:,k]  = np.interp(y_ix - (offset + dely_deriv)*oversamp, y_ix_oversamp, psf)
-					psfim_minus[:,k] = np.interp(y_ix - (offset - dely_deriv)*oversamp, y_ix_oversamp, psf)
-				psfim = 0.5*(psfim_plus + psfim_minus)
-				psfim_deriv = ( psfim_plus - psfim_minus )/2.0/dely_deriv 
-				psfsum = np.sum(psfim*subim,axis=0)
-				dy[i,j,:] = np.sum(psfim_deriv*subim,axis=0)/np.maximum(psfsum,flux_min)*np.sum(psfim**2)/np.sum(psfim_deriv**2)
-				weight_dy[i,j,:] = np.maximum(psfsum-flux_min,0)
-		
-		 print("RMS tramline offset (iteration " +str(count)+ "): " + str(np.sqrt(np.mean(dy**2))))
-		 for i in range(nslitlets):
-			#Now we fit to the dy values. 
-			W = np.diag(weight_dy[i,:,:].flatten())
-			y = dy[i,:,:].flatten()
-			delta_p = np.linalg.solve(np.dot(np.transpose(tramline_matrix),np.dot(W,tramline_matrix)) ,\
-				np.dot(np.transpose(tramline_matrix),np.dot(W,y)) )
-			p_tramline[i,:] += delta_p
-		np.savetxt(self.rdir + 'tramlines_p' + header['SOURCE'][6] + '.txt', p_tramline, fmt='%.5e')
-		
-		
-	def find_tramlines(self, infile, subtract_bias=False, fix_badpix=False, nsearch=20, \
-		fillfrac=1.035, central_sep=9.3, global_offset=-6, c_nonlin=3.2e-4):
-		"""For a single flat field, find the tramlines. This is the slightly manual
-		part... the 4 numbers (fillfrac,central_sep, global_offset,c_nonlin) have
-		to be set so that a good fit is made.
-		
-		If the fit is good, the tramlines_0.txt or tramlines_1.txt should be 
-		moved to the calibration directory cdir """
-		
-		nslitlets=40 #Number of slitlets.
-		nfibres=10   #Fibres per slitlet.
-		resamp = 3  #sub-pixel sampling in grid search
-		
-		nsearch *= resamp  
-		global_offset *= resamp
-		
-		im = self.basic_process(infile)
-		header = pyfits.getheader(self.ddir + infile)
-		ftable = pyfits.getdata(self.ddir + infile,1)
-		if subtract_bias:
-			im -= pyfits.getdata(self.rdir + 'bias.fits')
-		if fix_badpix:
-			medim = nd.filters.median_filter(im,size=5)
-			badpix = pyfits.getdata(self.cdir + 'badpix.fits')
-			ww = np.where(badpix)
-			im[ww] = medim[ww]
-		szy = im.shape[0]
-		szx = im.shape[1]
+# from pymodelfit.builtins import VoigtModel
+# from pymodelfit.builtins import GaussianModel
+# from pymodelfit import get_model_instance
+import time
+
+import RVSimulator as RVS
+import TableBrowser as TB
+import toolbox
+
+# calculate_RV_shift_HERMES([1], ['24oct10025red.fits', '24oct10026red.fits', '24oct10027red.fits', '24oct10030red.fits', '24oct10031red.fits', '24oct10032red.fits'])
+
+class dr2df():
+    
+    date = ''
+    source_dir = ''
+    target_dir = ''
+    dr_dir = ''
+    file_ix = []
+    display = 'localhost:21.0'
+
+    def create_file_list(self):
+        
+        self.files1 =  [self.date +'1' + str(name).zfill(4)+ '.fits' for name in self.file_ix]
+        self.files2 =  [self.date +'2' + str(name).zfill(4)+ '.fits' for name in self.file_ix]
+        self.files3 =  [self.date +'3' + str(name).zfill(4)+ '.fits' for name in self.file_ix]
+        self.files4 =  [self.date +'4' + str(name).zfill(4)+ '.fits' for name in self.file_ix]
+        
+    def create_folders(self, overwrite = False):
+        result = True 
+        try:
+            os.rmdir(self.target_dir)
+        except OSError as ex:
+            if ((ex.errno == 66) or (ex.errno == 17)):
+                if overwrite==True:
+                    print 'Overwriting', self.target_dir
+                else:
+                    print 'Target folder', self.target_dir,' not empty. Overwrite is off. '
+                    return False
+            
+        os.mkdir(self.target_dir)
+        os.mkdir(self.target_dir+'1/')
+        os.mkdir(self.target_dir+'2/')
+        os.mkdir(self.target_dir+'3/')
+        os.mkdir(self.target_dir+'4/')
+                
+        
+        return result
+    
+    
+    def bias_reduce(self, overwrite = False, copyFiles = True, idxFile = 'hermes.idx'):
+        
+        if (((copyFiles==True) and (self.create_folders(overwrite = overwrite))) or (copyFiles==False)):
+                self.create_file_list()
+            
+                #copy files
+                if copyFiles==True:
+                    cam = 0
+                    for camList in [self.files1, self.files2, self.files3, self.files4]:
+                        cam += 1
+                        for i in camList:
+                            src = self.source_dir  + 'ccd_' + str(cam) + '/' + i
+                            dst = self.target_dir + '' + str(cam) + '/' + i
+                            if not os.path.exists(dst):
+                                shutil.copy(src, dst)
+                
+                # environment vars for os call
+                env = {'PATH': self.dr_dir,
+                       'DISPLAY': self.display,
+                       }
+                
+                            
+                #start reduction
+                cam = 0  
+                out = 0      
+                for j in [self.files1, self.files2, self.files3, self.files4]:
+                    cam += 1
+                    os.chdir(self.target_dir + str(cam) + '/')
+                    print j
+                    
+                    for obj in j:
+                        os_command =  'drcontrol'
+                        os_command += ' reduce_bias ' + obj
+                        os_command += ' -idxfile ' + idxFile
+                        os.system('killall drcontrol')
+                        os.system('killall drexec')
+                        os.system(os_command)
+   
+            
+    def auto_reduce(self, overwrite = False, copyFiles = True, idxFile = 'hermes.idx', reduce = True):
+        
+        if (((copyFiles==True) and (self.create_folders(overwrite = overwrite))) or (copyFiles==False)):
+                self.create_file_list()
+            
+                #copy files
+                if copyFiles==True:
+                    cam = 0
+                    for camList in [self.files1, self.files2, self.files3, self.files4]:
+                        cam += 1
+                        for i in camList:
+                            src = self.source_dir  + 'ccd_' + str(cam) + '/' + i
+                            dst = self.target_dir + '' + str(cam) + '/' + i
+                            if not os.path.exists(dst):
+                                shutil.copy(src, dst)
+                        src_bias = self.bias_dir+str(cam)+'/BIAScombined.fits'
+                        dst_bias = self.target_dir + '' + str(cam) + '/BIAScombined.fits'
+                        shutil.copy(src_bias, dst_bias)
+                                
+                # environment vars for os call
+                env = {'PATH': self.dr_dir,
+                       'DISPLAY': self.display,
+                   }
+                
+                if reduce==True:            
+                    #start reduction
+                    cam = 0  
+                    out = 0      
+                    for j in [self.files1, self.files2, self.files3, self.files4]:
+                        cam += 1
+                        os.chdir(self.target_dir + str(cam) + '/')
+                        print j
+                        print 'arc',j[self.arc]
+                        print 'flat',j[self.flat]
+                        
+                        #flat
+                        result = True 
+                        try:
+                            os.rmdir(self.target_dir + str(cam) + '/' + j[self.flat][:-5]+'_outdir')
+                        except OSError as ex:
+                            if ex.errno == 66:
+                                print "Target folder not empty."
+                                return False
+                        os.mkdir (j[self.flat][:-5]+'_outdir')                   
+                        os_command =  'drcontrol'
+                        os_command += ' reduce_fflat ' + j[self.flat]
+                        os_command += ' -BIAS_FILENAME BIAScombined.fits'
+                        os_command += ' -idxfile ' + idxFile
+                        os_command += ' -OUT_DIRNAME '  + j[self.flat][:-5]+'_outdir'
+                        os.system('killall drcontrol')
+                        os.system('killall drexec')
+                        print os_command
+    #                     out = subprocess.call(os_command, env = env, shell = True)
+                        os.system(os_command)
+    
+                        if out==0: #arc
+                            result = True 
+                             
+                            try:
+                                os.rmdir(self.target_dir + str(cam) + '/' + j[self.arc][:-5]+'_outdir')
+                            except OSError as ex:
+                                if ex.errno == 66:
+                                    print "Target folder not empty."
+                                    return False
+                            os.mkdir(self.target_dir + str(cam) + '/' + j[self.arc][:-5]+'_outdir')                   
+                            os_command =  'drcontrol'
+                            os_command += ' reduce_arc ' + self.target_dir + str(cam) + '/' + j[self.arc]
+                            os_command += ' -idxfile ' + idxFile
+                            os_command += ' -TLMAP_FILENAME ' + self.target_dir + str(cam) + '/' + j[self.flat][:-5] + 'tlm.fits'
+                            os_command += ' -OUT_DIRNAME ' + self.target_dir + str(cam) + '/' + j[self.arc][:-5]+'_outdir'
+                            os_command =  'drcontrol'
+                            os_command += ' reduce_arc '  + j[self.arc]
+                            os_command += ' -BIAS_FILENAME BIAScombined.fits'
+                            os_command += ' -idxfile ' + idxFile
+                            os_command += ' -TLMAP_FILENAME ' + j[self.flat][:-5] + 'tlm.fits'
+                            os_command += ' -OUT_DIRNAME ' + j[self.arc][:-5]+'_outdir'
+                            os.system('killall drcontrol')
+                            os.system('killall drexec')
+                            print os_command
+    #                         out = subprocess.call(os_command, env = env, shell = True)
+                            os.system(os_command)
+    #                         shutil.copyfile(j[self.flat][:-5] + 'tlm.fits', '../../cam' +str(cam)+'/'+ j[self.flat][:-5] + 'tlm.fits')
+    
+                            if out==0: #scrunch flat
+                                os_command =  'drcontrol'
+                                os_command += ' reduce_fflat ' + j[self.flat]
+                                os_command += ' -idxfile ' + idxFile
+                                os_command += ' -BIAS_FILENAME BIAScombined.fits'
+                                os_command += ' -WAVEL_FILENAME ' + j[self.arc][:-5] + 'red.fits'
+                                os_command += ' -OUT_DIRNAME ' + j[self.flat][:-5]+'_outdir'
+                                os.system('killall drcontrol')
+                                os.system('killall drexec')
+                                print os_command
+    #                             out = subprocess.call(os_command, env = env, shell = True)
+                                os.system(os_command)
+    
+                                obj_files = np.array(j[:])
+                                mask = (obj_files!=obj_files[self.arc]) & (obj_files!=obj_files[self.flat])
+                                obj_files = obj_files[mask]                       
+                                for obj in obj_files:
+                                    result = True             
+                                    try:
+                                        os.rmdir(obj[:-5]+'_outdir')
+                                    except OSError as ex:
+                                        if ex.errno == 66:
+                                            print 'Target folder (', obj[:-5]+'_outdir', 'not empty.'
+                                            return False
+                                    os.mkdir(obj[:-5]+'_outdir')                   
+                                    if out==0: 
+                                        os_command =  'drcontrol'
+                                        os_command += ' reduce_object ' + obj
+                                        os_command += ' -idxfile ' + idxFile
+                                        os_command += ' -WAVEL_FILENAME ' + j[self.arc][:-5] + 'red.fits'
+                                        os_command += ' -BIAS_FILENAME BIAScombined.fits'
+                                        os_command += ' -TLMAP_FILENAME ' + j[self.flat][:-5] + 'tlm.fits'
+                                        os_command += ' -FFLAT_FILENAME ' + j[self.flat][:-5] + 'red.fits'
+                                        os_command += ' -OUT_DIRNAME ' + obj[:-5]+'_outdir'
+        #                                 os_command += ' -TPMETH OFFSKY'
+                                        os.system('killall drcontrol')
+                                        os.system('killall drexec')
+                                        print os_command
+    #                                     out = subprocess.call(os_command, env = env, shell = True)
+                                        os.system(os_command)
+                                        shutil.copyfile(obj[:-5]+'red.fits', '../../cam' +str(cam)+'/'+ obj[:-5]+'red.fits')
+    #                                     shutil.copyfile(obj, '../../cam' +str(cam)+'/'+ obj)
+        
+class RV():
+    
+    allFiles = []
+    base_dir = ''
+    files = [] #science reduced files to analyse
+    
+    def __init__(self):
+        self.JS = 1.1574074074074073e-05  #julian second
+        self.JD = []    
+        self.exp = []
+        self.flux = []
+        self.Lambda = []
+        self.fileData = []
+        self.fibreTable = []
+        self.header = []
+        self.c = const.c
+
+        self.magList = []
+        self.RA_decList = []
+        self.Dec_decList = []
+        self.fibreList = []
+        self.pivotList = []
+        self.fileList = []
+        self.targetList = []
+    
+    
+    def SNR(self, A, skyFlux):
+        
+        A*=2.7
+        skyFlux*=2.7
+        signal = np.sum(A[-np.isnan(A)])
+
+        RON = np.sqrt(16*len(A)*4) #4e-/px and ~4px per resolution element
+        PHN = np.sqrt(signal)
+        SKYN = np.sqrt(np.sum(skyFlux[-np.isnan(skyFlux)]))
+        
+        noise = np.sqrt(RON**2 + PHN**2 + SKYN**2)
+         
+        return signal/noise
+        
+    def plot_timeline(self):
+        for i in range(len(self.files)):
+            plt.plot(np.arange(self.JD[i], self.JD[i]+self.exposed[i],self.JS),np.ones(int(self.exposed[i]/self.JS)+1))
+        plt.show()
+
+    def read_single_star_all_curves(self, target):
+        
+        self.__init__()
+
+        for i in self.allFiles:    
+
+            self.load_fibre_table(i)
+            idx = np.where(self.target==target)
+            if len(idx[0])>0: 
+                cleanIdx = idx[0][0]
+                a = pf.open(i)
+                if a[0].header['EXPOSED']==1200:
+                    self.Lambda.append(RVS.extract_HERMES_wavelength(i))
+                    self.flux.append(a[0].data[cleanIdx])
+                    self.JD.append(a[0].header['UTMJD'])
+                    self.exp.append(a[0].header['EXPOSED']/24/3600)
+                    self.magList.append(self.mag[cleanIdx])
+                    self.RA_decList.append(self.RA_dec[cleanIdx] )
+                    self.Dec_decList.append(self.Dec_dec[cleanIdx])
+                    self.fibreList.append(cleanIdx )
+                    self.pivotList.append(self.pivot[cleanIdx])
+                    self.fileList.append(i)
+                    self.targetList.append(self.target[cleanIdx])
+                
+        #order by date
+        index = np.argsort(self.JD)
+
+        self.Lambda = np.array(self.Lambda)[index]
+        self.flux = np.array(self.flux)[index]
+        self.JD = np.array(self.JD)[index]
+        self.exp = np.array(self.exp)[index]
+        self.magList = np.array(self.magList)[index]
+        self.RA_decList = np.array(self.RA_decList)[index]
+        self.Dec_decList = np.array(self.Dec_decList)[index]
+        self.fibreList = np.array(self.fibreList)[index]
+        self.pivotList = np.array(self.pivotList)[index]
+        self.fileList = np.array(self.fileList)[index]
+        self.targetList = np.array(self.targetList)[index]
+        
+#                 allFlux.append([Lambda, thisFlux, thisJD, thisExp])
+        
+#         self.allFlux = allFlux
+    
+    def read_fits_files(self):
+        
+        
+        self.JD = np.zeros(len(self.files))
+        self.exposed = np.zeros(len(self.files))
+
+        for i in range(len(self.files)):    
+            a = pf.open(self.base_dir + self.files[i])
+            self.JD[i] = a[0].header['UTMJD']
+            self.exposed[i] = a[0].header['EXPOSED']/24/3600
+            
+            temp = a[0].header
+            self.header = self.header + [temp]
+#             if (len(self.fileData)==0):
+#                 self.header = np.array([temp])
+#             else:
+#                 self.header = np.append(self.header, [temp], 0)
+            
+            
+            temp = RVS.extract_HERMES_wavelength(self.base_dir + self.files[i])
+            if (len(self.fileData)==0):
+                self.Lambda = np.array([temp])
+            else:
+                self.Lambda = np.append(self.Lambda, [temp], 0)
+    
+            temp = self.load_fibre_table(self.base_dir + self.files[i])
+            if (len(self.fileData)==0):
+                self.fibreTable = np.array([temp])
+            else:
+                self.fibreTable = np.append(self.fibreTable, [temp], 0)
+    
+            temp = RVS.extract_all_from_2dfdr(self.base_dir + self.files[i])
+            if (len(self.fileData)==0):
+                self.fileData = np.array([temp])
+            else:
+                self.fileData = np.append(self.fileData, [temp],0)
+        
+        print ' Read ' + str(len(self.files)) + ' files'
+        
+    def clear_by_index(self, index):
+        
+        if index<len(self.files):
+            self.files.pop(index)
+            self.header.pop(index)
+            self.Lambda = np.delete(self.Lambda, index,0)
+            self.fibreTable = np.delete(self.fibreTable, index,0)
+            self.fileData = np.delete(self.fileData, index,0)
+
+    def check_single_target_alignment_by_fibre(self, fibre):
+        for i in range(len(self.fibreTable)-1):
+             if np.all(self.fibreTable[i]['target'][fibre-1] == self.fibreTable[i+1]['target'][fibre-1])==False:
+                 print 'DIFFERENT target in files ', self.files[i], self.files[i+1] 
+                 print self.fibreTable[i]['target'][fibre-1], self.fibreTable[i+1]['target'][fibre-1]
+                 print ''
+             else:
+                 print 'SAME target in files ', self.files[i], self.files[i+1] 
+                 print self.fibreTable[i]['target'][fibre-1], self.fibreTable[i+1]['target'][fibre-1]
+                 print ''
+        return True
+
+
+    def check_all_target_alignment(self):
+        for i in range(len(self.fibreTable)-1):
+             if np.all(self.fibreTable[i]['target'] == self.fibreTable[i+1]['target'])==False:
+                 print 'DIFFERENT fibre table in files ', self.files[i], self.files[i+1] 
+             else:
+                 print 'SAME fibre table in files ', self.files[i], self.files[i+1] 
+        return True
+
+    
+    def single_spectrum_by_target(self):
+        print 'empty'
+        
+        
+    def old_calculate_RV_shift(self):
+        
+        for j in range(399):     
+            for i in range(fileData.shape[0]-1):
+                fibre1 = fibreTable[i,j]
+                fibre2 = fibreTable[i+1,j]
+                # fibre types: F-guide, N-broken, dead or no fibre, P-program (science), S - Sky, U-unallocated or unused
+                if ((fibre1['NAME'].strip()==fibre2['NAME'].strip()) & (fibre1['TYPE']=='P') & (fibre1['NAME'].strip().lower()!='parked')):
+                    time1 = self.JD[i]
+                    time2 = self.JD[i+1]
+                    lambda1 = self.Lambda[i]
+                    lambda2 = self.Lambda[i+1]
+                    flux1 = fileData[i,j,:]
+                    flux2 = fileData[i+1,j,:]
+                    newLambda1, flux1Neat = RVS.clean_flux(flux1, 10, lambda1 )
+                    newLambda2, flux2Neat = RVS.clean_flux(flux2, 10, lambda2)                   
+                    
+                    
+                    a =  np.correlate(flux1Neat, flux2Neat, 'same')
+                    b =  np.correlate(flux1, flux2, 'same')
+                    print ''
+                    print 'Time Difference: ' + str(abs(time1 - time2)*24*60) + ' min'
+                    deltaLambda = newLambda2[len(newLambda2)/2] - newLambda2[np.where(a==max(a))[0][0]]
+                    print 'Wavelength difference: ' + str(deltaLambda) + ' Ang'
+                    print 'deltaRV: ' + str(c/newLambda2[len(newLambda2)/2] * deltaLambda) + ' m/s'
+                    
+                    #plotsssss
+    #                 plt.plot(newLambda1, flux1Neat/max(flux1Neat))
+    #                 plt.plot(newLambda2, flux2Neat/max(flux2Neat))
+                    plt.plot(newLambda2, a/max(a))
+    #                 plt.plot(lambda1, flux1/max(flux1))
+    #                 plt.plot(lambda2, flux2/max(flux2))
+    #                 plt.plot(lambda1, b/max(b))
+                    plt.title(fibre1['NAME'])
+                    plt.show()
+                else:
+                    print fibre1[0].strip()
+        
+    def RV(self, lambda1, flux1, lambda2, flux2, xDef = 1):
+        
+        lambda1Clean, flux1Clean = RVS.clean_flux(flux1, xDef, lambda1)
+        lambda2Clean, flux2Clean = RVS.clean_flux(flux2, xDef, lambda2)
+
+        a =  np.correlate(flux1Clean, flux2Clean, 'same')
+        deltaLambda = lambda2Clean[len(lambda2Clean)/2] - lambda2Clean[np.where(a==max(a))[0][0]]
+        RV = self.c/lambda2Clean[len(lambda2Clean)/2] * deltaLambda
+        
+        return RV
+    
+    def calculate_RV_shifts(self):
+        
+        self.RVShifts = np.zeros((len(self.files),400))
+        
+        for j in range(399):     
+            fibre1 = self.fibreTable[0].ix[j]       
+            # fibre types: F-guide, N-broken, dead or no fibre, P-program (science), S - Sky, U-unallocated or unused
+            if ((fibre1['type']=='P') & (fibre1['target'].strip().lower()!='parked')):
+                time1 = self.JD[0]
+                lambda1 = self.Lambda[0]
+                flux1 = self.fileData[0,j,:]
+                newLambda1, flux1Neat = RVS.clean_flux(flux1, 10, lambda1 )
+                
+                for i in range(0,self.fileData.shape[0]):
+    
+                    fibre2 = self.fibreTable[i].ix[j]
+                    if (fibre1['target'].strip()==fibre2['target'].strip()):
+                        time2 = self.JD[i]
+                        lambda2 = self.Lambda[i]
+                        flux2 = self.fileData[i,j,:]
+                        newLambda2, flux2Neat = RVS.clean_flux(flux2, 10, lambda2)                   
+                        
+                        a =  np.correlate(flux1Neat, flux2Neat, 'same')
+#                         b =  np.correlate(flux1, flux2, 'same')
+#                         print ''
+#                         print fibre1['target']
+#                         print 'Time Difference: ' + str(abs(time1 - time2)*24*60) + ' min'
+                        deltaLambda = newLambda2[len(newLambda2)/2] - newLambda2[np.where(a==max(a))[0][0]]
+#                         print 'Wavelength difference: ' + str(deltaLambda) + ' Ang'
+#                         print 'deltaRV: ' + str(self.c/newLambda2[len(newLambda2)/2] * deltaLambda) + ' m/s'
+                        RV = self.c/newLambda2[len(newLambda2)/2] * deltaLambda
+                        self.RVShifts[i,j] = RV
+                        print i,j, RV
+                        #plotsssss
+        #                 plt.plot(newLambda1, flux1Neat/max(flux1Neat))
+        #                 plt.plot(newLambda2, flux2Neat/max(flux2Neat))
+#                         plt.plot(newLambda2, a/max(a))
+#         #                 plt.plot(lambda1, flux1/max(flux1))
+#         #                 plt.plot(lambda2, flux2/max(flux2))
+#         #                 plt.plot(lambda1, b/max(b))
+#                         title = fibre1['target']+ ' ('+fibre1['mag']+')'
+#                         plt.title(title)
+#                         plt.show()
+            else:
+                pass
+#                 print 'Skipping ', fibre1['target'].strip()
+    
+
+    def load_fibre_table(self, fileName):
+        
+        self.source = fileName.split('.')[-1]
+        
+        if self.source == 'fld':
+            a = np.loadtxt(fileName, skiprows = 9, dtype=str)
+            b = a.transpose()
+
+            self.pivot = np.zeros(len(b[0].astype(str)))
+            self.target = b[0].astype(str)
+            self.RA_h = b[1].astype(int)
+            self.RA_min = b[2].astype(int)
+            self.RA_sec = b[3].astype(float)
+            self.Dec_deg = b[4].astype(int)
+            self.Dec_min = b[5].astype(int)
+            self.Dec_sec = b[6].astype(float)
+            self.type = b[7]
+            self.mag = b[9].astype(float)
+
+            self.RA_dec = 15*(self.RA_h + self.RA_min /60. + self.RA_sec /3600.)     
+            self.Dec_dec = self.Dec_deg + self.Dec_min /60. + self.Dec_sec /3600.
+                        
+        elif self.source == 'lis':
+            a = np.loadtxt(fileName, skiprows = 9, dtype=str)
+            b = a.transpose()[1:]
+
+            self.pivot = b[0].astype('int')
+            self.target = b[1].astype('str')
+            self.RA_h = b[2].astype('int')
+            self.RA_min = b[3].astype('int')
+            self.RA_sec = b[4].astype('float')
+            self.Dec_deg = b[5].astype('int')
+            self.Dec_min = b[6].astype('int')
+            self.Dec_sec = b[7].astype('float')
+            self.type = b[8]
+            self.mag = b[10].astype('float')
+        
+            self.mag[self.type=='1'] = 0.
+            self.type[self.type=='1'] = 0.
+
+            self.RA_dec = 15*(self.RA_h + self.RA_min /60. + self.RA_sec /3600.)     
+            self.Dec_dec = self.Dec_deg + self.Dec_min /60. + self.Dec_sec /3600.
+            
+        elif ((self.source.lower() == 'fits') or (self.source.lower() == 'fit')):
+            a = pf.open(fileName)    
+            for i in range(1,len(a)):
+                fibreType = a[i].header['EXTNAME']
+                if fibreType=='FIBRES' : b = a[i].data
+            
+            self.fibre = np.arange(1,401)
+            self.pivot = b.field('PIVOT')
+            self.target = b.field('NAME').strip()
+            self.RA_dec = b.field('RA')
+            self.Dec_dec = b.field('DEC')
+            self.mag = b.field('MAGNITUDE')
+            self.type = b.field('TYPE')
+
+            self.RA_h, self.RA_min, self.RA_sec = toolbox.dec2sex(self.RA_dec/15)   
+            self.Dec_deg, self.Dec_min, self.Dec_sec = toolbox.dec2sex(self.Dec_dec)
+            
+            self.fibreTable = b
+            
+        self.create_dataframe()
  
- #Next there are 2 general options... 
- #A: Deciding on the central wavelength pixel coordinates 
- #for each fiber image, and deciding on elements of a 2nd order polynomial, i.e. 
- # ypos = y(central) + a1*dx + a2*dx**2 + a3*dy*dx + a4*dx**2*dy
- #Each of these is a standard nonlinear fitting process. 
- #B: Explicitly fit to each slitlet individually. This approach was chosen.
- #
- #Fibre separations in slitlets:
- #First slitlet: 3.83 pix separations. 
- #Central slitlet: 3.67 pix separation. 
- #Last slitlet: 3.82 pix separations.
- #i.e. separation  = 3.67 + 4e-4*(slitlet - 20.5)**2
- #Good/Bad gives the brightness of each fiber. 
- #OR... just fit a parabola to each slitlet. 
-
-		#Central solution...
-		fit_px = [500,1500,2500,3500] #Pixels to try fitting the slitlet to.
-		ncuts = len(fit_px)
-		cuts = np.zeros((ncuts,szy*resamp))
-		for i in range(ncuts):
-			acut = np.median(im[:,fit_px[i]-2:fit_px[i]+3],axis=1)
-			cuts[i,:] = acut[np.arange(szy*resamp)/resamp]
-
- # From Koala...
- # params = np.loadtxt(pfile,dtype={
- #    'names':('spos','grid_x', 'grid_y', 'good','name'),'formats':('i2','i2','i2','S4','S15')})
-
-		#Now we run through the slitlets... some fixed numbers in here.
-		soffsets = np.zeros((nslitlets,ncuts),dtype='int')
-
-		outf = open(self.rdir + 'tramlines_p' + header['SOURCE'][6] + '.txt','w')
-		plt.clf()
-		plt.imshow(np.minimum(im,3*np.mean(im)),aspect='auto', cmap=cm.gray, interpolation='nearest')
-		x = np.arange(szx)
-		for i in np.arange(nslitlets):
-			#flux = (ftable[i*nfibres:(i+1)*nfibres]['TYPE'] != 'N') *  (ftable[i*nfibres:(i+1)*nfibres]['TYPE'] != 'F')
-			flux = (ftable[i*nfibres:(i+1)*nfibres]['TYPE'] != 'F')
-			#8.33, 9.33, 8.44
-			fsep = resamp*central_sep*(1 - c_nonlin*(i - (nslitlets-1)/2.0)**2)
-			#subsample by a factor of resamp only, i.e. 4 x 3 = 12 pix per fibre.
-			prof = np.zeros(szy*resamp)
-			fibre_offsets = np.zeros(nfibres)
-			for j in range(nfibres):
-				#Central pixel for this fibre image...
-				fibre_offsets[j] = (j- (nfibres-1)/2.0)*fsep
-				cpix = szy*resamp/2.0 + fibre_offsets[j]
-				for px in np.arange(np.floor(cpix-resamp),np.ceil(cpix+resamp+1)):
-					prof[px] = np.exp(-(px-cpix)**2/resamp**2.0)*flux[j]
-			#Now find the best match. Note that slitlet 1 starts from the top.
-			#!!! On this next line, the nonlinear process becomes important !!!
-			offsets = global_offset -nsearch/2.0 + resamp*(1 - c_nonlin/3.0*(i - (nslitlets-1)/2.0)**2)*(i-(nslitlets-1)/2.0)/nslitlets*szy*fillfrac + np.arange(nsearch)
-			offsets = offsets.astype(int)
-			for k in np.arange(ncuts):
-				xp = np.zeros(nsearch)
-				for j in range(nsearch):
-					xp[j] = np.sum(np.roll(prof,offsets[j])*cuts[k,:])
-			#   print np.argmax(xp)
-				soffsets[i,k] = offsets[np.argmax(xp)]
-			#Great! At this point we have everything we need for a parabolic fit to the "tramline".
-			#Lets make this fit and write to file.
-			p = np.polyfit(fit_px,(soffsets[i,:] + szy*resamp/2.0)/float(resamp),2)
-			pp = np.poly1d(p)
-			#outf.write('{0:3.4e} {1:3.4e} {2:3.4e}\n'.format(p[0],p[1],p[2]+fibre_offsets[j]/resamp))
-			outf.write('{0:3.4e} {1:3.4e} {2:3.4e} {3:3.4e}\n'.format(p[0],p[1],p[2],fsep/resamp))
-			for j in range(nfibres):
-				if flux[j]>0:
-					if (j == 0):
-						plt.plot(x,pp(x)+fibre_offsets[j]/resamp,'r-') 
-					else:
-						plt.plot(x,pp(x)+fibre_offsets[j]/resamp,'g-')
-		#import pdb; pdb.set_trace()
-		outf.close()
-	
-	def compute_model_wavelengths(self,header):
-		"""Given a fits header and fiber positions, compute the model wavelengths for the 
-		central fiber of HERMES.
-		"""
-		try:
-			gratlpmm = header['GRATLPMM']
-		except:
-			print "ERROR: Could not read grating parameter from header"
-			raise UserWarning
-		#A distortion estimate of 0.04 came from the slit image - 
-		#somewhat flawed because there is distortion
-		#from both the collimator and camera. Distortion in the wavelength direction
-		#is only due to the camera. This is the distortion due to and angle of
-		#half a chip, i.e. x' = x/(1 + distortion*x^2)
-		#The best value for the wavelength direction is pretty close to 0...
-		distortion = 0.00
-		camfl = 1.7*190.0   #In mm
-		pixel_size = 0.015   #In mm
-		#The nominal central wavelength angle from the HERMES design.
-		#Unclear if 68.1 or 67.2 is the right number...
-		beta0 = np.radians(67.2)
-		gratangl = np.radians(67.2)
-		szx = header['WINDOXE1'] #This removes the overscan region.
-		center_pix = 2048        
-		d = 1.0/gratlpmm
-		#First, convert pixel to x-angle (beta) 
-		#Unlike Koala, we'll ignore gamma in the first instance. 
-		#gamma_max = szy/2.0*pixel_size/camfl
-		dbeta = np.arange(szx,dtype=float) - center_pix
-		dbeta *= (1.0 + distortion*(dbeta/center_pix)**2)
-		dbeta *= pixel_size/camfl
-		beta = beta0 + dbeta
-		wavelengths = d*(np.sin(gratangl) + np.sin(beta))
-		#Return wavelengths in Angstroms.
-		return wavelengths * 1e7
-
-	def adjust_wavelengths(self, wavelengths, p):
-		"""p is (quadratic term, scale term, shift)"""
-		#Median wavelength.
-		medw = np.median(wavelengths)
-		#Delta wavelength from center to edge.
-		dw = max(wavelengths) - medw
-		wavelengths = p[0]*((wavelengths-medw)/dw)**2 + p[1]*(wavelengths-medw) + medw
-		wstep = wavelengths[1:]-wavelengths[:-1]
-		wstep = np.append(wstep, wstep[-1])
-		return wavelengths - p[2]*wstep
-
-	def find_arclines(self,arc, header):
-		""" Based on the model wavelength scale, try to find the """
-		
-		#The following code originally from quick_image_gui.py for Koala. The philosophy is to do our best
-		#based on a physical model to put the arclines on to chip coordinates... to raise the
-		#arc fluxes to a small power after truncating any noise, then to maximise the 
-		#cross-correlation function with reasonably broad library arc line functions. 
-		arc_center = np.median(arc[170:230,:],axis=0)
-		arc_center = np.sqrt(np.maximum(arc_center - np.median(arc_center),0))
-		szx = arc.shape[1]
-		arclines = np.loadtxt(self.cdir + '../thxe.arc')
-		wavelengths = self.compute_model_wavelengths(header)
-		arc_ix = np.where( (arclines[:,0] > min(wavelengths) + 0.5) * ((arclines[:,0] < max(wavelengths) - 0.5)) )[0]
-		if len(arc_ix)==0:
-			print("Error: No arc lines within wavelength range!")
-			raise UserWarning
-		arclines = arclines[arc_ix,:]
-		g = np.exp(-(np.arange(15)-7.0)**2/30.0)
-		#Only consider offsets of up to 50 pixels.
-		npix_search = 120
-		nscale_search = 101
-		nquad_search = 15
-		scales = 1.0 + 0.0015*(np.arange(nscale_search) - nscale_search/2)
-		#Peak to valley in Angstroms.
-		quad = 0.2*(np.arange(nquad_search) - nquad_search/2)
-		corr3d = np.zeros( (nquad_search, nscale_search, 2*npix_search) )
-		print("Beginning search for optimal wavelength scaling...")
-		for j in range(nquad_search):
-		 for i in range(nscale_search):
-			xcorr = np.zeros(szx)
-			pxarc = np.interp(arclines[:,0],self.adjust_wavelengths(wavelengths, [quad[j],scales[i],0]), np.arange(szx)).astype(int)
-			xcorr[pxarc] = np.sqrt(arclines[:,1])
-			xcorr = np.convolve(xcorr,g,mode='same')		
-			corfunc=np.correlate(arc_center,xcorr,mode='same')	
-			corr3d[j,i,:]=corfunc[szx/2-npix_search:szx/2+npix_search] 
-			#if (i == 32):
-			#	import pdb; pdb.set_trace()
-		pix_offset = np.unravel_index(corr3d.argmax(), corr3d.shape)
-		print("Max correlation: " + str(np.max(corr3d)))
-		#corfunc[szx/2+npix_search:]  = 0
-		#plt.plot(np.arange(2*npix_search) - npix_search, corfunc[szx/2-npix_search:szx/2+npix_search])
-		#pix_offset = np.argmax(corfunc) - szx/2
-		plt.clf()
-		plt.imshow(corr3d[pix_offset[0],:,:], interpolation='nearest')
-		plt.title('Click to continue...')
-		plt.ginput(1)
-		xcorr = np.zeros(szx)
-		new_wavelengths = self.adjust_wavelengths(wavelengths, [quad[pix_offset[0]],scales[pix_offset[1]],pix_offset[2]-npix_search])
-		pxarc = np.interp(arclines[:,0],new_wavelengths,np.arange(szx)).astype(int)
-		pxarc = np.maximum(pxarc,0)
-		pxarc = np.minimum(pxarc,szx)
-		xcorr[pxarc] = np.sqrt(arclines[:,1])
-		xcorr = np.convolve(xcorr,g,mode='same')
-		plt.clf()
-		plt.plot(new_wavelengths, xcorr)
-		plt.plot(new_wavelengths, arc_center)
-		plt.xlabel('Wavelength')
-		
-		#Now go through each slitlet (i.e. for a reliable median) 
-		#Making appropriate adjustments to the scale.
-		nslitlets = 40
-		nfibres = 10
-		slitlet_shift = np.zeros(nslitlets)
-		for i in range(nslitlets):
-			arc_med = np.median(arc[i*nfibres:(i+1)*nfibres,:],axis=0)
-			arc_med = np.sqrt(np.maximum(arc_med - np.median(arc_med),0))
-			corfunc=np.correlate(arc_med,xcorr,mode='same')
-			corfunc[:szx/2-npix_search]=0
-			corfunc[szx/2+npix_search:]=0
-			slitlet_shift[i] = np.argmax(corfunc)-szx/2
-			print("Slitlet " + str(i) + " correlation " +str(np.max(corfunc)))
-		#Save a polynomial fit to the wavelengths versus pixel
-		#a_5 x^5 + a_4 x^4     + a_3 x^3     + a_2 x^2 
-		#        + b_4 x^4 y   + b_3 x^3 y   + b_2 x^2 y 
-		#                      + c_3 x^3 y^2 + c_2 x^2 y^2
-		#                                    + d_2 x^2 y^3
-		x_ix = np.arange(szx) - szx/2
-		poly_p = np.polyfit(x_ix,new_wavelengths,5)
-		wcen = poly_p[5]
-		disp = poly_p[4]
-		poly2dfit = np.append(poly_p[0:4],np.zeros(6))
-		np.savetxt(self.rdir + 'poly2d_p' + header['SOURCE'][6] + '.txt',poly2dfit, fmt='%.6e')
-		#The individual fibres have a pixel shift, which we convert to a wavelength shift
-		#at the chip center.
-		fibre_fits = np.zeros((nslitlets*nfibres,2))
-		fibre_fits[:,0] = disp * np.ones(nslitlets*nfibres)
-		#pixel shift multiplied by dlambda/dpix = dlambda
-		fibre_fits[:,1] = wcen - np.repeat(slitlet_shift,nfibres) * disp
-		np.savetxt(self.rdir + 'dispwave_p' + header['SOURCE'][6] + '.txt',fibre_fits, fmt='%.6e')
-		
-		return new_wavelengths
-		
-	def find_wavelengths(self, poly2dfit, fibre_fits, nx):
-		"""Find the wavelengths for all fibers and all pixels"""
-		nslitlets=40 #!!! This should be a property of the main class.
-		nfibres=10
-		wavelengths = np.zeros( (nslitlets*nfibres, nx) )
-		x_ix = np.arange(nx) - nx/2
-		y_ix = np.arange(nslitlets*nfibres) - nslitlets*nfibres/2
-		xy_ix = np.meshgrid(x_ix,y_ix)
-		#Start with the linear component of the wavelength scale.
-		for i in range(nslitlets*nfibres):
-			wavelengths[i,:] = fibre_fits[i,0] * x_ix + fibre_fits[i,1]
-		#As we have a 2D polynomial, bite the bullet and just manually create the
-		#main offset...
-		poly_func = np.poly1d(np.append(poly2dfit[0:4],[0,0]))
-		wavelengths += poly_func(xy_ix[0])
-		poly_func = np.poly1d(np.append(poly2dfit[4:7],[0,0]))
-		wavelengths += poly_func(xy_ix[0])*xy_ix[1]
-		poly_func = np.poly1d(np.append(poly2dfit[7:9],[0,0]))
-		wavelengths += poly_func(xy_ix[0])*xy_ix[1]**2
-		wavelengths += poly2dfit[9]*xy_ix[0]**2*xy_ix[1]**3
-		return wavelengths
-		
-	def fit_arclines(self,arc, header, plotit=False, npix_extract = 51):
-		"""Assuming that the initial model is good enough, fit to the arclines.
-		Whenever an fibre isn't in use, this routine will take the fibre_fits from the 
-		two nearest good fibres in the slitlet. 
-		
-		npix_extract: 
-			Maximum number of pixels for extraction, including tramline tilt.
-			
-		The procedure is to:
-		0) Based on a model, find the wavelength of every pixel.
-		1) First find the x pixels corresponding to the model arc lines, as well
-		as the local dispersion at each line (arc_x and arc_disp).
-		2) Create a matrix such that wave = M * p, with p our parameters.
-		3) Find the dx values, convert to dwave.
-		4) Convert the dwave values to dp. """
-		nslitlets=40
-		nfibres=10
-		#Oversampling of the PSF - should be an odd number due to symmetrical 
-		#convolutions.
-		oversamp = 3
-		delx_deriv = 0.01
-		flux_min = 20
-		flux_max = 200
-		nx = arc.shape[1]
-		poly2dfit  = np.loadtxt(self.cdir + 'poly2d_p' + header['SOURCE'][6] + '.txt')
-		npoly_p = len(poly2dfit) #!!! Has to be 10 for the code below so far.
-		fibre_fits = np.loadtxt(self.cdir + 'dispwave_p' + header['SOURCE'][6] + '.txt')
-		wavelengths = self.find_wavelengths(poly2dfit, fibre_fits, nx)
-		#Read in the arc file...
-		arclines = np.loadtxt(self.cdir + '../thxe.arc')
-		arc_ix = np.where( (arclines[:,0] > np.min(wavelengths) + 0.5) * ((arclines[:,0] < np.max(wavelengths) - 0.5)) )[0]
-		arclines = arclines[arc_ix,:]
-		narc = len(arc_ix)
-		#Initialise the arc x and dispersion values...
-		arc_x    = np.zeros( (nfibres*nslitlets,narc) )
-		arc_disp = np.zeros( (nfibres*nslitlets,narc) )
-		#Find the x pixels corresponding to each wavelength.
-		#PSF stuff...
-		psf = self.make_psf(npix=npix_extract, oversamp=oversamp)
-		#e_ix is the extraction index.
-		e_ix_oversamp = np.arange(oversamp*npix_extract) - oversamp*npix_extract/2
-		e_ix = ( np.arange(npix_extract) - npix_extract/2 )*oversamp
-		psfim_plus  = np.zeros((npix_extract, nslitlets*nfibres))
-		psfim_minus = np.zeros((npix_extract, nslitlets*nfibres))
-		#Indices for later...
-		y_ix = np.arange(nslitlets*nfibres) - nslitlets*nfibres/2
-		y_ix = np.repeat(y_ix,narc).reshape(nfibres*nslitlets,narc)
-		x_ix = np.arange(nx) - nx/2
-		arcline_matrix = np.zeros((nfibres*nslitlets, narc,npoly_p + 2*nfibres*nslitlets))
-		#Whoa! That was tricky. Now lets use our PSF to fit for the arc lines.
-		dx        = np.zeros((nslitlets*nfibres,narc))
-		weight_dx = np.zeros((nslitlets*nfibres,narc))
-		for count in range(0,3):
-			wavelengths = self.find_wavelengths(poly2dfit, fibre_fits, nx)
-			#Find the arc_x values...
-			#Dispersion in the conventional sense, i.e. dlambda/dx
-			for i in range(nfibres*nslitlets):
-				xplus  = np.interp(arclines[:,0] + delx_deriv, wavelengths[i,:], x_ix)
-				xminus = np.interp(arclines[:,0] - delx_deriv, wavelengths[i,:], x_ix)
-				arc_x[i,:]    = 0.5*(xplus + xminus)
-				arc_disp[i,:] = 2.0*delx_deriv/(xplus - xminus)
-			
-			#Make a matrix that maps model parameters to wavelengths, based on the arc_x values.
-			#(nfibres*nslitlets,narc,npoly_p + 2*nfibres*nslitlets)
-			arcline_matrix = arcline_matrix.reshape(nfibres*nslitlets, narc,npoly_p + 2*nfibres*nslitlets)
-			arcline_matrix[:,:,0] = arc_x**5
-			arcline_matrix[:,:,1] = arc_x**4
-			arcline_matrix[:,:,2] = arc_x**3
-			arcline_matrix[:,:,3] = arc_x**2
-			arcline_matrix[:,:,4] = arc_x**4*y_ix
-			arcline_matrix[:,:,5] = arc_x**3*y_ix
-			arcline_matrix[:,:,6] = arc_x**2*y_ix
-			arcline_matrix[:,:,7] = arc_x**3*y_ix**2
-			arcline_matrix[:,:,8] = arc_x**2*y_ix**2
-			arcline_matrix[:,:,9] = arc_x**2*y_ix**3
-			for i in range(nfibres*nslitlets):
-				arcline_matrix[i,:,npoly_p+i] = arc_x[i,:]
-				arcline_matrix[i,:,npoly_p+nfibres*nslitlets + i] = 1.0
-			arcline_matrix = arcline_matrix.reshape(nfibres*nslitlets*narc,npoly_p + 2*nfibres*nslitlets)
-			
-			#!!! Sanity check that this matrix actually works...
-			#p_all = np.append(poly2dfit, np.transpose(fibre_fits).flatten())
-			#wavelengths_test = np.dot(arcline_matrix,p_all)
-			#import pdb; pdb.set_trace()
-
-			for i in range(narc):
-				#Find the range pixel values that correspond to the arc lines for all
-				#fibers.
-				center_int = int(np.median(arc_x[:,i]) + nx/2)
-				subim = np.transpose(arc[:,center_int - npix_extract/2:center_int + npix_extract/2+1])
-				#Start off with a slow interpolation for simplicity. 
-				for k in range(nslitlets*nfibres):
-					offset = arc_x[k,i] - center_int + nx/2
-					psfim_plus[:,k]  = np.interp(e_ix - (offset + delx_deriv)*oversamp, e_ix_oversamp, psf)
-					psfim_minus[:,k] = np.interp(e_ix - (offset - delx_deriv)*oversamp, e_ix_oversamp, psf)
-				psfim = 0.5*(psfim_plus + psfim_minus)
-				psfim_deriv = ( psfim_plus - psfim_minus )/2.0/delx_deriv 
-				psfsum = np.sum(psfim*subim,axis=0)
-				dx[:,i] = np.sum(psfim_deriv*subim,axis=0)/np.maximum(psfsum,flux_min)*np.sum(psfim**2)/np.sum(psfim_deriv**2)
-				weight_dx[:,i] = np.maximum(psfsum-flux_min,1e-3)
-				weight_dx[:,i] = np.minimum(weight_dx[:,i],1.5*np.median(weight_dx[:,i]))
-				weight_dx[:,i] = np.minimum(weight_dx[:,i],flux_max)
-				if count > 0 and plotit:
-					plt.clf()
-					plt.imshow(psfim, aspect='auto', interpolation='nearest')
-					plt.draw()
-					plt.imshow(np.minimum(subim,np.mean(subim)*10), aspect='auto', interpolation='nearest')
-					plt.draw()
-			ww = np.where(weight_dx > 0)
-			print("RMS arc offset in pix (iteration " +str(count)+ "): " + str(np.sqrt(np.mean(dx[ww]**2))))
-			#For fibres with low flux, set dx to the median of the fibers around.
-			med_weight = np.median(weight_dx, axis=1)
-			ww = np.where(med_weight < 0.3*np.median(med_weight))[0]
-			dx[ww] = (nd.filters.median_filter(dx,size=3))[ww]
-			
-			#Now convert the dx values to dwave.
-			dwave = (dx * arc_disp).reshape(nslitlets*nfibres*narc)
-			#That was easier than I thought it would be! Next, we have to do the linear fit to the
-			#dwave values
-			W = np.diag(weight_dx.flatten())
-			y = dwave.flatten()
-			
-			#So the model here is:
-			#delta_wavelengths = arcline_matrix . delta_p
-			delta_p = np.linalg.solve(np.dot(np.transpose(arcline_matrix),np.dot(W,arcline_matrix)) ,\
-				np.dot(np.transpose(arcline_matrix),np.dot(W,y)) )
-			poly2dfit -= delta_p[0:npoly_p]
-			fibre_fits[:,0] -= delta_p[npoly_p:npoly_p + nfibres*nslitlets]
-			fibre_fits[:,1] -= delta_p[npoly_p + nfibres*nslitlets:]
-		#Finally, go through the slitlets and fix the fibre fits for low SNR arcs (e.g. dead fibres)
-		med_weight = med_weight.reshape((nslitlets,nfibres))
-		fibre_fits = fibre_fits.reshape((nslitlets,nfibres,2))
-		fib_ix = np.arange(nfibres)
-		for i in range(nslitlets):
-			ww = np.where(med_weight[i,:] < 0.3*np.median(med_weight[i,:]))[0]
-			if len(ww)>0:
-				for wbad in ww:
-					nearby_fib = np.where( (wbad - fib_ix) < 4)[0]
-					fibre_fits[i,wbad,0] = np.median(fibre_fits[i,nearby_fib,0])
-					fibre_fits[i,wbad,1] = np.median(fibre_fits[i,nearby_fib,1])
-		fibre_fits = fibre_fits.reshape((nslitlets*nfibres,2))
-		#Save our fits!
-		np.savetxt(self.rdir + 'poly2d_p' + header['SOURCE'][6] + '.txt',poly2dfit, fmt='%.6e')
-		np.savetxt(self.rdir + 'dispwave_p' + header['SOURCE'][6] + '.txt',fibre_fits, fmt='%.6e')
-		return wavelengths
-		
-	def reduce_field(self,obj_files, arc_file, flat_file):
-		"""A wrapper to completely reduce a field, assuming that a bias already exists."""
-		fibre_flat = self.create_fibre_flat(flat_file)
-		arc, arc_sig = self.extract([arc_file])
-		wavelengths = self.fit_arclines(arc, pyfits.getheader(self.ddir + arc_file))
-		cube,badpix = self.make_cube_and_bad(obj_files)
-		flux, sigma = self.extract(obj_files, cube=cube, badpix=badpix)
-		flux, sigma = self.sky_subtract(obj_files, flux, sigma, wavelengths, fibre_flat=fibre_flat)
-		comb_flux, comb_flux_sigma = self.combine_single_epoch_spectra(flux, sigma, wavelengths, infiles=obj_files)
-		return comb_flux, comb_flux_sigma
-		
-	def go(self, min_obj_files=2, dobias=True):
-		"""A simple function that finds all fully-executed fields (in this case meaning
-		at least min_obj_files exposures on the field) and analyses them."""
-		all_files = np.array([os.path.basename(x) for x in glob.glob(self.ddir + '[0123]*.fit*')])
-		biases = np.array([],dtype=np.int)
-		flats = np.array([],dtype=np.int)
-		arcs = np.array([],dtype=np.int)
-		objects = np.array([],dtype=np.int)
-		cfgs = np.array([],dtype=np.int)
-		for i,file in enumerate(all_files):
-			header= pyfits.getheader(self.ddir + file)
-			cfgs = np.append(cfgs,header['CFG_FILE'])
-			if header['NDFCLASS'] == 'BIAS':
-				biases = np.append(biases,i)
-			#!!! No idea what LFLAT is, but it seems to be a flat.
-			#!!! Unfortunately, if it is used, the header['SOURCE'] seems to be invalid, so
-			#the code doesn't know what field is in use.
-			elif header['NDFCLASS'] == 'MFFFF':
-				flats = np.append(flats,i)
-			elif header['NDFCLASS'] == 'MFARC':
-				arcs = np.append(arcs,i)
-			elif header['NDFCLASS'] == 'MFOBJECT':
-				objects = np.append(objects,i)
-			else:
-				print("Unusual (ignored) NDFCLASS " + header['NDFCLASS'] + " for file: " + file)
-		#Forget about configs for the biases - just use all of them! (e.g. beginning and end of night)
-		if len(biases) > 2 and dobias:
-			print("Creating Biases")
-			bias = self.median_combine(all_files[biases], 'bias.fits')
-		else:
-			print("No biases. Will use default...")
-		for cfg in set(cfgs):
-			#For each config, check that there are enough files.
-			cfg_flats = flats[np.where(cfgs[flats] == cfg)[0]]
-			cfg_arcs = arcs[np.where(cfgs[arcs] == cfg)[0]]
-			cfg_objects = objects[np.where(cfgs[objects] == cfg)[0]]
-			if len(cfg_flats) == 0:
-				print("No flat for field: " + cfg + " Continuing to next field...")
-			elif len(cfg_arcs) == 0:
-				print("No arc for field: " + cfg + " Continuing to next field...")
-			elif len(cfg_objects) == 0:
-				print("Require at least 2 object files. Not satisfied for: " + cfg + " Continuing to next field...")
-			else:
-				print("Processing field: " + cfg)
-				#!!! NB if there is more than 1 arc or flat, we could be more sophisticated here... 
-				self.reduce_field(all_files[cfg_objects], all_files[cfg_arcs[0]], all_files[cfg_flats[0]])
+    
+    def create_dataframe(self):
+        
+        d = [ 'pivot','target', 'RA_h', 'RA_min', 'RA_sec', 'RA_dec' , 'Dec_deg', 'Dec_min',  'Dec_sec', 'Dec_dec', 'type', 'mag']
+       
+        tableFrame = np.array([self.pivot, 
+                               self.target, 
+                               self.RA_h, 
+                               self.RA_min, 
+                               self.RA_sec, 
+                               self.RA_dec, 
+                               self.Dec_deg, 
+                               self.Dec_min, 
+                               self.Dec_sec, 
+                               self.Dec_dec, 
+                               self.type, 
+                               self.mag])
+        
+        return TB.build_DataFrame(tableFrame, d)
 
 
+class PSF():
+    
+#     sexParamFile = 'HERMES.sex'
+#     scienceFile = '10nov40045.fits'
+#     biasFile = 'BIAScombined4.fits'
+#     flatFile = '10nov10044.fits'
+#     tramLinefile = '10nov10044tlm.fits'
+#     nFibres = 10
+
+    def __init__(self):
+#         self.nFibres = 400
+#         self.nBundles = 40
+        self.pShort = []
+        self.biasFile=''
+        self.tlmFile=''
+        self.flatFile=''
+        self.arcFile=''
+        self.scienceFile=''
+        
+    def bias_subtract_from_overscan(self, image, range):
+        
+        biasArrayInit = image[:,range]
+        
+        if len(range) > 1:          
+            biasLine = np.median(biasArrayInit,1)
+        else:
+            biasLine = biasArrayInit
+            
+        biasArray = np.tile(biasLine,(self.imWidth,1)).transpose()
+            
+        return image - biasArray      
+        
+    def bias_subtract(self):
+        if self.scienceFile!='':self.scienceIm_b = self.scienceIm - self.biasIm       
+        if self.flatFile!='':self.flatIm_b = self.flatIm - self.biasIm        
+        if self.arcFile!='':self.arcIm_b = self.arcIm - self.biasIm
+             
+    def open_files(self):
+        
+         #Read, calibrate and create im objects
+        if self.biasFile!='':self.bias = pf.open(self.biasFile)
+        if self.tlmFile!='':self.tlm = pf.open(self.tramLinefile)
+        if self.flatFile!='':self.flat = pf.open(self.flatFile)
+        if self.arcFile!='':self.arc = pf.open(self.arcFile)
+        if self.scienceFile!='':self.science = pf.open(self.scienceFile)
+
+        if self.scienceFile!='':self.scienceIm = self.science[0].data     
+        if self.tlmFile!='':self.tlmIm = self.tlm[0].data
+        if self.flatFile!='':
+            self.imWidth = self.flat[0].header['NAXIS1']
+            self.imHeight = self.flat[0].header['NAXIS2']
+            self.flatIm = self.flat[0].data
+        if self.arcFile!='':
+            self.imWidth = self.arc[0].header['NAXIS1']
+            self.imHeight = self.arc[0].header['NAXIS2']
+            self.arcIm = self.arc[0].data
+        if self.biasFile!='':self.biasIm = self.bias[0].data
+
+    def create_im_from_arcFileMap(self, refIm):
+        
+       imWidth = refIm.shape[0]
+       imHeight = refIm.shape[1]
+
+
+    def fit_10f(self, flatCurve):
+        #finds best fit for 10f config (5 x 2f) for len(p)=40
+        
+        self.write_p10(flatCurve)
+        
+        factorTry = 100
+        diagTry = np.ones(len(self.p10)) * 10
+        diagTry = np.arange(1,len(self.p10)+1)
+        maxfev = int(1e4) # of max tries
+        # diagonals!=1 to follow:
+#         diagTry[0] = 10    
+#         diagTry[self.nFibres] = 0.1  #sigma
+#         diagTry[self.nFibres+1] = 100  #gamma
+#         diagTry[-self.nFibres:] = np.ones(self.nFibres) * 10
+        
+        self.reps=0
+        p = opt.leastsq(self.find_residuals, self.p10, full_output=True, args = flatCurve, factor = factorTry, diag = diagTry, maxfev = maxfev)
+        
+        finalCurve, onePSF = self.find_p10_curve(p[0],flatCurve, output = False)
+        
+#         plt.plot(flatCurve, label = 'image')
+#         plt.plot(finalCurve,label = 'model')
+#         plt.title(self.profile)
+#         plt.legend()
+#         plt.show()
+
+        return p[0][10],p[0][11], p[2]['fvec'], np.sum(p[2]['fvec'])/np.sum(flatCurve)
+    
+    def fit_pShort(self, flatCurve):
+       
+        self.write_pShort(flatCurve)
+  
+        factorTry = 1
+        diagTry = np.ones(len(self.pShort))
+#         diagTry[0] = 200
+#         diagTry[1] = 200
+#         diagTry[2] = 0.1
+#         diagTry[3] = 1
+#         diagTry[4] = 30
+#         diagTry[5] = 1
+#         diagTry[6] = 1
+#         diagTry[7] = 1
+#         diagTry[8] = 0.1
+#         diagTry[9] = 0.1
+        maxfev = int(1e3)
+        self.reps=0
+        p = opt.leastsq(self.find_residuals, self.pShort, full_output=True, args = flatCurve)#, factor = factorTry, diag = diagTry, maxfev = maxfev)
+
+
+
+#         plt.plot(self.find_curve(p[0]))
+        finalCurve, onePSF = self.find_pShort_curve(p[0],flatCurve, output = False)
+        plt.plot(flatCurve, label = 'flat')
+        plt.plot(finalCurve,label = 'model')
+#         plt.plot(onePSF/max(onePSF),label = 'Single PSF')
+        plt.legend()
+        plt.show()
+        return p
+    
+    def fit_p400_A_mu(self, flatCurve):
+  
+        factorTry = 100
+        diagTry = np.ones(len(self.p400_A_mu))
+        maxfev = int(1e3)
+        self.reps=0
+
+        p = opt.leastsq(self.find_residuals, self.p400_A_mu, full_output=True, args = flatCurve, factor = factorTry, diag = diagTry, maxfev = maxfev)
+        print p[0]
+        finalCurve = self.find_p400_A_mu_curve(p[0],flatCurve, output = False)
+        
+#         #comarisson with pymodelfit
+#         self.reps=0
+#         self.profile = 'gaussian_fit'
+#         p = opt.leastsq(self.find_residuals, self.p400_A_mu, full_output=True, args = flatCurve, factor = factorTry, diag = diagTry, maxfev = maxfev)
+#         finalCurve = self.find_p400_A_mu_curve(p[0],flatCurve, output = False)
+
+        
+        self.plot(flatCurve, finalCurve)
+
+
+        return p
+    
+    def fit_p400_sigma_gamma(self, flatCurve):
+  
+        factorTry = 1
+        diagTry = np.ones(len(self.p400_sigma_gamma))
+#         diagTry[0] = 200
+#         diagTry[1] = 200
+#         diagTry[2] = 0.1
+#         diagTry[3] = 1
+#         diagTry[4] = 30
+#         diagTry[5] = 1
+#         diagTry[6] = 1
+#         diagTry[7] = 1
+#         diagTry[8] = 0.1
+#         diagTry[9] = 0.1
+        maxfev = int(1e1)
+        self.reps=0
+        p = opt.leastsq(self.find_residuals, self.p400_sigma_gamma, full_output=True, args = flatCurve)#, factor = factorTry, diag = diagTry, maxfev = maxfev)
+
+# #         plt.plot(self.find_curve(p[0]))
+#         finalCurve, onePSF = self.find_p400_sigma_gamma_curve(p[0],flatCurve, output = False)
+#         plt.plot(flatCurve, label = 'flat')
+#         plt.plot(finalCurve,label = 'model')
+# #         plt.plot(onePSF/max(onePSF),label = 'Single PSF')
+#         plt.legend()
+#         plt.show()
+        return p
+
+    def fit_single_gaussian(self):
+    
+        factorTry = 100
+        diagTry = np.ones(len(self.pSingleGaussian))
+        maxfev = int(1e3)
+        self.reps=0
+        
+        p = opt.leastsq(self.find_residuals, self.pSingleGaussian, full_output=True)#, args = [curve,0,xRange], factor = factorTry, diag = diagTry, maxfev = maxfev)
+#         print p[0]
+        finalCurve = toolbox.gaussian(self.xRange, sigma = [p[0][0]], mu = [p[0][1]], A = [p[0][2]])
+        
+    #         #comarisson with pymodelfit
+    #         self.reps=0
+    #         self.profile = 'gaussian_fit'
+    #         p = opt.leastsq(self.find_residuals, self.p400_A_mu, full_output=True, args = flatCurve, factor = factorTry, diag = diagTry, maxfev = maxfev)
+    #         finalCurve = self.find_p400_A_mu_curve(p[0],flatCurve, output = False)
+    
+        
+#         plt.plot(self.xRange,self.imCurve)
+#         plt.plot(self.xRange,finalCurve)
+#         plt.show()
+    
+        return p
+   
+    def write_p10(self, flatCurve):
+        
+        firstGap = 24.5
+        lGap = 17.
+        sGap = 8.0001   
+
+        sigma = 1.9
+        gamma = 2.24741646e-01
+        
+#         sigma = np.ones(10) * sigma
+#         gamma = np.ones(10) * gamma
+        
+        A = np.zeros(10)
+#         A[0] = 4.30763396
+#         A[1] = 4.79011575
+#         A[2] = 3.17765607
+#         A[3] = 3.19855864
+#         A[4] = 3.91087569
+#         A[5] = 3.83988602
+#         A[6] = 3.44450670
+#         A[7] = 4.28972608
+#         A[8] = 3.39712514
+#         A[9] = 3.48422336
+        A = np.ones(self.nFibres) * np.max(flatCurve) * np.sqrt(2* math.pi * sigma**2) *2
+
+        mu = np.zeros(10)
+        mu[0] = 660
+        mu[1] = mu[0] + sGap
+        mu[2] = 1888
+        mu[3] = mu[2] + sGap
+        mu[4] = 2628
+        mu[5] = mu[4] + sGap
+        mu[6] = 3043
+        mu[7] = mu[6] + sGap
+        mu[8] = 4066
+        mu[9] = mu[8] + sGap
+        
+        self.p10 = np.hstack((A, sigma, gamma, mu))
+        
+    def write_pShort(self, flatCurve):
+
+        sigma = 1.6775996937959061
+        gamma = 5.9997168955962937e-06        
+        A = np.ones(self.nFibres) * np.max(flatCurve) * np.sqrt(2* math.pi * sigma**2)
+        mu = np.zeros(400)
+        self.pShort = np.hstack((A, sigma, gamma, mu))        
+        
+    def write_p400_A_mu(self, flatCurve):  
+             
+        sigma = np.tile(1.,400)
+        gamma = 0.2
+#         A = np.sqrt(2*np.pi*sigma**2)*flatCurve[self.mu.astype(int)].astype(float)
+        A = flatCurve[self.mu.astype(int)].astype(float)
+        self.p400_A_mu = np.hstack((A, sigma, gamma))        
+
+    def write_p400_sigma_gamma(self, flatCurve):
+         
+        sigma = 1.9
+        gamma = 0.2
+        sigma = np.ones(400) * sigma
+        gamma = np.ones(400) * gamma
+        self.p400_sigma_gamma = np.hstack((sigma, gamma))        
+    
+    def write_mu_from_tlm(self, column):
+        
+        self.mu = self.tlmIm[:,column]-0.5
+        
+    def find_residuals(self, p, output=True):
+        self.reps += 1
+
+        if len(p)==len(self.pSingleGaussian):
+            model = self.find_pSingle_gaussian(p, output=output)
+            
+        elif len(p)==len(self.p400_A_mu):
+            model = self.find_p400_A_mu_curve(p, flatCurve)
+
+        elif len(p)==len(self.p400_sigma_gamma):
+            model = self.find_p400_sigma_gamma_curve(p, flatCurve)[0]
+
+        elif len(p)==len(self.p10):
+            model = self.find_p10_curve(p, flatCurve, output=output)[0]
+
+
+        diff = self.imCurve-model
+#         plt.plot(flatCurve)
+#         plt.plot(model)
+#         plt.show() 
+        
+        #just output to see progress
+        if (((self.reps in [1,2,3,4,5,6,7,8,10,20,50,100, 500, 1000]) or (self.reps in range(1100,10000,100))) and (output==True)):
+            print self.reps,
+#         if ((self.reps==1) and (output==True)):
+#             self.plot(flatCurve, model)
+        
+        return diff
+    
+ 
+    def find_p10_curve(self, p, flatCurve, output = False, psfFibre = []):
+         
+        A = p[0:self.nFibres]
+        #Sigma, gamma for 10 params
+        #sigma = p[self.nFibres:2*self.nFibres]
+        #gamma = p[2*self.nFibres:3*self.nFibres]
+        #Sigma, gamma for 1 param
+        sigma = p[self.nFibres]
+        gamma = p[self.nFibres+1]
+        mu = p[-self.nFibres:]
+                
+        if self.profile =='voigt':
+            a = get_model_instance('Voigt')
+        elif self.profile =='gaussian':
+            a = get_model_instance('Gaussian')
+            
+        model = np.zeros(len(flatCurve))
+        onePSF = np.zeros(len(flatCurve))
+        
+        for i in range(self.nFibres):
+            thisA = A[i]
+            thisSigma = sigma
+            thisGamma = math.fabs(gamma)
+#             thisGamma = gamma
+            thisMu = mu[i]
+    
+            if self.profile =='voigt':
+                thisCurve = a.f(np.arange(len(flatCurve)), thisA,thisSigma,thisGamma,thisMu)
+            elif self.profile =='gaussian':
+                thisCurve = a.f(np.arange(len(flatCurve)), thisA,thisSigma,thisMu)
+            
+            if ((np.sum(thisCurve) >0) and (output == True)):
+                print 'Input parameters for fibre ' + str(i) + ':', thisA, thisSigma, thisGamma, thisMu
+            
+            model += thisCurve
+#         plt.plot(flatCurve)
+#         plt.plot(model)
+#         plt.show()
+        
+        return model, onePSF
+    
+    def find_pShort_curve(self, p, flatCurve, output = False):
+
+        A = p[0:self.nFibres]
+        sigma = p[self.nFibres]
+        gamma = p[self.nFibres+1]
+        mu = p[-self.nFibres:]
+                
+        if self.profile =='voigt':
+            a = get_model_instance('Voigt')
+        elif self.profile =='gaussian':
+            a = get_model_instance('Gaussian')
+            
+        model = np.zeros(len(flatCurve))
+        onePSF = np.zeros(len(flatCurve))
+        
+        for i in range(self.nFibres):
+            thisA = A[i]
+            thisSigma = sigma
+#             thisGamma = math.fabs(gamma)
+            thisGamma = gamma
+            thisMu = mu[i]
+            if i+1 in self.deadFibres:
+                thisCurve = np.zeros(len(flatCurve))
+            else:
+                if self.profile =='voigt':
+                    thisCurve = a.f(np.arange(len(flatCurve)), thisA,thisSigma,thisGamma,thisMu)
+                elif self.profile =='gaussian':
+                    thisCurve = a.f(np.arange(len(flatCurve)), thisA,thisSigma,thisMu)
+            
+            if ((np.sum(thisCurve) >0) and (output == True)):
+                print 'Input parameters for fibre ' + str(i) + ':', thisA, thisSigma, thisGamma, thisMu
+            
+            model += thisCurve
+            
+#         plt.plot(flatCurve)
+#         plt.plot(model)
+#         plt.show()                    
+        return model, onePSF
+    
+    def find_p400_A_mu_curve(self, p, flatCurve, output = False):
+
+        A = np.array(p[0:self.nFibres])
+        sigma = np.array(p[self.nFibres:2*self.nFibres])
+        gamma = np.array(p[-1])
+
+#         if self.profile =='voigt':
+#             a = get_model_instance('Voigt')
+#         elif self.profile =='gaussian':
+#             a = get_model_instance('Gaussian')
+#             
+#         
+# 
+#         for i in range(self.nFibres):
+#             thisA = A[i]
+#             thisSigma = sigma
+#             thisGamma = gamma
+#             thisMu = self.mu[i]
+#             
+#             if i+1 in self.deadFibres:
+#                 thisCurve = np.zeros(len(flatCurve))
+#             else:
+#                 if self.profile =='voigt':
+#                     thisCurve = a.f(np.arange(len(flatCurve)), thisA,thisSigma,thisGamma,thisMu)
+#                 elif self.profile =='gaussian':
+#                     thisCurve = a.f(np.arange(len(flatCurve)), thisA,thisSigma,thisMu)
+#             
+#             if ((np.sum(thisCurve) >0) and (output == True)):
+#                 print 'Input parameters for fibre ' + str(i) + ':', thisA, thisSigma, thisGamma, thisMu
+#             
+#             model += thisCurve
+
+#         start_time=time.time()
+        thisA = A
+        thisSigma = sigma
+        thisGamma = np.array([gamma])
+        thisMu = self.mu
+        
+        #set amplitude of deadfibres to 0
+        thisA[np.array(self.deadFibres[self.camera])-1]=0
+        
+        if self.profile =='voigt':
+            thisCurve = a.f(np.arange(len(flatCurve)), thisA,thisSigma,thisGamma,thisMu)
+        elif self.profile =='gaussian':
+            model = toolbox.gaussian(np.arange(len(flatCurve)), sigma = thisSigma, mu = thisMu, A = thisA)                    
+        elif self.profile =='gaussian_fit':
+            model = np.zeros(len(flatCurve))
+            a = get_model_instance('Gaussian')
+            for i in range(self.nFibres):
+                thisA = A[i]
+                thisSigma = sigma[i]
+                thisGamma = gamma
+                thisMu = self.mu[i]
+                
+                if i+1 in self.deadFibres:
+                    thisCurve = np.zeros(len(flatCurve))
+                else:
+                    thisCurve = a.f(np.arange(len(flatCurve)), thisA,thisSigma,thisMu)
+                
+            
+                model += thisCurve
+        else:
+            print 'no model specified'
+            model = []
+            
+        return model
+    
+    
+    def find_pSingle_gaussian(self, p, output = False):
+        xRange = self.xRange
+        
+        model = toolbox.gaussian(xRange, sigma = [p[0]], mu = [p[1]], A = [p[2]])                    
+        
+        return model
+
+    def find_p400_sigma_gamma_curve(self, p, flatCurve, output = False):
+
+        sigma = p[:self.nFibres]
+        gamma = p[self.nFibres:]
+                
+        if self.profile =='voigt':
+            a = get_model_instance('Voigt')
+        elif self.profile =='gaussian':
+            a = get_model_instance('Gaussian')
+            
+        model = np.zeros(len(flatCurve))
+        onePSF = np.zeros(len(flatCurve))
+        
+        for i in range(self.nFibres):
+            thisA = self.A[i]
+            thisSigma = sigma[i]
+#             thisGamma = math.fabs(gamma[i])
+            thisGamma = gamma[i]
+            thisMu = self.mu[i]
+            if i+1 in self.deadFibres:
+                thisCurve = np.zeros(len(flatCurve))
+            else:
+                if self.profile =='voigt':
+                    thisCurve = a.f(np.arange(len(flatCurve)), thisA,thisSigma,thisGamma,thisMu)
+                elif self.profile =='gaussian':
+                    thisCurve = a.f(np.arange(len(flatCurve)), thisA,thisSigma,thisMu)
+            
+            if ((np.sum(thisCurve) >0) and (output == True)):
+                print 'Input parameters for fibre ' + str(i) + ':', thisA, thisSigma, thisGamma, thisMu
+            
+            model += thisCurve 
+            
+#         plt.plot(flatCurve)
+#         plt.plot(model)
+#         plt.show()                    
+        return model, onePSF        
+    
+    def plot(self, flatCurve = [], model=[], extraCurve =[]):
+        
+        fig = plt.figure()
+        ax1 = fig.add_subplot(111)
+        if flatCurve !=[]:ax1.plot(flatCurve, label = 'flat')
+        if model !=[]:ax1.plot(model,label = 'model')
+        if extraCurve !=[]:ax1.plot(extraCurve,label = 'extra')
+        
+        ax2 = ax1.twiny()
+        ax2.set_xlabel("Fibre")
+        ax2.set_xlim(ax1.axis()[0:2])
+        ax2.set_xticks(self.mu)
+        ax2.set_xticklabels(range(1,401))
+        ax1.legend()
+        plt.show()    
+        
+    def read_full_image_spatial(self, profile, Columns):
+        #reads spatial psf from flat file for all columns in Columns. 
+        #4 cameras
+        #writes coo
+        self.deadFibres = [[],[],[],[],[]]
+        self.deadFibres[1] = [41,66, 91, 141,191, 241, 250, 294, 304, 341, 391]
+        self.deadFibres[2] = [41,66, 91, 141,191,241, 294, 307, 341, 391]
+        self.deadFibres[3] = [41,66, 91, 141,191,241, 250, 294, 307, 341, 391]
+        self.deadFibres[4] = [41,66, 91, 141,191,241, 250, 294, 307, 341, 391]
+        self.nFibres = 400
+        self.open_files()
+        self.flatIm_b = self.bias_subtract_from_overscan(self.flatIm, range(-45,-5)) #bias subtract using the last 40 columns(overscan region)
+
+        if profile=='voigt':
+            fileOutSpa = open('spatialV'+str(self.camera)+'.txt','w')
+        elif profile=='gaussian':
+            fileOutSpa = open('spatialG'+str(self.camera)+'.txt','w')
+        fileOutSpa.write('fibre, y_cent, A, sigma, gamma, mu \n')
+        
+        for C in Columns:
+            flatCurve = self.flatIm_b[:,C]       
+            
+            start_time=time.time()
+            #find A        
+            self.write_mu_from_tlm(C)
+            self.write_p400_A_mu(flatCurve)
+            p = self.fit_p400_A_mu(flatCurve)
+#             print p
+            print C, 'column fit took ', time.time() - start_time, "seconds" 
+            
+
+            A = p[0][:self.nFibres]           
+            sigma = p[0][self.nFibres:2*self.nFibres]
+            gamma = p[0][-1]
+            
+            for F in range(400):
+                outString = (str(F+1) + ', ' + 
+                            str(C) + ', ' + 
+                            str(A[F]) + ', ' + 
+                            str(sigma[F]) + ', ' + 
+                            str(gamma) + ', ' + 
+                            str(self.mu[F]) + ', ' + 
+                            '\n' )
+                fileOutSpa.write(outString)
+            
+    def read_full_image_spectral(self, profile):
+        #reads spectral psf from flat file for full image. 
+        #4 cameras
+        #writes coo
+    #         self.deadFibres = [[],[],[],[],[]]
+    #         self.deadFibres[1] = [41,66, 91, 141,191, 241, 250, 294, 304, 341, 391]
+    #         self.deadFibres[2] = [41,66, 91, 141,191,241, 294, 307, 341, 391]
+    #         self.deadFibres[3] = [41,66, 91, 141,191,241, 250, 294, 307, 341, 391]
+    #         self.deadFibres[4] = [41,66, 91, 141,191,241, 250, 294, 307, 341, 391]
+    #         self.nFibres = 400
+        self.open_files()
+#         self.bias_subtract()
+        self.arcIm_b = self.bias_subtract_from_overscan(self.arcIm, range(-45,-5)) #bias subtract using the last 40 columns(overscan region)
+    
+        if profile=='voigt':
+            fileOutSpa = open(self.arcFile+'spectralV'+str(self.camera)+'.txt','w')
+        elif profile=='gaussian':
+            fileOutSpa = open(self.arcFile+'spectralG'+str(self.camera)+'.txt','w')
+        fileOutSpa.write('x_cent, y_cent, A, sigma, gamma, mu \n')
+        
+    
+        #finds peaks using sextractor, returns program output and generated data filename        
+        #adds sex_ to the arc filename for sextractor output
+        outputFileName =  'sex_result.txt'
+        
+        os_command = self.sex_path +'sex ' + self.arcFile + ' -c ' + self.sexParamFile
+        os_command += ' -CATALOG_NAME ' + outputFileName
+        #     os_command = '/usr/local/bin/sex'
+        #     os.system(os_command)
+        proc = subprocess.Popen([os_command,self.sex_path], stdout=subprocess.PIPE, shell=True)
+        out, err_result = proc.communicate()
+    
+        if out=='':
+            arcFileMap = np.loadtxt(outputFileName, usecols = [0,1,3])
+            arcFileMap[:,0] -=1
+            arcFileMap[:,1] -=1
+            arcFileMap = np.insert(arcFileMap, 2, 0, axis=1)
+            self.arcFileMap = np.insert(arcFileMap, 3, arcFileMap[:,3], axis=1)
+            np.save(self.arcFile+'_map', self.arcFileMap)
+            
+            plt.imshow(np.log10(self.arcIm_b), origin ='lower', cmap = plt.cm.gray)
+            plt.scatter(arcFileMap[:,0],arcFileMap[:,1], s=0.5, c='r', edgecolors='none', alpha = 0.5)
+            plt.title(str(arcFileMap.shape[0])+' sample points')
+            plt.legend()
+            plt.savefig(self.arcFile[:-5], dpi=700.)
+            plt.close()
+            
+            
+        length = 10 #this is the range of x pixels used for fitting the gaussian
+        for x,y in zip(self.arcFileMap[:,0],self.arcFileMap[:,1]):
+            xRange = np.arange(x-length/2,x+length/2+1).astype(int)
+            self.xRange = xRange
+            self.imCurve = self.arcIm_b[y,xRange] # the actual 1D section to be fitted
+            self.pSingleGaussian = [np.array(2.),np.array(x),np.array(np.max(self.imCurve))] #sigma, mu, A (std Dev, postion, peak)
+            p = self.fit_single_gaussian()
+            
+            #x,y,A,sigma,gamma,mu
+            outString = (str(x) + ', ' + 
+                        str(y) + ', ' + 
+                        str(p[0][2]) + ', ' + 
+                        str(p[0][0]) + ', ' + 
+                        str(0) + ', ' + 
+                        str(p[0][1]) + ', ' + 
+                        '\n' )
+            fileOutSpa.write(outString)            
+        
+        
+    
+    def read_spectral_psf_data(self, profile, referenceFile, camera):
+        import matplotlib
+        import matplotlib.cm as cm
+        import matplotlib.mlab as mlab
+        import matplotlib.pyplot as plt
+        
+    #     from scipy.interpolate import interp1d
+    #     from scipy.interpolate import interp2d
+    #     import pyfits as pf
+        if camera==1:
+            cameraName = 'Blue Camera'
+        elif camera==2:
+            cameraName = 'Green Camera'
+        elif camera==3:
+            cameraName = 'Red Camera'
+        elif camera==4:
+            cameraName = 'IR Camera'
+            
+        
+#         self.base_dir = '/Users/Carlos/Documents/HERMES/reductions/resolution_gayandhi/'
+#         dataFile = 'spectral'+profile[0].upper()+str(camera)+'.txt'
+        files = glob.glob('*.txt')
+        for dataFile in files:
+#             dataFile = '07feb10021.fitsspectralG1.txt'
+            a = np.loadtxt(dataFile, skiprows=1, delimiter = ',' , usecols=[0,1,2,3,4,5])
+            
+    #         hdulist = pf.open(referenceFile)
+    #         imWidth = hdulist[0].header['NAXIS1']
+    #         imHeight = hdulist[0].header['NAXIS2']
+    #         
+    # #         Lambda = RVS.extract_HERMES_wavelength(referenceFile)
+    # 
+    #         matplotlib.rcParams['xtick.direction'] = 'out'
+    #         matplotlib.rcParams['ytick.direction'] = 'out'
+            
+            plt.scatter(a[:,0],a[:,1], s=a[:,3]/np.max(a[:,3])*100, edgecolors='none')
+            plt.savefig(dataFile[:-19],dpi=700.)
+#             plt.show()
+            plt.close()
+
+#         X, Y = np.meshgrid(a[:,1], a[:,0])
+#         X, Y = np.meshgrid(range(imHeight),range(imWidth))
+#         Z = a[3].reshape(X.shape[1],X.shape[0])
+#         Z = Z.transpose()
+#         Z = np.zeros((imHeight,imWidth))
+#         for r,c,z in zip(a[:,1].astype(int),a[:,0].astype(int), a[:,3]):
+#             Z[r,c] = z
+#             
+# #         Z = np.diagflat(a[:,3])
+# #         Z[Z<0.5] = np.average(Z)
+# #         Z[Z>4] = np.average(Z)
+#         
+#         if profile=='voigt':
+#             Z = 2 * np.sqrt(2*math.log(2)) * Z
+#         elif profile=='gaussian':
+#             Z = 2 * np.sqrt(2*math.log(2)) * Z
+# 
+#         # Or you can use a colormap to specify the colors; the default
+#         # colormap will be used for the contour lines
+#         plt.figure()
+# #         im = plt.imshow(Z, interpolation='bilinear', origin='lower',
+# #                         cmap=cm.gray)#, extent=(0,400,1,400))
+# #         plt.xticks(range(40), Lambda.astype(int)[::len(Lambda)/40], size='small')
+# #         plt.xticks(range(0,400,100),Lambda.astype(int)[::len(Lambda)/100])
+#         levels = np.arange(2.5, 7., 0.5)
+#         CS = plt.contour(Z, levels,
+#                          origin='lower',
+#                          cmap=cm.gray, 
+#                          linewidths=1)#,
+#                          #extent=(0,400,1,400))
+# 
+#         #Thicken the zero contour.
+# #         zc = CS.collections[6]
+# #         plt.setp(zc, linewidth=4)
+#          
+#         plt.clabel(CS, levels,  # levels[1::2]  to label every second level
+#                    inline=0,
+#                    fmt='%1.2f',
+#                    fontsize=12)
+#         
+#         # make a colorbar for the contour lines
+# #         CB = plt.colorbar(CS, shrink=0.8, extend='both')
+#         
+#         plt.title('Spectral FWHM - ' + cameraName)
+#         plt.gray()  # Now change the colormap for the contour lines and colorbar
+# #         plt.flag()
+#         
+#         # We can still add a colorbar for the image, too.
+# #         CBI = plt.colorbar(im, orientation='vertical', shrink=1)
+#         
+#         # This makes the original colorbar look a bit out of place,
+#         # so let's improve its position.
+#         
+# #         l,b,w,h = plt.gca().get_position().bounds
+# #         ll,bb,ww,hh = CB.ax.get_position().bounds
+# #         CB.ax.set_position([ll, b+0.1*h, ww, h*0.8])
+#         plt.xlabel('Pixel')
+#         plt.ylabel('Pixel')
+#         plt.savefig('contour_' + str(camera) + 'G.png')
+#         plt.show()
+
+        
+        
+        #X-binned  plot
+#         fibreFlux = np.zeros(40)
+#         fibreFluxStd = np.zeros(40)
+#         x = np.zeros(40)
+#         for fib in [0,99,199,299,399]:
+#             for i in range(0,37,4):
+#                 fibreFlux[i] = np.average(Z[fib,i:i+10])
+#                 fibreFluxStd[i] = Z[fib,i:i+10].std()
+#             mask = [fibreFlux!=0]
+#             plt.errorbar(Lambda[mask], fibreFlux[mask], yerr=fibreFluxStd[mask], label = 'Fibre ' + str(fib+1))
+#         plt.title('FWHM - ' + cameraName)
+#         plt.xlabel('Wavelength [Ang]')
+#         plt.ylabel('PSF [px]')
+#         plt.legend()
+#         plt.savefig('lambda_' + str(camera) + 'G.png')
+#         plt.show()
+#         
+#         #y-binned  plot
+#         fibreFlux = np.zeros(400)
+#         fibreFluxStd = np.zeros(400)
+#         x = np.zeros(400)
+#         for col in [0,100,200,300,400]:
+#             for i in range(0,359,40):
+#                 fibreFlux[i] = np.average(Z[i:i+40,col])
+#                 fibreFluxStd[i] = Z[i:i+40,col].std()
+#             mask = [fibreFlux!=0]
+#             plt.errorbar(np.array(range(len(fibreFlux)))[mask], fibreFlux[mask], yerr=fibreFluxStd[mask], label = 'column ' + str(col*10))
+#         plt.title('FWHM - '+cameraName)
+#         plt.xlabel('Fibre')
+#         plt.ylabel('PSF [px]')
+#         plt.legend()
+#         plt.savefig('fibre_' + str(camera) + 'G.png')
+#         plt.show()
+#         
+        
+        
+#         rows = 4112
+#         cols = 4146
+#         bins = 4
+#         #bin rows
+#         for i in range(bins):
+#             binLimits = (rows/bins*i,rows/bins*(i+1))
+#             mapBin = ((a[1]>binLimits[0]) & (a[1]<=binLimits[1]))
+#             b = a[0,mapBin], a[5,mapBin]
+#             c = np.bincount(b[0].astype(int), weights=b[1])
+#             d = np.bincount(b[0].astype(int))
+#             px = np.arange(len(d))
+#             px = px[d>0]
+#             c = c[d>0]
+#             d = d[d>0]
+#             c = c/d
+#             plt.plot(px,c, label= ' Range (y) = ' + str(binLimits))
+#             plt.title('Spatial PSF - y-binned - ' + method)
+#             plt.xlabel('X[Px]')
+#             plt.ylabel('Std. Dev. (px)')
+#             plt.legend()
+# #         plt.savefig('spa_' + str(cam) + '_y_' + method +'.png')
+#         plt.show()
+#     
+#         #bin cols
+#         for i in range(bins):
+#             binLimits = (cols/bins*i,cols/bins*(i+1))
+#             mapBin = ((a[0]>binLimits[0]) & (a[0]<=binLimits[1]))
+#             b = a[1,mapBin], a[5,mapBin]
+#             c = np.bincount(b[0].astype(int), weights=b[1])
+#             d = np.bincount(b[0].astype(int))
+#             px = np.arange(len(d))
+#             px = px[d>0]
+#             c = c[d>0]
+#             d = d[d>0]
+#             c = c/d
+#             plt.plot(px,c, label= ' Range (x) = ' + str(binLimits))
+#             plt.title('Spatial PSF - x-binned - ' + method)
+#             plt.xlabel('Y-Pixels')
+#             plt.ylabel('Std. Dev. (px)')
+#             plt.legend()
+#         plt.savefig('spa_' + str(cam) + '_x_' + method +'.png')
+#         plt.show()
+    
+    
+    #     grid = np.zeros((4112,4146))
+    #     a[2] = a[2]/max(a[2])*65535
+    #     pointSize = 10
+    #     for i in range(len(a[0])):
+    #         grid[int(a[1][i]-pointSize):int(a[1][i]+pointSize),int(a[0][i]-pointSize):int(a[0][i]+pointSize)] = a[2][i]
+    #     plt.imshow(grid, origin='lower')
+    #     plt.set_cmap(cm.Greys_r)                                                                                    
+    #     plt.show()
+    #     pf.writeto('a.fits', grid)
+    
+    
+        #interpolate function
+    #     f = interp2d(a[0][range(0,len(a[0]),1)],a[1][range(0,len(a[0]),1)],a[5][range(0,len(a[0]),1)])#, kind='cubic')
+    # #     grid = np.zeros((4112,4146))
+    # #     grid = f(a[0].astype('int'), a[1].astype('int'))
+    #     grid = f(range(4112),range(4146))
+    # #     grid = f(range(100),range(100))
+    #     plt.imshow(grid, origin='lower')
+    #     plt.set_cmap(cm.Greys_r)                                                                                    
+    #     plt.show()
+    #     pf.writeto('a.fits',grid, clobber= True)
+
+    def read_spatial_psf_data(self, profile, referenceFile, camera):
+        import matplotlib
+        import matplotlib.cm as cm
+        import matplotlib.mlab as mlab
+        import matplotlib.pyplot as plt
+        
+    #     from scipy.interpolate import interp1d
+    #     from scipy.interpolate import interp2d
+    #     import pyfits as pf
+        if camera==1:
+            cameraName = 'Blue Camera'
+        elif camera==2:
+            cameraName = 'Green Camera'
+        elif camera==3:
+            cameraName = 'Red Camera'
+        elif camera==4:
+            cameraName = 'IR Camera'
+            
+        
+#         self.base_dir = '/Users/Carlos/Documents/HERMES/reductions/resolution_gayandhi/'
+        dataFile = 'spatial'+profile[0].upper()+str(camera)+'.txt'
+
+        a = np.loadtxt(dataFile, skiprows=1, delimiter = ',' , usecols=[0,1,2,3,4,5]).transpose()
+    
+        Lambda = RVS.extract_HERMES_wavelength(referenceFile)
+
+        matplotlib.rcParams['xtick.direction'] = 'out'
+        matplotlib.rcParams['ytick.direction'] = 'out'
+        
+        X, Y = np.meshgrid(a[1], a[0])
+        Z = a[3].reshape(X.shape[1],X.shape[0])
+        Z = Z.transpose()
+
+        Z[Z<0.5] = np.average(Z)
+        Z[Z>4] = np.average(Z)
+        
+        if profile=='voigt':
+            Z = 2 * np.sqrt(2*math.log(2)) * Z
+        elif profile=='gaussian':
+            Z = 2 * np.sqrt(2*math.log(2)) * Z
+
+        # Or you can use a colormap to specify the colors; the default
+        # colormap will be used for the contour lines
+        plt.figure()
+        im = plt.imshow(Z, interpolation='bilinear', origin='lower',
+                        cmap=cm.gray, extent=(0,400,1,400))
+#         plt.xticks(range(40), Lambda.astype(int)[::len(Lambda)/40], size='small')
+#         plt.xticks(range(0,400,100),Lambda.astype(int)[::len(Lambda)/100])
+        levels = np.arange(2.5, 7., 0.5)
+        CS = plt.contour(Z, levels,
+                         origin='lower',
+                         cmap=cm.gray, 
+                         linewidths=1,
+                         extent=(0,400,1,400))
+
+        #Thicken the zero contour.
+#         zc = CS.collections[6]
+#         plt.setp(zc, linewidth=4)
+         
+        plt.clabel(CS, levels,  # levels[1::2]  to label every second level
+                   inline=0,
+                   fmt='%1.2f',
+                   fontsize=12)
+        
+        # make a colorbar for the contour lines
+#         CB = plt.colorbar(CS, shrink=0.8, extend='both')
+        
+        plt.title('Spatial FWHM - ' + cameraName)
+        plt.gray()  # Now change the colormap for the contour lines and colorbar
+#         plt.flag()
+        
+        # We can still add a colorbar for the image, too.
+        CBI = plt.colorbar(im, orientation='vertical', shrink=1)
+        
+        # This makes the original colorbar look a bit out of place,
+        # so let's improve its position.
+        
+#         l,b,w,h = plt.gca().get_position().bounds
+#         ll,bb,ww,hh = CB.ax.get_position().bounds
+#         CB.ax.set_position([ll, b+0.1*h, ww, h*0.8])
+        plt.xlabel('Wavelength [Ang]')
+        plt.ylabel('Fibre')
+        plt.savefig('contour_' + str(camera) + 'G.png')
+        plt.show()
+
+        
+        
+        #X-binned  plot
+        fibreFlux = np.zeros(40)
+        fibreFluxStd = np.zeros(40)
+        x = np.zeros(40)
+        for fib in [0,99,199,299,399]:
+            for i in range(0,37,4):
+                fibreFlux[i] = np.average(Z[fib,i:i+10])
+                fibreFluxStd[i] = Z[fib,i:i+10].std()
+            mask = [fibreFlux!=0]
+            plt.errorbar(Lambda[mask], fibreFlux[mask], yerr=fibreFluxStd[mask], label = 'Fibre ' + str(fib+1))
+        plt.title('FWHM - ' + cameraName)
+        plt.xlabel('Wavelength [Ang]')
+        plt.ylabel('PSF [px]')
+        plt.legend()
+        plt.savefig('lambda_' + str(camera) + 'G.png')
+        plt.show()
+        
+        #y-binned  plot
+        fibreFlux = np.zeros(400)
+        fibreFluxStd = np.zeros(400)
+        x = np.zeros(400)
+        for col in [0,100,200,300,400]:
+            for i in range(0,359,40):
+                fibreFlux[i] = np.average(Z[i:i+40,col])
+                fibreFluxStd[i] = Z[i:i+40,col].std()
+            mask = [fibreFlux!=0]
+            plt.errorbar(np.array(range(len(fibreFlux)))[mask], fibreFlux[mask], yerr=fibreFluxStd[mask], label = 'column ' + str(col*10))
+        plt.title('FWHM - '+cameraName)
+        plt.xlabel('Fibre')
+        plt.ylabel('PSF [px]')
+        plt.legend()
+        plt.savefig('fibre_' + str(camera) + 'G.png')
+        plt.show()
+        
+        
+        
+#         rows = 4112
+#         cols = 4146
+#         bins = 4
+#         #bin rows
+#         for i in range(bins):
+#             binLimits = (rows/bins*i,rows/bins*(i+1))
+#             mapBin = ((a[1]>binLimits[0]) & (a[1]<=binLimits[1]))
+#             b = a[0,mapBin], a[5,mapBin]
+#             c = np.bincount(b[0].astype(int), weights=b[1])
+#             d = np.bincount(b[0].astype(int))
+#             px = np.arange(len(d))
+#             px = px[d>0]
+#             c = c[d>0]
+#             d = d[d>0]
+#             c = c/d
+#             plt.plot(px,c, label= ' Range (y) = ' + str(binLimits))
+#             plt.title('Spatial PSF - y-binned - ' + method)
+#             plt.xlabel('X[Px]')
+#             plt.ylabel('Std. Dev. (px)')
+#             plt.legend()
+# #         plt.savefig('spa_' + str(cam) + '_y_' + method +'.png')
+#         plt.show()
+#     
+#         #bin cols
+#         for i in range(bins):
+#             binLimits = (cols/bins*i,cols/bins*(i+1))
+#             mapBin = ((a[0]>binLimits[0]) & (a[0]<=binLimits[1]))
+#             b = a[1,mapBin], a[5,mapBin]
+#             c = np.bincount(b[0].astype(int), weights=b[1])
+#             d = np.bincount(b[0].astype(int))
+#             px = np.arange(len(d))
+#             px = px[d>0]
+#             c = c[d>0]
+#             d = d[d>0]
+#             c = c/d
+#             plt.plot(px,c, label= ' Range (x) = ' + str(binLimits))
+#             plt.title('Spatial PSF - x-binned - ' + method)
+#             plt.xlabel('Y-Pixels')
+#             plt.ylabel('Std. Dev. (px)')
+#             plt.legend()
+#         plt.savefig('spa_' + str(cam) + '_x_' + method +'.png')
+#         plt.show()
+    
+    
+    #     grid = np.zeros((4112,4146))
+    #     a[2] = a[2]/max(a[2])*65535
+    #     pointSize = 10
+    #     for i in range(len(a[0])):
+    #         grid[int(a[1][i]-pointSize):int(a[1][i]+pointSize),int(a[0][i]-pointSize):int(a[0][i]+pointSize)] = a[2][i]
+    #     plt.imshow(grid, origin='lower')
+    #     plt.set_cmap(cm.Greys_r)                                                                                    
+    #     plt.show()
+    #     pf.writeto('a.fits', grid)
+    
+    
+        #interpolate function
+    #     f = interp2d(a[0][range(0,len(a[0]),1)],a[1][range(0,len(a[0]),1)],a[5][range(0,len(a[0]),1)])#, kind='cubic')
+    # #     grid = np.zeros((4112,4146))
+    # #     grid = f(a[0].astype('int'), a[1].astype('int'))
+    #     grid = f(range(4112),range(4146))
+    # #     grid = f(range(100),range(100))
+    #     plt.imshow(grid, origin='lower')
+    #     plt.set_cmap(cm.Greys_r)                                                                                    
+    #     plt.show()
+    #     pf.writeto('a.fits',grid, clobber= True)
+    

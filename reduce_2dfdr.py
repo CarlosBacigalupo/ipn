@@ -28,7 +28,6 @@ class dr2df():
     #general
     target_root = ''
     display = 'localhost:21.0'
-    galah_data_root = ''
     idxFile = ''
     final_dir = ''
     doReduce = False

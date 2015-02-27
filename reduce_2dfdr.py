@@ -23,7 +23,7 @@ class dr2df():
     copyFiles = True
     overwrite = False
     reduceMode = ''
-    
+    reduceSet = -1
     
     #general
     target_root = ''
@@ -99,15 +99,16 @@ class dr2df():
             print '   Copying reduced flats and arcs to subsequent data sets'
             self.copy_flat_arc()
             
-            #reduce datasets>0
-            for i in range(1,len(self.ix_array)):
-                self.target_dir = self.target_root + str(i) + '_'+ self.filename_prfx[i] +'/'
-                self.file_ix = self.ix_array[i]
-                self.create_file_list(i)
-    
-                for cam,j in enumerate([self.files1, self.files2, self.files3, self.files4]):
-                    os.chdir(self.target_dir + str(cam+1) + '/')
-                    self.reduce_science(self, cam, j)
+        elif self.reduceMode=='single_set':
+            #reduce single dataset
+            i==self.reduceSet
+            self.target_dir = self.target_root + str(i) + '_'+ self.filename_prfx[i] +'/'
+            self.file_ix = self.ix_array[i]
+            self.create_file_list(i)
+
+            for cam,j in enumerate([self.files1, self.files2, self.files3, self.files4]):
+                os.chdir(self.target_dir + str(cam+1) + '/')
+                self.reduce_science(self, cam, j)
                 
     
     

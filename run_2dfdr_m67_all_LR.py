@@ -1,19 +1,22 @@
 import reduce_2dfdr 
 import os
 import numpy as np
-
+import sys
 
 # M67, all observations
 
+if len(sys.argv)>0:
+    print sys.argv
+
+sys.exit()
 
 #reduction flags
 useBias = False
-copyFiles = True
+copyFiles = False
 doReduce = True
 overwrite = True
 idxFile = 'no_flat_no_bias.idx'
 startFrom = 1 #number of data set to begin with. 0 for beginning. Good for starting half way through if it cancelled
-reduceMode = 'one_arc'
 
 
 #path to 2dfdr
@@ -29,10 +32,10 @@ final_dir = '/home/staff/mq20101889/HERMES/reductions/test/'
 
 #path to data sources
 HERMES_data_root = []
-HERMES_data_root.append('/home/staff/mq20101889/galah_survey/')
+HERMES_data_root.append('/home/staff/mq20101889/galah_data/')
 HERMES_data_root.append('/home/staff/mq20101889/galah_pilot/')
 HERMES_data_root.append('/home/staff/mq20101889/RV_data/')
-HERMES_data_root.append('/home/staff/mq20101889/Jan14_data/')
+HERMES_data_root.append('/home/staff/mq20101889/jan14_data/')
 HERMES_data_root = np.array(HERMES_data_root)
 
 #len(date_list) = number of observations (can have more than 1 science file per observation)
@@ -58,7 +61,7 @@ date_list = ['131217',
             '140109',
             '140109']
 
-root_date_link = np.array([0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0])
+root_date_link = np.array([1,1,1,1,1,1,1,0,0,0,0,0,3,3,3,3,3,3,3,3,3])
 
 #Filenumbers for each dataset FLAT_IDX, ARC_IDX, SCIENCE_IDX[S]. Asumes [flat, arc, sci, sci, ...]
 ix_array = [[42,43]+range(39,42),
@@ -113,7 +116,7 @@ dr2df.doReduce = doReduce
 dr2df.ix_array = ix_array
 dr2df.filename_prfx = filename_prfx
 dr2df.date_list = date_list
-# dr2df.source_dir_array = source_dir_array
+dr2df.source_dir_array = source_dir_array
      
 #run forest, run
 dr2df.runReduction()

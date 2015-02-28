@@ -5,18 +5,20 @@ import sys
 
 # M67, all observations
 
-if len(sys.argv)>0:
-    print sys.argv
+reduceMode = 'starting_set'
 
-sys.exit()
-
+reduceSet = -1
+if len(sys.argv)>1:
+    reduceSet = int(sys.argv[1])
+    reduceMode = 'single_set'
+    
 #reduction flags
 useBias = False
 copyFiles = False
 doReduce = True
 overwrite = True
 idxFile = 'no_flat_no_bias.idx'
-startFrom = 1 #number of data set to begin with. 0 for beginning. Good for starting half way through if it cancelled
+startFrom = 0 #number of data set to begin with. 0 for beginning. Good for starting half way through if it cancelled
 
 
 #path to 2dfdr
@@ -108,9 +110,11 @@ dr2df.final_dir = final_dir
 dr2df.overwrite = overwrite
 dr2df.target_root = target_root
 dr2df.reduceMode = reduceMode
+dr2df.reduceSet = reduceSet
 dr2df.idxFile = idxFile
 dr2df.copyFiles = copyFiles
 dr2df.doReduce = doReduce
+dr2df.startFrom = startFrom
 
 #arrays
 dr2df.ix_array = ix_array

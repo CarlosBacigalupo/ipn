@@ -31,6 +31,7 @@ class dr2df():
     idxFile = ''
     final_dir = ''
     doReduce = False
+    startFrom = 0
     
     #arrays
     filename_prfx = '' #file prefixes (09jan, 12aug, ...)
@@ -101,16 +102,27 @@ class dr2df():
             
         elif self.reduceMode=='single_set':
             #reduce single dataset
-            i==self.reduceSet
+            i=self.reduceSet
             self.target_dir = self.target_root + str(i) + '_'+ self.filename_prfx[i] +'/'
             self.file_ix = self.ix_array[i]
             self.create_file_list(i)
 
             for cam,j in enumerate([self.files1, self.files2, self.files3, self.files4]):
                 os.chdir(self.target_dir + str(cam+1) + '/')
-                self.reduce_science(self, cam, j)
+                self.reduce_science(cam, j)
                 
-    
+        elif self.reduceMode=='starting_set':
+            #reduce single dataset
+            for i in range(self.startFrom,len(self.filename_prfx)):
+
+                self.target_dir = self.target_root + str(i) + '_'+ self.filename_prfx[i] +'/'
+                self.file_ix = self.ix_array[i]
+                self.create_file_list(i)
+
+                for cam,j in enumerate([self.files1, self.files2, self.files3, self.files4]):
+                    os.chdir(self.target_dir + str(cam+1) + '/')
+                    self.reduce_all()
+
     
     def create_file_list(self, thisSetIx = 0 ):
         # Creates the list of files to be reduced based on date, name and indices.        
@@ -210,7 +222,7 @@ class dr2df():
 
 
             #flat
-            print '      >>Scrunching flat (whatever that means)'    
+            print '      >>Scrunching flat'    
             os_command =  'drcontrol'
             os_command += ' reduce_fflat ' + j[0]
             os_command += ' -idxfile ' + self.idxFile
@@ -223,38 +235,8 @@ class dr2df():
 #             out = subprocess.call(os_command, env = env, shell = True)
             os.system(os_command)
             
-            #THIS SHOULD CALL reduce_science
             #science 
             self.reduce_science(cam, j)
-#             obj_files = np.array(j[2:])
-#             for obj in obj_files:
-#                 try:
-#                     os.rmdir(obj[:-5]+'_outdir')
-#                 except OSError as ex:
-#                     if ex.errno == 66:
-#                         print 'Target folder (', obj[:-5]+'_outdir', 'not empty.'
-#                         return False
-
-#                 print '      >>Reducing science '+ obj                        
-#                 os.mkdir(obj[:-5]+'_outdir')                   
-#                 os_command =  'drcontrol'
-#                 os_command += ' reduce_object ' + obj
-#                 os_command += ' -idxfile ' + self.idxFile
-#                 os_command += ' -WAVEL_FILENAME ' + j[1][:-5] + 'red.fits'
-# #                 if useBias==True: os_command += ' -BIAS_FILENAME BIAScombined.fits'
-#                 os_command += ' -TLMAP_FILENAME ' + j[0][:-5] + 'tlm.fits'
-#                 os_command += ' -FFLAT_FILENAME ' + j[0][:-5] + 'red.fits'
-#                 os_command += ' -OUT_DIRNAME ' + obj[:-5]+'_outdir'
-# #                                 os_command += ' -TPMETH OFFSKY'
-#                 os.system('killall drcontrol')
-#                 os.system('killall drexec')
-#                 print '      OS Command '+ os_command
-# #                                     out = subprocess.call(os_command, env = env, shell = True)
-#                 os.system(os_command)
-    
-#                 print '      Copying '+ obj[:-5]+'red.fits to ' + self.final_dir + 'cam' + str(cam+1) + '/'               
-#                 shutil.copyfile(obj[:-5]+'red.fits', self.final_dir + 'cam' + str(cam+1) + '/' + obj[:-5]+'red.fits')
-# #                                     shutil.copyfile(obj, '../../cam' +str(cam)+'/'+ obj)
     
     
     

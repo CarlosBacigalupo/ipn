@@ -2,6 +2,10 @@ import reduce_2dfdr
 import os
 import numpy as np
 import sys
+import time
+
+
+reduceCam = -1
 
 # M67, all observations
 
@@ -11,6 +15,10 @@ reduceSet = -1
 if len(sys.argv)>1:
     reduceSet = int(sys.argv[1])
     reduceMode = 'single_set'
+    if len(sys.argv)>2:
+        reduceCam = int(sys.argv[2])
+        
+    
     
 #reduction flags
 useBias = False
@@ -18,19 +26,19 @@ copyFiles = False
 doReduce = True
 overwrite = True
 idxFile = 'no_flat_no_bias.idx'
-startFrom = 0 #number of data set to begin with. 0 for beginning. Good for starting half way through if it cancelled
+startFrom = 3 #number of data set to begin with. 0 for beginning. Good for starting half way through if it cancelled
 
 
 #path to 2dfdr
 dr_dir = '/home/staff/mq20101889/2dfdr/6.2/2dfdr_install/bin' #in nut
-dr_dir = '/Users/Carlos/Documents/workspace/2dfdr/6.0/src_code/2dfdr-6.0/bin/' #local
+# dr_dir = '/Users/Carlos/Documents/workspace/2dfdr/6.0/src_code/2dfdr-6.0/bin/' #local
 
 #target directory. It will copy the data files to sub-directories branching from this directory
-target_root = '/home/staff/mq20101889/HERMES/reductions/test/' #in nut
-target_root = '/home/staff/mq20101889/HERMES/reductions/test/' #in nut
+target_root = '/home/staff/mq20101889/HERMES/reductions/m67_lr_6.2/' #in nut
+# target_root = '/home/staff/mq20101889/HERMES/reductions/test/' #in nut
 
 #all science reduced (*red.fits) files will be copied to this directory
-final_dir = '/home/staff/mq20101889/HERMES/reductions/test/'
+final_dir = '/home/staff/mq20101889/HERMES/reductions/m67_lr_6.2/'
 
 #path to data sources
 HERMES_data_root = []
@@ -111,6 +119,7 @@ dr2df.overwrite = overwrite
 dr2df.target_root = target_root
 dr2df.reduceMode = reduceMode
 dr2df.reduceSet = reduceSet
+dr2df.reduceCam = reduceCam
 dr2df.idxFile = idxFile
 dr2df.copyFiles = copyFiles
 dr2df.doReduce = doReduce
@@ -123,4 +132,9 @@ dr2df.date_list = date_list
 dr2df.source_dir_array = source_dir_array
      
 #run forest, run
+
+sys.stdout = open(str(reduceSet)+'_'+str(time.strftime('%T'))+'.log', 'w')
+                  
+print time.strftime('%X %x %Z'), '  Starting reduction'
 dr2df.runReduction()
+print time.strftime('%X %x %Z'), '  Ending reduction'

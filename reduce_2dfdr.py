@@ -14,6 +14,7 @@ import numpy as np
 import os
 import shutil
 import subprocess 
+import time
 
 # <codecell>
 
@@ -24,6 +25,7 @@ class dr2df():
     overwrite = False
     reduceMode = ''
     reduceSet = -1
+    reduceCam = -1
     
     #general
     target_root = ''
@@ -52,7 +54,7 @@ class dr2df():
         
         ############### Copy bit
         if self.copyFiles==True:
-            print 'Copying all data files...'
+            print time.strftime('%X %x %Z'),'Copying all data files...'
             for thisSetIx in range(len(self.filename_prfx)):
                 
                 print '   ' + self.filename_prfx[thisSetIx]
@@ -72,10 +74,10 @@ class dr2df():
         
                             if not os.path.exists(dst):
                                 shutil.copy(src, dst)
-                                print '      Copied '+ dst
+                                print time.strftime('%X %x %Z'),'      Copied '+ dst
         
-            print 'End of file copy'
-            print ''
+            print time.strftime('%X %x %Z'),'End of file copy'
+            print time.strftime('%X %x %Z'),''
 
             
         ############### Reduction bit
@@ -89,15 +91,15 @@ class dr2df():
             self.create_file_list(0)
 
             if self.doReduce==True:
-                print '  Reducing first frame', self.filename_prfx[0]
+                print time.strftime('%X %x %Z'),'  Reducing first frame', self.filename_prfx[0]
                 self.reduce_all() 
-                print '  First frame reduced', self.filename_prfx[0]
-                print ''
+                print time.strftime('%X %x %Z'),'  First frame reduced', self.filename_prfx[0]
+                print time.strftime('%X %x %Z'),''
             else:
-                print 'Reduction flag turned off. All done.'
+                print time.strftime('%X %x %Z'),'Reduction flag turned off. All done.'
             
             #replace flats and arcs for datasets>0
-            print '   Copying reduced flats and arcs to subsequent data sets'
+            print time.strftime('%X %x %Z'),'   Copying reduced flats and arcs to subsequent data sets'
             self.copy_flat_arc()
             
         elif self.reduceMode=='single_set':
@@ -106,22 +108,19 @@ class dr2df():
             self.target_dir = self.target_root + str(i) + '_'+ self.filename_prfx[i] +'/'
             self.file_ix = self.ix_array[i]
             self.create_file_list(i)
-
-            for cam,j in enumerate([self.files1, self.files2, self.files3, self.files4]):
-                os.chdir(self.target_dir + str(cam+1) + '/')
-                self.reduce_science(cam, j)
+            
+            self.reduce_all()
                 
         elif self.reduceMode=='starting_set':
             #reduce single dataset
             for i in range(self.startFrom,len(self.filename_prfx)):
-
+                
+                print time.strftime('%X %x %Z'),'---------------Starting Dataset #', i
                 self.target_dir = self.target_root + str(i) + '_'+ self.filename_prfx[i] +'/'
                 self.file_ix = self.ix_array[i]
                 self.create_file_list(i)
-
-                for cam,j in enumerate([self.files1, self.files2, self.files3, self.files4]):
-                    os.chdir(self.target_dir + str(cam+1) + '/')
-                    self.reduce_all()
+            
+                self.reduce_all()
 
     
     def create_file_list(self, thisSetIx = 0 ):
@@ -130,7 +129,8 @@ class dr2df():
         self.files2 =  [self.filename_prfx[thisSetIx] +'2' + str(name).zfill(4)+ '.fits' for name in self.file_ix]
         self.files3 =  [self.filename_prfx[thisSetIx] +'3' + str(name).zfill(4)+ '.fits' for name in self.file_ix]
         self.files4 =  [self.filename_prfx[thisSetIx] +'4' + str(name).zfill(4)+ '.fits' for name in self.file_ix]
-
+        
+        print time.strftime('%X %x %Z'),'Created filenames for 4 channels. Example:', str(self.files1)
         
         
     def create_folders(self):
@@ -140,10 +140,10 @@ class dr2df():
         except OSError as ex:
             if ((ex.errno == 66) or (ex.errno == 17)):
                 if self.overwrite==True:
-                    print '>>>> Overwriting', self.target_dir
+                    print time.strftime('%X %x %Z'),'>>>> Overwriting', self.target_dir
                     os.system('rm -r '+self.target_dir )
                 else:
-                    print 'Target folder', self.target_dir,' not empty. Overwrite is off. '
+                    print time.strftime('%X %x %Z'),'Target folder', self.target_dir,' not empty. Overwrite is off. '
                     return False
         os.mkdir(self.target_dir)
         os.mkdir(self.target_dir+'1/')
@@ -157,7 +157,7 @@ class dr2df():
             os.mkdir(self.final_dir+'cam3/')
             os.mkdir(self.final_dir+'cam4/')
         except:
-            print '>>>> Final folder creation failed(no biggie), please check '+self.final_dir
+            print time.strftime('%X %x %Z'),'>>>> Final folder creation failed(no biggie), please check '+self.final_dir
         return True
     
     
@@ -169,74 +169,74 @@ class dr2df():
                 
         #start reduction   
         for cam,j in enumerate([self.files1, self.files2, self.files3, self.files4]):
-            os.chdir(self.target_dir + str(cam+1) + '/')
-            print '      Flat ',j[0]
-            print '      Arc ',j[1]
-            print '      Science files ' + str(j[2:])
+            if ((self.reduceCam==-1) or (self.reduceCam==cam)):
+                os.chdir(self.target_dir + str(cam+1) + '/')
+                print time.strftime('%X %x %Z'),'current folders is',self.target_dir + str(cam+1) + '/'
 
-            
-            #flat
-            try:
-                os.rmdir(self.target_dir + str(cam+1) + '/' + j[0][:-5]+'_outdir')
-            except OSError as ex:
-                if ex.errno == 66:
-                    print "Target folder not empty."
-                    return False
-
-            print '      >>Reducing flat'    
-            os.mkdir (j[0][:-5]+'_outdir')                   
-            os_command =  'drcontrol'
-            os_command += ' reduce_fflat ' + j[0]
-#            if useBias==True: os_command += ' -BIAS_FILENAME BIAScombined.fits'
-            os_command += ' -idxfile ' + self.idxFile
-            os_command += ' -OUT_DIRNAME '  + j[0][:-5]+'_outdir'
-            os.system('killall drcontrol')
-            os.system('killall drexec')
-            print '      OS Command '+ os_command
-#             out = subprocess.call(os_command, env = env, shell = True)
-            os.system(os_command)
-    
-    
-            #arc                 
-            try:
-                os.rmdir(self.target_dir + str(cam+1) + '/' + j[1][:-5]+'_outdir')
-            except OSError as ex:
-                if ex.errno == 66:
-                    print "Target folder not empty."
-                    return False
-                
-            print '      >>Reducing arc'    
-            os.mkdir(self.target_dir + str(cam+1) + '/' + j[1][:-5]+'_outdir')                   
-            os_command =  'drcontrol'
-            os_command += ' reduce_arc '  + j[1]
-#             if useBias==True: os_command += ' -BIAS_FILENAME BIAScombined.fits'
-            os_command += ' -idxfile ' + self.idxFile
-            os_command += ' -TLMAP_FILENAME ' + j[0][:-5] + 'tlm.fits'
-            os_command += ' -OUT_DIRNAME ' + j[1][:-5]+'_outdir'
-            os.system('killall drcontrol')
-            os.system('killall drexec')
-            print '      OS Command '+ os_command
-#             out = subprocess.call(os_command, env = env, shell = True)
-            os.system(os_command)
-#                         shutil.copyfile(j[self.flat][:-5] + 'tlm.fits', '../../cam' +str(cam)+'/'+ j[self.flat][:-5] + 'tlm.fits')
+                print '      Flat ',j[0]
+                print '      Arc ',j[1]
+                print '      Science files ' + str(j[2:])
 
 
-            #flat
-            print '      >>Scrunching flat'    
-            os_command =  'drcontrol'
-            os_command += ' reduce_fflat ' + j[0]
-            os_command += ' -idxfile ' + self.idxFile
-#             if useBias==True: os_command += ' -BIAS_FILENAME BIAScombined.fits'
-            os_command += ' -WAVEL_FILENAME ' + j[1][:-5] + 'red.fits'
-            os_command += ' -OUT_DIRNAME ' + j[0][:-5]+'_outdir'
-            os.system('killall drcontrol')
-            os.system('killall drexec')
-            print '      OS Command '+ os_command
-#             out = subprocess.call(os_command, env = env, shell = True)
-            os.system(os_command)
-            
-            #science 
-            self.reduce_science(cam, j)
+                #flat
+                try:
+                    os.rmdir(self.target_dir + str(cam+1) + '/' + j[0][:-5]+'_outdir')
+                except OSError as ex:
+                    if ex.errno == 66:
+                        print "Target folder not empty."
+                        return False
+
+                print time.strftime('%X %x %Z'),'      >>Reducing flat'    
+                os.mkdir (j[0][:-5]+'_outdir')                   
+                os_command =  'drcontrol'
+                os_command += ' reduce_fflat ' + j[0]
+    #            if useBias==True: os_command += ' -BIAS_FILENAME BIAScombined.fits'
+                os_command += ' -idxfile ' + self.idxFile
+                os_command += ' -OUT_DIRNAME '  + j[0][:-5]+'_outdir'
+                os.system('cleanup')
+                print '      OS Command '+ os_command
+    #             out = subprocess.call(os_command, env = env, shell = True)
+                os.system(os_command)
+
+
+                #arc                 
+                try:
+                    os.rmdir(self.target_dir + str(cam+1) + '/' + j[1][:-5]+'_outdir')
+                except OSError as ex:
+                    if ex.errno == 66:
+                        print "Target folder not empty."
+                        return False
+
+                print time.strftime('%X %x %Z'),'      >>Reducing arc'    
+                os.mkdir(self.target_dir + str(cam+1) + '/' + j[1][:-5]+'_outdir')                   
+                os_command =  'drcontrol'
+                os_command += ' reduce_arc '  + j[1]
+    #             if useBias==True: os_command += ' -BIAS_FILENAME BIAScombined.fits'
+                os_command += ' -idxfile ' + self.idxFile
+                os_command += ' -TLMAP_FILENAME ' + j[0][:-5] + 'tlm.fits'
+                os_command += ' -OUT_DIRNAME ' + j[1][:-5]+'_outdir'
+                os.system('cleanup')
+                print '      OS Command '+ os_command
+    #             out = subprocess.call(os_command, env = env, shell = True)
+                os.system(os_command)
+    #                         shutil.copyfile(j[self.flat][:-5] + 'tlm.fits', '../../cam' +str(cam)+'/'+ j[self.flat][:-5] + 'tlm.fits')
+
+
+                #flat
+                print time.strftime('%X %x %Z'),'      >>Scrunching flat'    
+                os_command =  'drcontrol'
+                os_command += ' reduce_fflat ' + j[0]
+                os_command += ' -idxfile ' + self.idxFile
+    #             if useBias==True: os_command += ' -BIAS_FILENAME BIAScombined.fits'
+                os_command += ' -WAVEL_FILENAME ' + j[1][:-5] + 'red.fits'
+                os_command += ' -OUT_DIRNAME ' + j[0][:-5]+'_outdir'
+                os.system('cleanup')
+                print '      OS Command '+ os_command
+    #             out = subprocess.call(os_command, env = env, shell = True)
+                os.system(os_command)
+
+                #science 
+                self.reduce_science(cam, j)
     
     
     
@@ -298,7 +298,7 @@ class dr2df():
                     print 'Target folder (', obj[:-5]+'_outdir', 'not empty.'
                     return False
 
-            print '      >>Reducing science '+ obj                        
+            print time.strftime('%X %x %Z'),'      >>Reducing science '+ obj                        
             os.mkdir(obj[:-5]+'_outdir')                   
             os_command =  'drcontrol'
             os_command += ' reduce_object ' + obj
@@ -309,8 +309,8 @@ class dr2df():
             os_command += ' -FFLAT_FILENAME ' + j[0][:-5] + 'red.fits'
             os_command += ' -OUT_DIRNAME ' + obj[:-5]+'_outdir'
 #                                 os_command += ' -TPMETH OFFSKY'
-            os.system('killall drcontrol')
-            os.system('killall drexec')
+            os.system('cleanup')
+
             print '      OS Command '+ os_command
 #                                     out = subprocess.call(os_command, env = env, shell = True)
             os.system(os_command)
@@ -355,13 +355,23 @@ class dr2df():
                         os_command =  'drcontrol'
                         os_command += ' reduce_bias ' + obj
                         os_command += ' -idxfile ' + idxFile
-                        os.system('killall drcontrol')
-                        os.system('killall drexec')
+                        os.system('clenaup')
                         os.system(os_command)
    
 
 # <codecell>
 
+import subprocess as sp
+import os
+
+# <codecell>
+
+# os.system('ls')
+sp.call('printenv $PATH', shell=True)
+
+# <codecell>
+
+sp.STDOUT(DISPLAY)
 
 # <codecell>
 

@@ -105,6 +105,7 @@ class dr2df():
         elif self.reduceMode=='single_set':
             #reduce single dataset
             i=self.reduceSet
+            print time.strftime('%X %x %Z'),'---------------Starting Dataset #', i
             self.target_dir = self.target_root + str(i) + '_'+ self.filename_prfx[i] +'/'
             self.file_ix = self.ix_array[i]
             self.create_file_list(i)

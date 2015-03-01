@@ -360,20 +360,3 @@ class dr2df():
                         os.system(os_command)
    
 
-# <codecell>
-
-import subprocess as sp
-import os
-
-# <codecell>
-
-# os.system('ls')
-sp.call('printenv $PATH', shell=True)
-
-# <codecell>
-
-sp.STDOUT(DISPLAY)
-
-# <codecell>
-
-

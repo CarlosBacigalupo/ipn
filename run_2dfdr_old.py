@@ -80,7 +80,7 @@ os.environ['PATH'] = '/Users/Carlos/Documents/workspace/2dfdr/6.0/src_code/2dfdr
 # ix_array = [[34,52,53],
 #             range(41,44)+[46,47],
 #             [31,32]+range(36,39),
-#             [53,53]+range(58,63),
+#             [53,54]+range(58,63),
 #             [39,43]+range(44,47)]
 
 

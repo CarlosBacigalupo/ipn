@@ -9,7 +9,7 @@ reduceCam = -1
 
 #RV run, HD1581
 
-reduceMode = 'one_arc'
+reduceMode = 'starting_set'
 
 reduceSet = -1
 if len(sys.argv)>1:
@@ -22,11 +22,11 @@ if len(sys.argv)>1:
     
 #reduction flags
 useBias = False
-copyFiles = True
+copyFiles = False
 doReduce = True
 overwrite = True
 idxFile = 'no_flat_no_bias.idx'
-startFrom = 0 #number of data set to begin with. 0 for beginning. Good for starting half way through if it cancelled
+startFrom = 2 #number of data set to begin with. 0 for beginning. Good for starting half way through if it cancelled
 
 #path to 2dfdr
 # dr_dir = '/home/staff/mq20101889/2dfdr/6.2/2dfdr_install/bin' #in nut
@@ -57,7 +57,7 @@ root_date_link = np.array([0,0,0,0,0])
 ix_array = [[34,52,53],
             [47,46]+range(41,44),
             [32,31]+range(36,39),
-            [53,53]+range(58,63),
+            [53,54]+range(58,63),
             [39,43]+range(44,47)]
  
 #####End of custom data#################################################################

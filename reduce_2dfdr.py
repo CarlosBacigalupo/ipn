@@ -86,14 +86,14 @@ class dr2df():
 
             #first do the 1st reduction as usual
             
-            self.target_dir = self.target_root + str(0) + '_'+ self.filename_prfx[0] +'/'
-            self.file_ix = self.ix_array[0]
-            self.create_file_list(0)
+            self.target_dir = self.target_root + str(self.startFrom) + '_'+ self.filename_prfx[self.startFrom] +'/'
+            self.file_ix = self.ix_array[self.startFrom]
+            self.create_file_list(self.startFrom)
 
             if self.doReduce==True:
-                print time.strftime('%X %x %Z'),'  Reducing first frame', self.filename_prfx[0]
+                print time.strftime('%X %x %Z'),'  Reducing master frame', self.filename_prfx[self.startFrom]
                 self.reduce_all() 
-                print time.strftime('%X %x %Z'),'  First frame reduced', self.filename_prfx[0]
+                print time.strftime('%X %x %Z'),'  First master reduced', self.filename_prfx[self.startFrom]
                 print time.strftime('%X %x %Z'),''
             else:
                 print time.strftime('%X %x %Z'),'Reduction flag turned off. All done.'
@@ -101,6 +101,17 @@ class dr2df():
             #replace flats and arcs for datasets>0
             print time.strftime('%X %x %Z'),'   Copying reduced flats and arcs to subsequent data sets'
             self.copy_flat_arc()
+
+            no_masters = range(len(self.filename_prfx))
+            no_masters.remove(int(self.startFrom))
+            for i in no_masters:
+
+                print time.strftime('%X %x %Z'),'---------------Starting Dataset #', i
+                self.target_dir = self.target_root + str(i) + '_'+ self.filename_prfx[i] +'/'
+                self.file_ix = self.ix_array[i]
+                self.create_file_list(i)
+            
+                self.reduce_all()
             
         elif self.reduceMode=='single_set':
             #reduce single dataset
@@ -112,6 +123,18 @@ class dr2df():
             
             self.reduce_all()
                 
+        elif self.reduceMode=='single_set_science':
+            #reduce single dataset
+            i=self.reduceSet
+            print time.strftime('%X %x %Z'),'---------------Starting Dataset #', i
+            self.target_dir = self.target_root + str(i) + '_'+ self.filename_prfx[i] +'/'
+            self.file_ix = self.ix_array[i]
+            self.create_file_list(i)
+            
+            for cam,j in enumerate([self.files1, self.files2, self.files3, self.files4]):
+                if ((self.reduceCam==-1) or (self.reduceCam==cam)):
+                    self.reduce_science(cam, j)
+                
         elif self.reduceMode=='starting_set':
             #reduce single dataset
             for i in range(self.startFrom,len(self.filename_prfx)):
@@ -122,6 +145,19 @@ class dr2df():
                 self.create_file_list(i)
             
                 self.reduce_all()
+
+        elif self.reduceMode=='starting_set_science':
+            #reduce single dataset
+            for i in range(self.startFrom,len(self.filename_prfx)):
+                
+                print time.strftime('%X %x %Z'),'---------------Starting Dataset #', i
+                self.target_dir = self.target_root + str(i) + '_'+ self.filename_prfx[i] +'/'
+                self.file_ix = self.ix_array[i]
+                self.create_file_list(i)
+            
+                for cam,j in enumerate([self.files1, self.files2, self.files3, self.files4]):
+                    if ((self.reduceCam==-1) or (self.reduceCam==cam)):
+                        self.reduce_science(cam, j)
 
     
     def create_file_list(self, thisSetIx = 0 ):
@@ -246,9 +282,9 @@ class dr2df():
     def copy_flat_arc(self):     
         
         #crates the list of source files fro dataset=0
-        self.target_dir = self.target_root + str(0) + '_'+ self.filename_prfx[0] +'/'
-        self.file_ix = self.ix_array[0]
-        self.create_file_list(0)
+        self.target_dir = self.target_root + str(self.startFrom) + '_'+ self.filename_prfx[self.startFrom] +'/'
+        self.file_ix = self.ix_array[self.startFrom]
+        self.create_file_list(self.startFrom)
         src_list = []
         for cam,j in enumerate([self.files1, self.files2, self.files3, self.files4]):
             src_list.append(self.target_dir + str(cam+1) + '/' +j[0])
@@ -262,7 +298,9 @@ class dr2df():
             src_list.append(self.target_dir + str(cam+1) + '/' +j[1][:-5] + 'red.fits')
         
         #for all datasets>0 create target_list and copy src_list to target_list
-        for i in range(1,len(self.ix_array)):
+        no_masters = range(len(self.ix_array))
+        no_masters.remove(int(self.startFrom))
+        for i in no_masters:
             self.target_dir = self.target_root + str(i) + '_'+ self.filename_prfx[i] +'/'
             self.file_ix = self.ix_array[i]
             self.create_file_list(i)

@@ -9,7 +9,7 @@ reduceCam = -1
 
 # M67, all observations
 
-reduceMode = 'one_arc'
+reduceMode = 'starting_set'
 
 reduceSet = -1
 if len(sys.argv)>1:
@@ -22,11 +22,11 @@ if len(sys.argv)>1:
     
 #reduction flags
 useBias = False
-copyFiles = True
+copyFiles = False
 doReduce = True
 overwrite = True
 idxFile = 'no_flat_no_bias.idx'
-startFrom = 0 #number of data set to begin with. 0 for beginning. Good for starting half way through if it cancelled
+startFrom = 1 #number of data set to begin with. 0 for beginning. Good for starting half way through if it cancelled
 
 
 #path to 2dfdr
@@ -35,7 +35,6 @@ dr_dir = '/home/staff/mq20101889/2dfdr/6.2/2dfdr_install/bin' #in nut
 
 #target directory. It will copy the data files to sub-directories branching from this directory
 target_root = '/home/staff/mq20101889/HERMES/reductions/m67_lr_1arc_6.2/' #in nut
-# target_root = '/home/staff/mq20101889/HERMES/reductions/test/' #in nut
 
 #all science reduced (*red.fits) files will be copied to this directory
 final_dir = '/home/staff/mq20101889/HERMES/reductions/m67_lr_1arc_6.2/'

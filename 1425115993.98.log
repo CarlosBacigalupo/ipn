@@ -1,0 +1,83 @@
+20:33:13 02/28/15 AEDT   starting reduction
+20:33:13 02/28/15 AEDT Created filenames for 4 channels. Example: ['12jan10029.fits', '12jan10028.fits', '12jan10030.fits', '12jan10031.fits', '12jan10032.fits']
+20:33:13 02/28/15 AEDT current folders is /home/staff/mq20101889/HERMES/reductions/m67_lr_6.2/6_12jan/1/
+      Flat  12jan10029.fits
+      Arc  12jan10028.fits
+      Science files ['12jan10030.fits', '12jan10031.fits', '12jan10032.fits']
+20:33:13 02/28/15 AEDT       >>Reducing flat
+      OS Command drcontrol reduce_fflat 12jan10029.fits -idxfile no_flat_no_bias.idx -OUT_DIRNAME 12jan10029_outdir
+20:35:17 02/28/15 AEDT       >>Reducing arc
+      OS Command drcontrol reduce_arc 12jan10028.fits -idxfile no_flat_no_bias.idx -TLMAP_FILENAME 12jan10029tlm.fits -OUT_DIRNAME 12jan10028_outdir
+20:38:22 02/28/15 AEDT       >>Scrunching flat
+      OS Command drcontrol reduce_fflat 12jan10029.fits -idxfile no_flat_no_bias.idx -WAVEL_FILENAME 12jan10028red.fits -OUT_DIRNAME 12jan10029_outdir
+20:42:48 02/28/15 AEDT       >>Reducing science 12jan10030.fits
+      OS Command drcontrol reduce_object 12jan10030.fits -idxfile no_flat_no_bias.idx -WAVEL_FILENAME 12jan10028red.fits -TLMAP_FILENAME 12jan10029tlm.fits -FFLAT_FILENAME 12jan10029red.fits -OUT_DIRNAME 12jan10030_outdir
+      Copying 12jan10030red.fits to /home/staff/mq20101889/HERMES/reductions/m67_lr_6.2/cam1/
+20:47:40 02/28/15 AEDT       >>Reducing science 12jan10031.fits
+      OS Command drcontrol reduce_object 12jan10031.fits -idxfile no_flat_no_bias.idx -WAVEL_FILENAME 12jan10028red.fits -TLMAP_FILENAME 12jan10029tlm.fits -FFLAT_FILENAME 12jan10029red.fits -OUT_DIRNAME 12jan10031_outdir
+      Copying 12jan10031red.fits to /home/staff/mq20101889/HERMES/reductions/m67_lr_6.2/cam1/
+20:52:38 02/28/15 AEDT       >>Reducing science 12jan10032.fits
+      OS Command drcontrol reduce_object 12jan10032.fits -idxfile no_flat_no_bias.idx -WAVEL_FILENAME 12jan10028red.fits -TLMAP_FILENAME 12jan10029tlm.fits -FFLAT_FILENAME 12jan10029red.fits -OUT_DIRNAME 12jan10032_outdir
+      Copying 12jan10032red.fits to /home/staff/mq20101889/HERMES/reductions/m67_lr_6.2/cam1/
+20:57:28 02/28/15 AEDT current folders is /home/staff/mq20101889/HERMES/reductions/m67_lr_6.2/6_12jan/2/
+      Flat  12jan20029.fits
+      Arc  12jan20028.fits
+      Science files ['12jan20030.fits', '12jan20031.fits', '12jan20032.fits']
+20:57:28 02/28/15 AEDT       >>Reducing flat
+      OS Command drcontrol reduce_fflat 12jan20029.fits -idxfile no_flat_no_bias.idx -OUT_DIRNAME 12jan20029_outdir
+21:03:10 02/28/15 AEDT       >>Reducing arc
+      OS Command drcontrol reduce_arc 12jan20028.fits -idxfile no_flat_no_bias.idx -TLMAP_FILENAME 12jan20029tlm.fits -OUT_DIRNAME 12jan20028_outdir
+21:09:14 02/28/15 AEDT       >>Scrunching flat
+      OS Command drcontrol reduce_fflat 12jan20029.fits -idxfile no_flat_no_bias.idx -WAVEL_FILENAME 12jan20028red.fits -OUT_DIRNAME 12jan20029_outdir
+21:16:25 02/28/15 AEDT       >>Reducing science 12jan20030.fits
+      OS Command drcontrol reduce_object 12jan20030.fits -idxfile no_flat_no_bias.idx -WAVEL_FILENAME 12jan20028red.fits -TLMAP_FILENAME 12jan20029tlm.fits -FFLAT_FILENAME 12jan20029red.fits -OUT_DIRNAME 12jan20030_outdir
+      Copying 12jan20030red.fits to /home/staff/mq20101889/HERMES/reductions/m67_lr_6.2/cam2/
+21:27:48 02/28/15 AEDT       >>Reducing science 12jan20031.fits
+      OS Command drcontrol reduce_object 12jan20031.fits -idxfile no_flat_no_bias.idx -WAVEL_FILENAME 12jan20028red.fits -TLMAP_FILENAME 12jan20029tlm.fits -FFLAT_FILENAME 12jan20029red.fits -OUT_DIRNAME 12jan20031_outdir
+      Copying 12jan20031red.fits to /home/staff/mq20101889/HERMES/reductions/m67_lr_6.2/cam2/
+21:42:11 02/28/15 AEDT       >>Reducing science 12jan20032.fits
+      OS Command drcontrol reduce_object 12jan20032.fits -idxfile no_flat_no_bias.idx -WAVEL_FILENAME 12jan20028red.fits -TLMAP_FILENAME 12jan20029tlm.fits -FFLAT_FILENAME 12jan20029red.fits -OUT_DIRNAME 12jan20032_outdir
+      Copying 12jan20032red.fits to /home/staff/mq20101889/HERMES/reductions/m67_lr_6.2/cam2/
+22:00:22 02/28/15 AEDT current folders is /home/staff/mq20101889/HERMES/reductions/m67_lr_6.2/6_12jan/3/
+      Flat  12jan30029.fits
+      Arc  12jan30028.fits
+      Science files ['12jan30030.fits', '12jan30031.fits', '12jan30032.fits']
+22:00:22 02/28/15 AEDT       >>Reducing flat
+      OS Command drcontrol reduce_fflat 12jan30029.fits -idxfile no_flat_no_bias.idx -OUT_DIRNAME 12jan30029_outdir
+22:15:27 02/28/15 AEDT       >>Reducing arc
+      OS Command drcontrol reduce_arc 12jan30028.fits -idxfile no_flat_no_bias.idx -TLMAP_FILENAME 12jan30029tlm.fits -OUT_DIRNAME 12jan30028_outdir
+22:30:04 02/28/15 AEDT       >>Scrunching flat
+      OS Command drcontrol reduce_fflat 12jan30029.fits -idxfile no_flat_no_bias.idx -WAVEL_FILENAME 12jan30028red.fits -OUT_DIRNAME 12jan30029_outdir
+22:49:41 02/28/15 AEDT       >>Reducing science 12jan30030.fits
+      OS Command drcontrol reduce_object 12jan30030.fits -idxfile no_flat_no_bias.idx -WAVEL_FILENAME 12jan30028red.fits -TLMAP_FILENAME 12jan30029tlm.fits -FFLAT_FILENAME 12jan30029red.fits -OUT_DIRNAME 12jan30030_outdir
+      Copying 12jan30030red.fits to /home/staff/mq20101889/HERMES/reductions/m67_lr_6.2/cam3/
+22:59:20 02/28/15 AEDT       >>Reducing science 12jan30031.fits
+      OS Command drcontrol reduce_object 12jan30031.fits -idxfile no_flat_no_bias.idx -WAVEL_FILENAME 12jan30028red.fits -TLMAP_FILENAME 12jan30029tlm.fits -FFLAT_FILENAME 12jan30029red.fits -OUT_DIRNAME 12jan30031_outdir
+      Copying 12jan30031red.fits to /home/staff/mq20101889/HERMES/reductions/m67_lr_6.2/cam3/
+23:09:03 02/28/15 AEDT       >>Reducing science 12jan30032.fits
+      OS Command drcontrol reduce_object 12jan30032.fits -idxfile no_flat_no_bias.idx -WAVEL_FILENAME 12jan30028red.fits -TLMAP_FILENAME 12jan30029tlm.fits -FFLAT_FILENAME 12jan30029red.fits -OUT_DIRNAME 12jan30032_outdir
+      Copying 12jan30032red.fits to /home/staff/mq20101889/HERMES/reductions/m67_lr_6.2/cam3/
+23:19:17 02/28/15 AEDT current folders is /home/staff/mq20101889/HERMES/reductions/m67_lr_6.2/6_12jan/4/
+      Flat  12jan40029.fits
+      Arc  12jan40028.fits
+      Science files ['12jan40030.fits', '12jan40031.fits', '12jan40032.fits']
+23:19:17 02/28/15 AEDT       >>Reducing flat
+      OS Command drcontrol reduce_fflat 12jan40029.fits -idxfile no_flat_no_bias.idx -OUT_DIRNAME 12jan40029_outdir
+23:30:19 02/28/15 AEDT       >>Reducing arc
+      OS Command drcontrol reduce_arc 12jan40028.fits -idxfile no_flat_no_bias.idx -TLMAP_FILENAME 12jan40029tlm.fits -OUT_DIRNAME 12jan40028_outdir
+23:40:17 02/28/15 AEDT       >>Scrunching flat
+      OS Command drcontrol reduce_fflat 12jan40029.fits -idxfile no_flat_no_bias.idx -WAVEL_FILENAME 12jan40028red.fits -OUT_DIRNAME 12jan40029_outdir
+23:51:27 02/28/15 AEDT       >>Reducing science 12jan40030.fits
+      OS Command drcontrol reduce_object 12jan40030.fits -idxfile no_flat_no_bias.idx -WAVEL_FILENAME 12jan40028red.fits -TLMAP_FILENAME 12jan40029tlm.fits -FFLAT_FILENAME 12jan40029red.fits -OUT_DIRNAME 12jan40030_outdir
+      Copying 12jan40030red.fits to /home/staff/mq20101889/HERMES/reductions/m67_lr_6.2/cam4/
+00:01:21 03/01/15 AEDT       >>Reducing science 12jan40031.fits
+      OS Command drcontrol reduce_object 12jan40031.fits -idxfile no_flat_no_bias.idx -WAVEL_FILENAME 12jan40028red.fits -TLMAP_FILENAME 12jan40029tlm.fits -FFLAT_FILENAME 12jan40029red.fits -OUT_DIRNAME 12jan40031_outdir
+      Copying 12jan40031red.fits to /home/staff/mq20101889/HERMES/reductions/m67_lr_6.2/cam4/
+00:11:31 03/01/15 AEDT       >>Reducing science 12jan40032.fits
+      OS Command drcontrol reduce_object 12jan40032.fits -idxfile no_flat_no_bias.idx -WAVEL_FILENAME 12jan40028red.fits -TLMAP_FILENAME 12jan40029tlm.fits -FFLAT_FILENAME 12jan40029red.fits -OUT_DIRNAME 12jan40032_outdir
+      Copying 12jan40032red.fits to /home/staff/mq20101889/HERMES/reductions/m67_lr_6.2/cam4/
+00:21:47 03/01/15 AEDT current folders is /home/staff/mq20101889/HERMES/reductions/m67_lr_6.2/6_12jan/1/
+      Flat  12jan10029.fits
+      Arc  12jan10028.fits
+      Science files ['12jan10030.fits', '12jan10031.fits', '12jan10032.fits']
+00:21:47 03/01/15 AEDT       >>Reducing flat

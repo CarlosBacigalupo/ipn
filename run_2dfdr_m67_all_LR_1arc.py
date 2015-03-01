@@ -7,9 +7,9 @@ import time
 
 reduceCam = -1
 
-#RV run, NGC2477 all
+# M67, all observations
 
-reduceMode = 'starting_set'
+reduceMode = 'one_arc'
 
 reduceSet = -1
 if len(sys.argv)>1:
@@ -28,46 +28,73 @@ overwrite = True
 idxFile = 'no_flat_no_bias.idx'
 startFrom = 0 #number of data set to begin with. 0 for beginning. Good for starting half way through if it cancelled
 
+
 #path to 2dfdr
-# dr_dir = '/home/staff/mq20101889/2dfdr/6.2/2dfdr_install/bin' #in nut
-# dr_dir = '/Users/Carlos/Documents/workspace/2dfdr/6.2/2dfdr_install/bin/' #my laptop
-dr_dir = '/home/science/staff/kalumbe/2dfdr/6.2/2dfdr_install/bin/' #in ceres
+dr_dir = '/home/staff/mq20101889/2dfdr/6.2/2dfdr_install/bin' #in nut
+# dr_dir = '/Users/Carlos/Documents/workspace/2dfdr/6.0/src_code/2dfdr-6.0/bin/' #local
 
 #target directory. It will copy the data files to sub-directories branching from this directory
-target_root = '/disks/ceres/makemake/aphot/kalumbe/reductions/NGC2477_6.2/' #ceres
+target_root = '/home/staff/mq20101889/HERMES/reductions/m67_lr_1arc_6.2/' #in nut
+# target_root = '/home/staff/mq20101889/HERMES/reductions/test/' #in nut
 
 #all science reduced (*red.fits) files will be copied to this directory
-final_dir = '/disks/ceres/makemake/aphot/kalumbe/reductions/NGC2477_6.2/' #ceres
+final_dir = '/home/staff/mq20101889/HERMES/reductions/m67_lr_1arc_6.2/'
 
 #path to data sources
 HERMES_data_root = []
-HERMES_data_root.append('/disks/ceres/makemake/aphot/kalumbe/hermes/jan14/')
+HERMES_data_root.append('/home/staff/mq20101889/galah_data/')
+HERMES_data_root.append('/home/staff/mq20101889/galah_pilot/')
+HERMES_data_root.append('/home/staff/mq20101889/RV_data/')
+HERMES_data_root.append('/home/staff/mq20101889/jan14_data/')
 HERMES_data_root = np.array(HERMES_data_root)
 
 #len(date_list) = number of observations (can have more than 1 science file per observation)
-date_list = ['140107',
-             '140107',
-             '140107',
-             '140109',
-             '140109',
-             '140109',
-             '140109',
-             '140109']
+date_list = ['131217',
+            '131217',
+            '131218',
+            '140111',
+            '140111',
+            '140111',
+            '140112',
+            '140209',
+            '140209',
+            '140210',
+            '140211',
+            '140211',
+            '140107',
+            '140107',
+            '140107',
+            '140107',
+            '140109',
+            '140109',
+            '140109',
+            '140109',
+            '140109']
 
-root_date_link = np.array([0,0,0,0,0,0,0,0])
+root_date_link = np.array([1,1,1,1,1,1,1,0,0,0,0,0,3,3,3,3,3,3,3,3,3])
 
-
-#Filenumbers for each dataset FLAT_IDX, ARC_IDX, SCIENCE_IDX[S]. Assumes [flat, arc, sci, sci, ...]
-ix_array = [[27,25]+range(28,31),
-            [31,32]+range(33,37),
-            [38,37]+range(39,47),
-            [20,19]+range(16,19),
-            [25,24]+range(21,24),
-            [44,43]+range(39,43),
-            [55,54,53],
-            [60,59]+range(56,59)]
-#####End of custom data#################################################################
-
+#Filenumbers for each dataset FLAT_IDX, ARC_IDX, SCIENCE_IDX[S]. Asumes [flat, arc, sci, sci, ...]
+ix_array = [[42,43]+range(39,42),
+            [47,48]+range(44,47),
+            [35,34]+range(30,34),
+            [27,26]+range(28,31),
+            [32,31]+range(33,36),
+            [37,36]+range(38,41),
+            [29,28]+range(30,33),
+            [27,28]+range(29,32),
+            [32,33]+range(34,37),
+            [25,26]+range(27,34),
+            [11,12]+range(13,19),
+            [19,20]+range(21,27),
+            [48,47]+range(49,52),
+            [53,52]+range(54,57),
+            [58,57]+range(59,62),
+            [63,62]+[64],
+            [29,28]+range(26,28),
+            [35,34]+range(30,34),
+            [38,37]+[36],
+            [47,46]+[45],
+            [52,51]+range(48,51)]
 
 
 #adds 2dfdr bi path to PATH variable
@@ -106,7 +133,7 @@ dr2df.source_dir_array = source_dir_array
      
 #run forest, run
 
-sys.stdout = open(str(reduceSet)+'_'+str(time.strftime('%X'))+'.log', 'w')
+sys.stdout = open(str(reduceSet)+'_'+str(time.strftime('%T'))+'.log', 'w')
                   
 print time.strftime('%X %x %Z'), '  Starting reduction'
 dr2df.runReduction()

@@ -26,7 +26,7 @@ copyFiles = False
 doReduce = True
 overwrite = True
 idxFile = 'no_flat_no_bias.idx'
-startFrom = 1 #number of data set to begin with. 0 for beginning. Good for starting half way through if it cancelled
+startFrom = 12 #number of data set to begin with. 0 for beginning. Good for starting half way through if it cancelled
 
 
 #path to 2dfdr
@@ -132,7 +132,7 @@ dr2df.source_dir_array = source_dir_array
      
 #run forest, run
 
-sys.stdout = open(str(reduceSet)+'_'+str(time.strftime('%T'))+'.log', 'w')
+sys.stdout = open(str(startFrom)+str(reduceSet)+'_'+str(time.strftime('%X'))+'.log', 'w')
                   
 print time.strftime('%X %x %Z'), '  Starting reduction'
 dr2df.runReduction()

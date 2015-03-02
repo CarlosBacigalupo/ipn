@@ -15,6 +15,7 @@ import os
 import shutil
 import subprocess 
 import time
+import sys
 
 # <codecell>
 
@@ -55,6 +56,7 @@ class dr2df():
         ############### Copy bit
         if self.copyFiles==True:
             print time.strftime('%X %x %Z'),'Copying all data files...'
+            sys.stdout.flush()
             for thisSetIx in range(len(self.filename_prfx)):
                 
                 print '   ' + self.filename_prfx[thisSetIx]
@@ -63,26 +65,28 @@ class dr2df():
                 self.file_ix = self.ix_array[thisSetIx]
                 self.source_dir = self.source_dir_array[thisSetIx]
                 
-                if self.create_folders():
-                    self.create_file_list(thisSetIx)
-                    
-                    #copy fileset x 4cams
-                    for cam, camList in enumerate([self.files1, self.files2, self.files3, self.files4]):
-                        for i in camList:
-                            src = self.source_dir  + 'ccd_' + str(cam+1) + '/' + i
-                            dst = self.target_dir + '' + str(cam+1) + '/' + i
-        
-                            if not os.path.exists(dst):
-                                shutil.copy(src, dst)
-                                print time.strftime('%X %x %Z'),'      Copied '+ dst
+                self.create_folders()
+                self.create_file_list(thisSetIx)
+                
+                #copy fileset x 4cams
+                for cam, camList in enumerate([self.files1, self.files2, self.files3, self.files4]):
+                    for i in camList:
+                        src = self.source_dir  + 'ccd_' + str(cam+1) + '/' + i
+                        dst = self.target_dir + '' + str(cam+1) + '/' + i
+
+                        if not os.path.exists(dst):
+                            shutil.copy(src, dst)
+                            print time.strftime('%X %x %Z'),'      Copied '+ dst
         
             print time.strftime('%X %x %Z'),'End of file copy'
             print time.strftime('%X %x %Z'),''
+            sys.stdout.flush()
 
             
         ############### Reduction bit
         if self.reduceMode=='one_arc':
             print 'Starting one-arc reduction'
+            sys.stdout.flush()
 
             #first do the 1st reduction as usual
             
@@ -92,6 +96,7 @@ class dr2df():
 
             if self.doReduce==True:
                 print time.strftime('%X %x %Z'),'  Reducing master frame', self.filename_prfx[self.startFrom]
+                sys.stdout.flush()
                 self.reduce_all() 
                 print time.strftime('%X %x %Z'),'  First master reduced', self.filename_prfx[self.startFrom]
                 print time.strftime('%X %x %Z'),''
@@ -100,6 +105,7 @@ class dr2df():
             
             #replace flats and arcs for datasets>0
             print time.strftime('%X %x %Z'),'   Copying reduced flats and arcs to subsequent data sets'
+            sys.stdout.flush()
             self.copy_flat_arc()
 
             no_masters = range(len(self.filename_prfx))
@@ -107,6 +113,7 @@ class dr2df():
             for i in no_masters:
 
                 print time.strftime('%X %x %Z'),'---------------Starting Dataset #', i
+                sys.stdout.flush()
                 self.target_dir = self.target_root + str(i) + '_'+ self.filename_prfx[i] +'/'
                 self.file_ix = self.ix_array[i]
                 self.create_file_list(i)
@@ -117,6 +124,7 @@ class dr2df():
             #reduce single dataset
             i=self.reduceSet
             print time.strftime('%X %x %Z'),'---------------Starting Dataset #', i
+            sys.stdout.flush()
             self.target_dir = self.target_root + str(i) + '_'+ self.filename_prfx[i] +'/'
             self.file_ix = self.ix_array[i]
             self.create_file_list(i)
@@ -127,6 +135,7 @@ class dr2df():
             #reduce single dataset
             i=self.reduceSet
             print time.strftime('%X %x %Z'),'---------------Starting Dataset #', i
+            sys.stdout.flush()
             self.target_dir = self.target_root + str(i) + '_'+ self.filename_prfx[i] +'/'
             self.file_ix = self.ix_array[i]
             self.create_file_list(i)
@@ -140,6 +149,7 @@ class dr2df():
             for i in range(self.startFrom,len(self.filename_prfx)):
                 
                 print time.strftime('%X %x %Z'),'---------------Starting Dataset #', i
+                sys.stdout.flush()
                 self.target_dir = self.target_root + str(i) + '_'+ self.filename_prfx[i] +'/'
                 self.file_ix = self.ix_array[i]
                 self.create_file_list(i)
@@ -151,6 +161,7 @@ class dr2df():
             for i in range(self.startFrom,len(self.filename_prfx)):
                 
                 print time.strftime('%X %x %Z'),'---------------Starting Dataset #', i
+                sys.stdout.flush()
                 self.target_dir = self.target_root + str(i) + '_'+ self.filename_prfx[i] +'/'
                 self.file_ix = self.ix_array[i]
                 self.create_file_list(i)
@@ -168,6 +179,30 @@ class dr2df():
         self.files4 =  [self.filename_prfx[thisSetIx] +'4' + str(name).zfill(4)+ '.fits' for name in self.file_ix]
         
         print time.strftime('%X %x %Z'),'Created filenames for 4 channels. Example:', str(self.files1)
+        sys.stdout.flush()
+        
+    def collect_red_files(self):
+        
+        for i in range(len(self.filename_prfx)):
+            print time.strftime('%X %x %Z'),'Copying results from Dataset #', i
+            sys.stdout.flush()
+            self.target_dir = self.target_root + str(i) + '_'+ self.filename_prfx[i] +'/'
+            self.file_ix = self.ix_array[i]
+            self.create_file_list(i)
+
+            for cam,j in enumerate([self.files1, self.files2, self.files3, self.files4]):
+                os.chdir(self.target_dir + str(cam+1) + '/')
+                print time.strftime('%X %x %Z'),'current folders is',self.target_dir + str(cam+1) + '/'
+                obj_files = np.array(j[2:])
+                for obj in obj_files:
+                    print '      Copying '+ obj[:-5]+'red.fits to ' + self.final_dir + 'cam' + str(cam+1) + '/'  
+                    sys.stdout.flush()
+                    try:
+                        shutil.copyfile(obj[:-5]+'red.fits', self.final_dir + 'cam' + str(cam+1) + '/' + obj[:-5]+'red.fits')
+                    except:
+                        print '^^^^^Could not copy'
+                        sys.stdout.flush()
+        
         
         
     def create_folders(self):
@@ -178,9 +213,11 @@ class dr2df():
             if ((ex.errno == 66) or (ex.errno == 17)):
                 if self.overwrite==True:
                     print time.strftime('%X %x %Z'),'>>>> Overwriting', self.target_dir
+                    sys.stdout.flush()
                     os.system('rm -r '+self.target_dir )
                 else:
                     print time.strftime('%X %x %Z'),'Target folder', self.target_dir,' not empty. Overwrite is off. '
+                    sys.stdout.flush()
                     return False
         os.mkdir(self.target_dir)
         os.mkdir(self.target_dir+'1/')
@@ -195,7 +232,9 @@ class dr2df():
             os.mkdir(self.final_dir+'cam4/')
         except:
             print time.strftime('%X %x %Z'),'>>>> Final folder creation failed(no biggie), please check '+self.final_dir
-        return True
+            sys.stdout.flush()
+
+            return True
     
     
             
@@ -213,6 +252,7 @@ class dr2df():
                 print '      Flat ',j[0]
                 print '      Arc ',j[1]
                 print '      Science files ' + str(j[2:])
+                sys.stdout.flush()
 
 
                 #flat
@@ -232,6 +272,7 @@ class dr2df():
                 os_command += ' -OUT_DIRNAME '  + j[0][:-5]+'_outdir'
                 os.system('cleanup')
                 print '      OS Command '+ os_command
+                sys.stdout.flush()
     #             out = subprocess.call(os_command, env = env, shell = True)
                 os.system(os_command)
 
@@ -245,6 +286,7 @@ class dr2df():
                         return False
 
                 print time.strftime('%X %x %Z'),'      >>Reducing arc'    
+                sys.stdout.flush()
                 os.mkdir(self.target_dir + str(cam+1) + '/' + j[1][:-5]+'_outdir')                   
                 os_command =  'drcontrol'
                 os_command += ' reduce_arc '  + j[1]
@@ -254,6 +296,7 @@ class dr2df():
                 os_command += ' -OUT_DIRNAME ' + j[1][:-5]+'_outdir'
                 os.system('cleanup')
                 print '      OS Command '+ os_command
+                sys.stdout.flush()
     #             out = subprocess.call(os_command, env = env, shell = True)
                 os.system(os_command)
     #                         shutil.copyfile(j[self.flat][:-5] + 'tlm.fits', '../../cam' +str(cam)+'/'+ j[self.flat][:-5] + 'tlm.fits')
@@ -261,6 +304,7 @@ class dr2df():
 
                 #flat
                 print time.strftime('%X %x %Z'),'      >>Scrunching flat'    
+                sys.stdout.flush()
                 os_command =  'drcontrol'
                 os_command += ' reduce_fflat ' + j[0]
                 os_command += ' -idxfile ' + self.idxFile
@@ -269,6 +313,7 @@ class dr2df():
                 os_command += ' -OUT_DIRNAME ' + j[0][:-5]+'_outdir'
                 os.system('cleanup')
                 print '      OS Command '+ os_command
+                sys.stdout.flush()
     #             out = subprocess.call(os_command, env = env, shell = True)
                 os.system(os_command)
 
@@ -319,6 +364,7 @@ class dr2df():
             #copy this set
             for src,tgt in zip(src_list, target_list):
                 print 'Copying ',src,' to ',tgt
+                sys.stdout.flush()
                 shutil.copyfile(src,tgt)
             
             
@@ -338,6 +384,7 @@ class dr2df():
                     return False
 
             print time.strftime('%X %x %Z'),'      >>Reducing science '+ obj                        
+            sys.stdout.flush()
             os.mkdir(obj[:-5]+'_outdir')                   
             os_command =  'drcontrol'
             os_command += ' reduce_object ' + obj
@@ -351,10 +398,12 @@ class dr2df():
             os.system('cleanup')
 
             print '      OS Command '+ os_command
+            sys.stdout.flush()
 #                                     out = subprocess.call(os_command, env = env, shell = True)
             os.system(os_command)
     
-            print '      Copying '+ obj[:-5]+'red.fits to ' + self.final_dir + 'cam' + str(cam+1) + '/'               
+            print '      Copying '+ obj[:-5]+'red.fits to ' + self.final_dir + 'cam' + str(cam+1) + '/'  
+            sys.stdout.flush()
             shutil.copyfile(obj[:-5]+'red.fits', self.final_dir + 'cam' + str(cam+1) + '/' + obj[:-5]+'red.fits')
 #                                     shutil.copyfile(obj, '../../cam' +str(cam)+'/'+ obj)
     

@@ -28,7 +28,7 @@ overwrite = True
 idxFile = 'no_flat_no_bias.idx'
 startFrom = 0 #number of data set to begin with. 0 for beginning. Good for starting half way through if it cancelled
 
-#path to 2dfdr
+#path to 2dfdr    
 # dr_dir = '/home/staff/mq20101889/2dfdr/6.2/2dfdr_install/bin' #in nut
 dr_dir = '/Users/Carlos/Documents/workspace/2dfdr/6.2/2dfdr_install/bin/' #my laptop
 
@@ -101,8 +101,24 @@ dr2df.source_dir_array = source_dir_array
      
 #run forest, run
 
-sys.stdout = open(str(reduceSet)+'_'+str(time.strftime('%X'))+'.log', 'w')
+sys.stdout = open(str(startFrom)+str(reduceSet)+'_'+str(time.strftime('%X'))+'.log', 'w')
                   
-print time.strftime('%X %x %Z'), '  Starting reduction'
-dr2df.runReduction()
-print time.strftime('%X %x %Z'), '  Ending reduction'
+# print time.strftime('%X %x %Z'), '  Starting reduction'
+# dr2df.runReduction()
+# print time.strftime('%X %x %Z'), '  Ending reduction'
+
+# print time.strftime('%X %x %Z'), '  Starting reduction'
+# dr2df.collect_red_files()
+# print time.strftime('%X %x %Z'), '  Ending reduction'
+
+n=0
+for dataset, fileN in zip(filename_prfx, ix_array):
+    for i in fileN[2:]:
+        print str(n)+'_'+str(dataset),'\t',str(i)
+    n+=1
+
+
+
+
+
+

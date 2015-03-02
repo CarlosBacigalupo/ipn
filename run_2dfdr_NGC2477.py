@@ -106,8 +106,14 @@ dr2df.source_dir_array = source_dir_array
      
 #run forest, run
 
-sys.stdout = open(str(reduceSet)+'_'+str(time.strftime('%X'))+'.log', 'w')
+sys.stdout = open(str(startFrom)+str(reduceSet)+'_'+str(time.strftime('%X'))+'.log', 'w')
                   
-print time.strftime('%X %x %Z'), '  Starting reduction'
-dr2df.runReduction()
-print time.strftime('%X %x %Z'), '  Ending reduction'
+# print time.strftime('%X %x %Z'), '  Starting reduction'
+# dr2df.runReduction()
+# print time.strftime('%X %x %Z'), '  Ending reduction'
+
+n=0
+for dataset, fileN in zip(filename_prfx, ix_array):
+    for i in fileN[2:]:
+        print str(n)+'_'+str(dataset),'\t',str(i)
+    n+=1

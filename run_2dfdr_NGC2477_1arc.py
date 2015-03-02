@@ -34,10 +34,10 @@ startFrom = 0 #number of data set to begin with. 0 for beginning. Good for start
 dr_dir = '/home/science/staff/kalumbe/2dfdr/6.2/2dfdr_install/bin/' #in ceres
 
 #target directory. It will copy the data files to sub-directories branching from this directory
-target_root = '/disks/ceres/makemake/aphot/kalumbe/reductions/NGC2477_6.2/' #ceres
+target_root = '/disks/ceres/makemake/aphot/kalumbe/reductions/NGC2477_1arc_6.2/' #ceres
 
 #all science reduced (*red.fits) files will be copied to this directory
-final_dir = '/disks/ceres/makemake/aphot/kalumbe/reductions/NGC2477_6.2/' #ceres
+final_dir = '/disks/ceres/makemake/aphot/kalumbe/reductions/NGC2477_1arc_6.2/' #ceres
 
 #path to data sources
 HERMES_data_root = []

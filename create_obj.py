@@ -8,9 +8,8 @@ import os
 import numpy as np
 import pyfits as pf
 import pickle
-import TableBrowser as tb
 import toolbox
-import pandas
+# import pandas
 
 # <codecell>
 

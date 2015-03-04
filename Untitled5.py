@@ -64,4 +64,46 @@ plt.show()
 
 # <codecell>
 
+cd ~/Documents/HERMES/reductions/47Tuc_core_6.2/
+
+# <codecell>
+
+import pickle
+import pylab as plt
+import numpy as np
+
+# <codecell>
+
+filename = 'Brght24.obj'
+filehandler = open(filename, 'r')
+thisStar = pickle.load(filehandler)
+
+# <codecell>
+
+thisCam = thisStar.exposures.cameras[2]
+
+# <codecell>
+
+print np.nansum(thisCam.red_fluxes,1)
+print np.nansum(thisCam.wavelengths,1)
+
+# <codecell>
+
+for i in a.sigmas[:]:
+    plt.plot(i)
+plt.show()
+
+# <codecell>
+
+i=0
+for x,y,label in zip(thisCam.wavelengths, thisCam.red_fluxes, thisCam.fileNames):
+    plt.plot(x,y+i, label= label, c='k')
+    i+=300
+plt.title(thisStar.name)
+# plt.legend(loc = 0)
+plt.show()
+
+# <codecell>
+
+N104-S2214.obj
 

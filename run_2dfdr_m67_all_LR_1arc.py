@@ -130,6 +130,8 @@ dr2df.filename_prfx = filename_prfx
 dr2df.date_list = date_list
 dr2df.source_dir_array = source_dir_array
      
+     
+     
 #run forest, run
 
 sys.stdout = open(str(startFrom)+str(reduceSet)+'_'+str(time.strftime('%X'))+'.log', 'w')

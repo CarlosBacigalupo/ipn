@@ -24,7 +24,6 @@ class star():
     def __init__(self, name):
         self.load_star_data(name = name)
         
-        
     def load_star_data(self, name):
         
 #         stetson_df = pandas.read_pickle('stetson.pd')
@@ -33,10 +32,9 @@ class star():
             a = pf.open(thisFile)
             b = a['FIBRES'].data
             idx = b.field('NAME').strip()==name
-            
             if b[idx].shape[0] >0:
                 starInfo = b[idx][0]
-                
+
                 self.name = starInfo.field('NAME').strip()
                 self.RA_dec = starInfo.field('RA')
                 self.Dec_dec = starInfo.field('DEC')        
@@ -89,6 +87,10 @@ class camera():
 
 # <codecell>
 
+import sys
+
+# <codecell>
+
 class exposures():
 
     def __init__(self):
@@ -107,61 +109,79 @@ class exposures():
         self.cameras = np.array([a,b,c,d])
         
     def load_exposures(self, name):
-
-        for camIdx in range(4):
+        
+        print 'Collecting MJDs from all 4 channels'
+        for camIdx, cam in enumerate(self.cameras):
             files = glob.glob('cam'+str(camIdx+1)+'/*.fits')
-            thisCam = self.cameras[camIdx]
+            print 'cam'+str(camIdx+1)+':',len(files) #,files
             for thisFile in files:    
+                HDUList = pf.open(thisFile)
+                self.JDs.append(HDUList[0].header['UTMJD'])
+        a = np.unique(np.round(np.array(self.JDs).astype(float),3))
+        self.JDs = np.sort(a)
+        nExposures = len(a)
+        print nExposures, 'exposures per channel'
+        print ''
+        
+        #create top_level arrays
+        self.UTdates = np.chararray(nExposures)
+        self.UTstarts = np.chararray(nExposures)
+        self.UTends = np.chararray(nExposures)
+        self.lengths = np.zeros(nExposures)
+        self.plates = np.chararray(nExposures)
+        self.pivots = np.zeros(nExposures)
+        self.HRs = np.zeros(nExposures).astype(bool)
+        
+
+        
+        for camIdx, cam in enumerate(self.cameras):
+            files = glob.glob('cam'+str(camIdx+1)+'/*.fits')
+            print 'cam'+str(camIdx+1),len(files),'files'
+            
+            thisCam = cam
+            
+            #create camera level arrays
+            thisCam.red_fluxes = np.zeros((nExposures, 4096))
+            thisCam.wavelengths = np.zeros((nExposures, 4096))
+            thisCam.fileNames = np.chararray(nExposures)
+
+            
+            for thisFile in files: 
+                print 'Opening',thisFile,
                 HDUList = pf.open(thisFile)
                 fibreTable = HDUList['FIBRES'].data            
                 idx = fibreTable.field('NAME').strip()==name
-
                 if np.sum(idx)>0:  #star found in fits file 
-                    if camIdx == 0: #one time per exposure (because they are equal in all cameras)
-                        self.UTdates.append(HDUList[0].header['UTDATE'])
-                        self.UTstarts.append(HDUList[0].header['UTSTART'])
-                        self.UTends.append(HDUList[0].header['UTEND'])
-                        try:self.lengths.append(HDUList[0].header['EXPOSED'])
-                        except: self.lengths.append(0)
-                        self.JDs.append(HDUList[0].header['UTMJD'])
-                        self.plates.append(HDUList[0].header['SOURCE'])
-                        self.pivots.append(fibreTable.field('PIVOT')[idx][0])
-                        if HDUList[0].header['SLITMASK'].strip()=='OUT':
-                            self.HRs.append(False)
-                        else:
-                            self.HRs.append(True)
-                    thisCam.red_fluxes.append(HDUList[0].data[idx][0])
-                    thisCam.wavelengths.append(self.extract_HERMES_wavelength(HDUList[0].header))
-                    thisCam.fileNames.append(thisFile.split('/')[-1])
                     
-                        
+                    #one time per exposure (because they are equal in all cameras)
+                    thisMJDidx = ''
+                    thisMJDidx = np.where(self.JDs==round(float(HDUList[0].header['UTMJD']),3))[0]
+                    if len(thisMJDidx)>0:
+                        thisMJDidx = thisMJDidx[0]
+                        print 'MJD',self.JDs[thisMJDidx]                          
+                        self.UTdates[thisMJDidx] = HDUList[0].header['UTDATE']
+                        self.UTstarts[thisMJDidx] = HDUList[0].header['UTSTART']
+                        self.UTends[thisMJDidx] = HDUList[0].header['UTEND']
+                        try:self.lengths[thisMJDidx] = HDUList[0].header['EXPOSED']
+                        except: pass
+#                         self.JDs.append(HDUList[0].header['UTMJD'])
+                        self.plates[thisMJDidx] = HDUList[0].header['SOURCE']
+                        self.pivots[thisMJDidx] = int(fibreTable.field('PIVOT')[idx][0])
+                        if HDUList[0].header['SLITMASK'].strip()=='OUT':
+                            self.HRs[thisMJDidx] = False
+                        else:
+                            self.HRs[thisMJDidx] = True
+                                  
+                        thisCam.red_fluxes[thisMJDidx] = HDUList[0].data[idx][0]
+                        thisCam.wavelengths[thisMJDidx] = self.extract_HERMES_wavelength(HDUList[0].header)
+                        thisCam.fileNames[thisMJDidx] = thisFile.split('/')[-1]
+                    else:
+                        print name, 'found in', thisFile, 'but no matching date' 
+                else:
+                    print name,'not found in', thisFile
 
-            sortOrder = np.argsort(self.JDs)
-            self.UTdates = np.array(self.UTdates)[sortOrder]
-            self.UTstarts = np.array(self.UTstarts)[sortOrder]
-            self.UTends = np.array(self.UTends)[sortOrder]
-            self.lengths = np.array(self.lengths)[sortOrder]
-            self.JDs = np.array(self.JDs)[sortOrder]
-            self.HRs = np.array(self.HRs)[sortOrder]
-            self.plates = np.array(self.plates)[sortOrder]
-            self.pivots = np.array(self.pivots)[sortOrder]
-
-            thisCam.red_fluxes = np.array(thisCam.red_fluxes)[sortOrder]
-            thisCam.wavelengths = np.array(thisCam.wavelengths)[sortOrder]
-            thisCam.fileNames = np.array(thisCam.fileNames)[sortOrder]
-#             self.UTdates = np.array(self.UTdates)
-#             self.UTstarts = np.array(self.UTstarts)
-#             self.UTends = np.array(self.UTends)
-#             self.lengths = np.array(self.lengths)
-#             self.JDs = np.array(self.JDs)
-#             self.HRs = np.array(self.HRs)
-#             self.plates = np.array(self.plates)
-#             self.pivots = np.array(self.pivots)
-#             thisCam.red_fluxes = np.array(thisCam.red_fluxes)
-#             thisCam.wavelengths = np.array(thisCam.wavelengths)
-#             thisCam.fileNames = np.array(thisCam.fileNames)
             thisCam.safe_flag = np.ones(len(thisCam.fileNames)).astype(bool)
-
+            print ''
 
             
     def extract_HERMES_wavelength(self, header):
@@ -188,4 +208,7 @@ class exposures():
         self.abs_baryVels = np.array(baryVels)
 
         
+
+# <codecell>
+
 

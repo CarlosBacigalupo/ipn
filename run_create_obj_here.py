@@ -3,23 +3,28 @@ import os
 import create_obj as cr_obj
 import pickle
 import glob
-import TableBrowser as tb
 import pyfits as pf
+import numpy as np
 
 
 #load all star names from 1st file
 fileList = glob.glob('cam1/*.fits')
+starNames = []
 if len(fileList)>0:
-    fits = pf.open(fileList[0])
-    a = fits['FIBRES'].data            
-    starNames=a.field('NAME')[a.field('TYPE').strip()=='P']
-    
+    for fitsname in fileList[:]:
+        print "Starnames",starNames, 'file', fitsname
+        fits = pf.open(fitsname)
+        a = fits['FIBRES'].data            
+        starNames = np.hstack((starNames,np.array(a.field('NAME')[a.field('TYPE').strip()=='P'])))
+        fits.close()
+
+    starNames = np.unique(starNames)
     print 'Collecting data from ',len(starNames),'stars'
     
     for i,star_name in enumerate(starNames):
         print i,star_name
         thisStar = cr_obj.star(star_name)
-        
+         
         thisStar.exposures = cr_obj.exposures()
         thisStar.exposures.load_exposures(thisStar.name)
         thisStar.exposures.calculate_baryVels(thisStar)

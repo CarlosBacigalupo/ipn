@@ -6,7 +6,7 @@
 import numpy as np
 import pickle
 import pylab as plt
-from scipy import interpolate, signal, optimize, constants
+import scipy as sp 
 import pyfits as pf
 import sys
 
@@ -27,7 +27,7 @@ def clean_flux(wavelength, flux, thisCam, xDef = 1, medianRange = 0):
         
     #median outliers
     if medianRange>0:
-        fluxMed = signal.medfilt(flux,medianRange)
+        fluxMed = sp.signal.medfilt(flux,medianRange)
         w = np.where(abs((flux-fluxMed)/np.maximum(fluxMed,50)) > 0.4)
         for ix in w[0]:
             flux[ix] = fluxMed[ix]
@@ -35,7 +35,7 @@ def clean_flux(wavelength, flux, thisCam, xDef = 1, medianRange = 0):
     if ((wavelength[-np.isnan(flux)].shape[0]>0) &  (flux[-np.isnan(flux)].shape[0]>0)):
         
         #flatten curve by fitting a 3rd order poly
-        fFlux = optimize.curve_fit(cubic, wavelength[-np.isnan(flux)], flux[-np.isnan(flux)], p0 = [1,1,1,1])
+        fFlux = sp.optimize.curve_fit(cubic, wavelength[-np.isnan(flux)], flux[-np.isnan(flux)], p0 = [1,1,1,1])
         fittedCurve = cubic(wavelength, fFlux[0][0], fFlux[0][1], fFlux[0][2], fFlux[0][3])
         flux = flux/fittedCurve-1
         
@@ -44,7 +44,7 @@ def clean_flux(wavelength, flux, thisCam, xDef = 1, medianRange = 0):
 
         #resample
         if (xDef>1):
-            fFlux = interpolate.interp1d(wavelength, flux) 
+            fFlux = sp.interpolate.interp1d(wavelength, flux) 
             wavelength = np.linspace(min(wavelength), max(wavelength),len(wavelength)*xDef)
             flux = fFlux(wavelength)
 
@@ -153,7 +153,7 @@ def RVs_CC_t0(thisStar, xDef = 1, CCReferenceSet = 0, printDetails=False, corrHW
             print 'This wl,fl sum', np.nansum(lambda2), np.nansum(flux2)
 
             if validDates[i]==True:
-                CCCurve = signal.fftconvolve(flux1[-np.isnan(flux1)], flux2[-np.isnan(flux2)][::-1], mode='same')
+                CCCurve = sp.signal.fftconvolve(flux1[-np.isnan(flux1)], flux2[-np.isnan(flux2)][::-1], mode='same')
 #                 CCCurve = signal.fftconvolve(flux1, flux2[::-1], mode='same')
 #                 if i <5:
 #                     plt.plot(flux1)
@@ -191,7 +191,7 @@ def RVs_CC_t0(thisStar, xDef = 1, CCReferenceSet = 0, printDetails=False, corrHW
 
                     mid_px = thisCam.wavelengths.shape[1]/2
                     dWl = (thisCam.wavelengths[i,mid_px+1]-thisCam.wavelengths[i,mid_px]) / thisCam.wavelengths[i,mid_px]
-                    RV = dWl * pixelShift * constants.c 
+                    RV = dWl * pixelShift * sp.constants.c 
                     print 'RV',RV
 
                     SNR = np.median(thisCam.red_fluxes[i])/np.std(thisCam.red_fluxes[i])
@@ -236,7 +236,7 @@ def QdRV(Lambda, A0):
 	dRV = 0
 	if np.sum(W1)>0:
 		Q_out = Q(W1, A0)
-		dRV = constants.c/np.sqrt(np.sum(W1))
+		dRV = sp.constants.c/np.sqrt(np.sum(W1))
 	
 	return Q_out, dRV
 
@@ -318,7 +318,7 @@ def gaussian(x, mu, sig, ):
     return np.exp(-np.power(x - mu, 2.) / 2 / np.power(sig, 2.))
 
 def fit_gaussian(p, flux, x_range):
-    a = optimize.leastsq(diff_gausian, p, args= [flux, x_range])
+    a = sp.optimize.leastsq(diff_gausian, p, args= [flux, x_range])
     return a
 
 def diff_gausian(p, args):
@@ -392,7 +392,7 @@ def quad(x,a,b,c):
     return curve
 
 def fit_quad(p, quadX, quadY):
-    a = optimize.leastsq(diff_quad, p, args= [quadX, quadY], epsfcn=0.1)
+    a = sp.optimize.leastsq(diff_quad, p, args= [quadX, quadY], epsfcn=0.1)
     return a
 
 def diff_quad(p, args):
@@ -540,10 +540,10 @@ def fit_continuum(disp, flux, knot_spacing=200, sigma_clip=(1.0, 0.2), \
 
         if function == 'spline':
             order = 5 if order > 5 else order
-            tck = interpolate.splrep(splrep_disp, splrep_flux,
+            tck = sp.interpolate.splrep(splrep_disp, splrep_flux,
                 k=order, task=-1, t=knots, w=splrep_weights)
 
-            continuum = interpolate.splev(disp, tck)
+            continuum = sp.interpolate.splev(disp, tck)
 
         elif function in ("poly", "polynomial"):
         

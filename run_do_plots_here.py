@@ -25,11 +25,11 @@ except:
     print 'Falied to create plots/'
     print ''
 
-    #Plot
-#     RVP.RVs_all_stars()
+#Plot
+# RVP.RVs_all_stars()
 
-    #Plot
-    RVP.RVs_all_stars_NPYs(RVClip = 10000)
+#Plot
+RVP.RVs_all_stars_NPYs(RVClip = 3000)
 
 
 # if len(fileList)>0:

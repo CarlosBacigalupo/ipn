@@ -89,7 +89,7 @@ sigmas = np.ones((len(fileList),15,4)) * 100
 
 for i in range(len(fileList)):
 
-    print i,fileList[i]
+    print i,fileList[i],
     filehandler = open(fileList[i], 'r') 
     thisStar = pickle.load(filehandler) 
     if ((thisStar.exposures.cameras[0].sigmas.all()!=0) and
@@ -111,6 +111,8 @@ for i in range(len(fileList)):
         thisStar = None
     else:
         print 'Sigma=0'
+
+    print ''
     
 data = np.array(data)
 order = np.argsort(data[:,2].astype(int))

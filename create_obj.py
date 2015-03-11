@@ -123,15 +123,14 @@ class exposures():
         print ''
         
         #create top_level arrays
-        self.UTdates = np.chararray(nExposures)
-        self.UTstarts = np.chararray(nExposures)
-        self.UTends = np.chararray(nExposures)
+        self.UTdates = np.chararray(nExposures,10)
+        self.UTstarts = np.chararray(nExposures,10)
+        self.UTends = np.chararray(nExposures,10)
         self.lengths = np.zeros(nExposures)
-        self.plates = np.chararray(nExposures)
+        self.plates = np.chararray(nExposures,10)
         self.pivots = np.zeros(nExposures)
         self.HRs = np.zeros(nExposures).astype(bool)
         
-
         
         for camIdx, cam in enumerate(self.cameras):
             files = glob.glob('cam'+str(camIdx+1)+'/*.fits')
@@ -142,7 +141,8 @@ class exposures():
             #create camera level arrays
             thisCam.red_fluxes = np.zeros((nExposures, 4096))
             thisCam.wavelengths = np.zeros((nExposures, 4096))
-            thisCam.fileNames = np.chararray(nExposures)
+            thisCam.fileNames = np.chararray(nExposures,18)
+            thisCam.fileNames[:] =  ''
 
             
             for thisFile in files: 
@@ -207,7 +207,4 @@ class exposures():
         self.abs_baryVels = np.array(baryVels)
 
         
-
-# <codecell>
-
 

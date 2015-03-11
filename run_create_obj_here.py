@@ -5,20 +5,28 @@ import pickle
 import glob
 import pyfits as pf
 import numpy as np
+import sys
+
 
 
 #load all star names from 1st file
 fileList = glob.glob('cam1/*.fits')
 starNames = []
 if len(fileList)>0:
-    for fitsname in fileList[:]:
-        print "Starnames",starNames, 'file', fitsname
-        fits = pf.open(fitsname)
-        a = fits['FIBRES'].data            
-        starNames = np.hstack((starNames,np.array(a.field('NAME')[a.field('TYPE').strip()=='P'])))
-        fits.close()
-
-    starNames = np.unique(starNames)
+    if len(sys.argv)>1:
+        starNames = [sys.argv[1]]
+    else:
+        for fitsname in fileList[:]:
+            print "Starnames",starNames, 'file', fitsname
+            fits = pf.open(fitsname)
+            a = fits['FIBRES'].data            
+            starNames = np.hstack((starNames,np.array(a.field('NAME')[a.field('TYPE').strip()=='P'])))
+            fits.close()
+    
+        starNames = np.unique(starNames)
+    
+    #     starNames = ['Giant01']
+    
     print 'Collecting data from ',len(starNames),'stars'
     
     for i,star_name in enumerate(starNames):

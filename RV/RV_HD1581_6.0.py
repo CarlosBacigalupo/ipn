@@ -341,10 +341,9 @@ for cam, thisCam in enumerate(thisStar.exposures.cameras):
         plt.plot(x,y1+i, label= label, c='k')
     plt.title(thisStar.name)
     plt.yticks = thisCam.fileNames 
-    plt.savefig('plots/HD1581_'+str(cam), dpi = 1000 )
-    
+#     plt.savefig('plots/HD1581_'+str(cam), dpi = 1000 )
+    plt.show()    
     plt.close()
-#     plt.show()
 
 # <codecell>
 

@@ -8,6 +8,7 @@ import pickle
 import pylab as plt
 from scipy import interpolate, signal, optimize, constants
 import pyfits as pf
+import sys
 
 # <codecell>
 
@@ -117,55 +118,113 @@ def find_max_wl_range(thisStar):
 # <codecell>
 
 #Create cross correlation curves wrt epoch 0
-def RVs_CC_t0(thisStar, xDef = 1):
+def RVs_CC_t0(thisStar, xDef = 1, CCReferenceSet = 0, printDetails=False, corrHWidth=10):
 
-    for thisCam in thisStar.exposures.cameras:
+    print '#############################################################################################################'
+    print '#############################################################################################################'
+    print '#############################################################################################################'
+
+#     validDates = np.all([np.nansum(thisCam.red_fluxes,1).astype(bool) for thisCam in thisStar.exposures.cameras],0)
+    
+    for j,thisCam in enumerate(thisStar.exposures.cameras):
         RVs = []
         sigmas = [] 
         Qs = []
         SNRs = []
 
-        lambda1, flux1 = clean_flux(thisCam.wavelengths[0], thisCam.red_fluxes[0], thisCam)
-
+        validDates = np.nansum(thisCam.red_fluxes,1).astype(bool)
+        
+        print 'Camera',j,validDates
+        
+        if len(np.arange(len(validDates))[validDates])>0:
+            CCReferenceSet = np.arange(len(validDates))[validDates][0]
+        else:
+            CCReferenceSet = 0
+            
+            
+        lambda1, flux1 = clean_flux(thisCam.wavelengths[CCReferenceSet], thisCam.red_fluxes[CCReferenceSet], thisCam)
+        print 'Reference wl,fl sum', np.nansum(lambda1), np.nansum(flux1)
+        print 
+        
+        plts = 0    
         for i, JD in enumerate(thisStar.exposures.JDs):
-            print JD,
+            print 'Set,MJD',i,JD
             lambda2, flux2 = clean_flux(thisCam.wavelengths[i], thisCam.red_fluxes[i], thisCam)
-            CCCurve = signal.fftconvolve(flux1, flux2[::-1], mode='same')
-#             plt.plot(flux1)
-#             plt.plot(flux2)
-#             plt.plot(CCCurve)
-#             plt.show()
-            
-            corrMax = np.where(CCCurve==max(CCCurve))[0][0]
-            p_guess = [corrMax,xDef]
-            x_mask = np.arange(corrMax-2, corrMax+2+1)
-            p = fit_gaussian(p_guess, CCCurve[x_mask], np.arange(len(CCCurve))[x_mask])[0]
-            
-            if np.modf(CCCurve.shape[0]/2.0)[0]>1e-5:
-                pixelShift = (p[0]-(CCCurve.shape[0]-1)/2.) #odd number of elements
+            print 'This wl,fl sum', np.nansum(lambda2), np.nansum(flux2)
+
+            if validDates[i]==True:
+                CCCurve = signal.fftconvolve(flux1[-np.isnan(flux1)], flux2[-np.isnan(flux2)][::-1], mode='same')
+#                 CCCurve = signal.fftconvolve(flux1, flux2[::-1], mode='same')
+#                 if i <5:
+#                     plt.plot(flux1)
+#                     plt.plot(flux2)
+#                     plt.plot(CCCurve)
+#                     plt.show()
+                print 'max_idx, len(CCCurve) =',np.where(CCCurve==max(CCCurve)), CCCurve.shape
+                try:
+                    corrMax = np.where(CCCurve==max(CCCurve))[0][0]
+                except: 
+                    print 'cc',CCCurve,
+#                     if plts<5:
+#                         plts+=1
+#                         plt.plot(flux1)
+#                         plt.plot(flux2)
+#                         plt.plot(CCCurve)
+#                         plt.show()
+
+                p_guess = [corrMax,corrHWidth]
+                x_mask = np.arange(corrMax-corrHWidth, corrMax+corrHWidth+1)
+                if max(x_mask)<len(CCCurve):
+    #                 try:
+    #                 print '4 params',p_guess, x_mask, np.sum(x_mask), CCCurve.shape
+                    p = fit_gaussian(p_guess, CCCurve[x_mask], np.arange(len(CCCurve))[x_mask])[0]
+                    print 'p result',p
+                    if np.modf(CCCurve.shape[0]/2.0)[0]>1e-5:
+                        pixelShift = (p[0]-(CCCurve.shape[0]-1)/2.) #odd number of elements
+                    else:
+                        pixelShift = (p[0]-(CCCurve.shape[0])/2.) #even number of elements
+    #                 except:
+    #                     pixelShift = 0
+
+                    thisQ, thisdRV = QdRV(thisCam.wavelengths[i], thisCam.red_fluxes[i])
+                    print  ' thisQ, thisdRV',thisQ, thisdRV
+
+                    mid_px = thisCam.wavelengths.shape[1]/2
+                    dWl = (thisCam.wavelengths[i,mid_px+1]-thisCam.wavelengths[i,mid_px]) / thisCam.wavelengths[i,mid_px]
+                    RV = dWl * pixelShift * constants.c 
+                    print 'RV',RV
+
+                    SNR = np.median(thisCam.red_fluxes[i])/np.std(thisCam.red_fluxes[i])
+                else:
+                    R = 0
+                    thisQ = 0
+                    thisdRV = 0
+                    RV = 0
+                    print 'Invalid data point'
+
             else:
-                pixelShift = (p[0]-(CCCurve.shape[0])/2.) #even number of elements
+#                 if i==CCReferenceSet:
+#                     print 'The CC reference set is not present. Can\'t continue. Launch again with different reference set.'
+#                     sys.exit()
+                SNR = 0
+                thisQ = 0
+                thisdRV = 0
+                RV = 0
+                print 'Invalid data point'
 
-            thisQ, thisdRV = QdRV(thisCam.wavelengths[i], thisCam.red_fluxes[i])
+            print ''
 
-            RV = np.array((thisCam.wavelengths[0,1]-thisCam.wavelengths[0,0])
-                          /thisCam.wavelengths[0,0]*constants.c*
-                          pixelShift)
-
-            SNR = np.median(thisCam.red_fluxes[i])/np.std(thisCam.red_fluxes[i])
-            
-            
             SNRs.append(SNR)
             Qs.append(thisQ)
             sigmas.append(thisdRV)
             RVs.append(RV)
+
 
                 
         thisCam.sigmas = np.array(sigmas)
         thisCam.Qs = np.array(Qs)
         thisCam.RVs = np.array(RVs)
         thisCam.SNRs = np.array(SNRs)
-        print ''
 
 # <codecell>
 
@@ -341,9 +400,6 @@ def diff_quad(p, args):
     quadY = args[1]
     diff = quad(quadX, p[0],p[1], p[2]) - quadY
     return diff
-
-# <codecell>
-
 
 # <codecell>
 

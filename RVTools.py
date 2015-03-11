@@ -160,8 +160,8 @@ def RVs_CC_t0(thisStar, xDef = 1, CCReferenceSet = 0, printDetails=False, corrHW
 #                     plt.plot(flux2)
 #                     plt.plot(CCCurve)
 #                     plt.show()
-                print 'max_idx, len(CCCurve) =',np.where(CCCurve==max(CCCurve)), CCCurve.shape
                 try:
+#                     print 'max_idx, len(CCCurve) =',np.where(CCCurve==max(CCCurve)), CCCurve.shape
                     corrMax = np.where(CCCurve==max(CCCurve))[0][0]
                 except: 
                     print 'cc',CCCurve,

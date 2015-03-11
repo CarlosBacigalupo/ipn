@@ -25,11 +25,18 @@ except:
     print 'Falied to create plots/'
     print ''
 
-if len(fileList)>0:
-    for objName in fileList[:2]:
-        print 'Reading',objName
-        filehandler = open(objName, 'r')
-        thisStar = pickle.load(filehandler)
+    #Plot
+#     RVP.RVs_all_stars()
+
+    #Plot
+    RVP.RVs_all_stars_NPYs(RVClip = 10000)
+
+
+# if len(fileList)>0:
+#     for objName in fileList[:2]:
+#         print 'Reading',objName
+#         filehandler = open(objName, 'r')
+#         thisStar = pickle.load(filehandler)
         
         #Plot
 #         RVP.all_spec_overlap(thisStar, booSave = booSave,booShow = booShow )
@@ -37,17 +44,9 @@ if len(fileList)>0:
         #Plot
 #         RVP.RVs_single_star(thisStar, sigmaClip = -1, RVClip = 3000)
 
-        #Plot
-#         RVP.RVs_all_stars()
-#         sys.exit()
-
-        #Plot
-        RVP.RVs_all_stars_NPYs(RVClip = 3000)
-        sys.exit()
-
             
-        thisStar = None
-        print ''
-else:
-    print 'No red_*.obj files here.'
+#         thisStar = None
+#         print ''
+# else:
+#     print 'No red_*.obj files here.'
     

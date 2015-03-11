@@ -205,8 +205,9 @@ def RVs_all_stars_NPYs( sigmaClip = -1, RVClip = -1, booSave = False, booShow = 
 
     X = JDs
     Y = RVs
+    print X,Y
     if RVClip>-1:Y[np.abs(Y)>RVClip] = np.nan
-    if RVClip>-1:Y[np.median(Y)>RVClip] = np.nan
+#     if sigmaClip>-1:Y[np.median(Y)>RVClip] = np.nan
     YERR = sigmas
     
     colors = ['b','g','r','cyan']
@@ -223,27 +224,22 @@ def RVs_all_stars_NPYs( sigmaClip = -1, RVClip = -1, booSave = False, booShow = 
     plt.title('RV - All Stars')
 #     plt.plot(JDs, -thisStar.exposures.rel_baryVels, label = 'Barycentric Vel. ')
     
-    for i in range(Y.shape[0])[:3]:
-        for cam in range(4)[:0]:
-            plt.errorbar(X, Y[i,:,cam], yerr=YERR[i,:,cam], fmt='.', label = labels[cam], color = colors[cam])
+    for i in range(Y.shape[0])[:]:
+        for cam in range(4)[:]:
+            print i,cam
+#             plt.errorbar(X, Y[i,:,cam], yerr=YERR[i,:,cam], fmt='.', label = labels[cam], color = colors[cam])
+            plt.scatter(X, Y[i,:,cam], label = labels[cam], color = colors[cam])
     
-#             thisCam = thisStar.exposures.cameras[0]
-#             # RVMask = thisStar.exposures.my_data_mask
-#             # RVMask = ((thisStar.exposures.my_data_mask) & (np.abs(thisCam.RVs)<50000))
-#             RVMask = thisCam.safe_flag
-#         #     plt.scatter(thisStar.exposures.JDs[RVMask], thisCam.DDRVs[RVMask], label = 'Blue', color ='b' )
-#             plt.errorbar(thisStar.exposures.JDs[RVMask], thisCam.RVs[RVMask], yerr=thisCam.sigmas[RVMask],fmt='.', label = 'Blue', color ='b' )
-
-        #sine plot
-            # start_day = 56889.000000 # The Julian date for CE  2014 August 20 00:00:00.0 UT  (10am australia)
-            # end_day = 56895.000000 #The Julian date for CE  2014 August 26 00:00:00.0 UT (10am australia)
-            # days = np.linspace(start_day, end_day) 
-            # K1=26100
-            # peri_time = 19298.85
-            # P=4.8202
-            # peri_arg=269.3
-            # RV = K1* np.sin( (days-peri_time)/P*2*np.pi - peri_arg/360*2*np.pi )
-            # plt.plot(days, RV, linewidth = 1, label = 'rhoTuc' )
+    #sine plot
+#     start_day = 56889.000000 # The Julian date for CE  2014 August 20 00:00:00.0 UT  (10am australia)
+#     end_day = 56895.000000 #The Julian date for CE  2014 August 26 00:00:00.0 UT (10am australia)
+#     days = np.linspace(start_day, end_day) 
+#     K1=26100
+#     peri_time = 19298.85
+#     P=4.8202
+#     peri_arg=269.3
+#     RV = K1* np.sin( (days-peri_time)/P*2*np.pi - peri_arg/360*2*np.pi )
+#     plt.plot(days, RV, linewidth = 1, label = 'rhoTuc' )
 
     plt.xlabel('MJD')
     plt.ylabel('RV [m/s]')

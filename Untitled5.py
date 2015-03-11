@@ -361,4 +361,13 @@ thisStar.exposures.JDs.shape
 
 # <codecell>
 
+import scipy as sp
+
+# <codecell>
+
+from scipy import optimize
+
+# <codecell>
+
+optimize.
 

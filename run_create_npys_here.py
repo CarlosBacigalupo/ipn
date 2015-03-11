@@ -44,6 +44,7 @@ if len(fileList)>0:
         sigmas[i,:,2] = thisStar.exposures.cameras[2].sigmas
         sigmas[i,:,3] = thisStar.exposures.cameras[3].sigmas
         JDs = np.array(thisStar.exposures.JDs)
+        baryVels = np.array(thisStar.exposures.abs_baryVels-thisStar.exposures.abs_baryVels[0])
         filehandler.close()
         thisStar = None
         
@@ -64,12 +65,14 @@ if len(fileList)>0:
     np.save('data',data)
     np.save('RVs',RVs)
     np.save('sigmas',sigmas)
+    np.save('baryVels',baryVels)
     np.save('JDs',JDs)
 
     print ''
     print 'data',len(data)
     print 'RVs',RVs.shape
     print 'sigmas',sigmas.shape
+    print 'baryVels',baryVels.shape
     print 'JDs',JDs.shape
 
 else:

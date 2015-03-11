@@ -196,11 +196,12 @@ def RVs_all_stars(booSave = False, booShow = True):
 
 # <codecell>
 
-def RVs_all_stars_NPYs( sigmaClip = -1, RVClip = -1, booSave = False, booShow = True):
+def RVs_all_stars_NPYs( sigmaClip = -1, RVClip = -1, booSave = False, booShow = True, booBaryPlot = False, title = ''):
     
     data=np.load('data.npy')
     RVs=np.load('RVs.npy')
     sigmas=np.load('sigmas.npy')
+    baryVels=np.load('baryVels.npy')
     JDs=np.load('JDs.npy')
 
     X = JDs
@@ -221,12 +222,15 @@ def RVs_all_stars_NPYs( sigmaClip = -1, RVClip = -1, booSave = False, booShow = 
 #             thisStar = pickle.load(filehandler)
 
     #Plots RVs, baryvels. Single star, 4 cameras
-    plt.title('RV - All Stars')
-#     plt.plot(JDs, -thisStar.exposures.rel_baryVels, label = 'Barycentric Vel. ')
+    if title=='':
+        plt.title('RV - All Stars')
+    else:
+        plt.title(title)
+        
+    if booBaryPlot==True: plt.plot(X, baryVels, label = 'Barycentric Vel. ')
     
     for i in range(Y.shape[0])[:]:
         for cam in range(4)[:]:
-            print i,cam
 #             plt.errorbar(X, Y[i,:,cam], yerr=YERR[i,:,cam], fmt='.', label = labels[cam], color = colors[cam])
             plt.scatter(X, Y[i,:,cam], label = labels[cam], color = colors[cam])
     

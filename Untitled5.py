@@ -369,5 +369,8 @@ from scipy import optimize
 
 # <codecell>
 
-optimize.
+thisStar.exposures.abs_baryVels
+
+# <codecell>
+
 

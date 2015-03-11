@@ -153,7 +153,6 @@ def RVs_CC_t0(thisStar, xDef = 1, CCReferenceSet = 0, printDetails=False, corrHW
             print 'This wl,fl sum', np.nansum(lambda2), np.nansum(flux2)
 
             if validDates[i]==True:
-                CCCurve = signal.fftconvolve(flux1[-np.isnan(flux1)], flux2[-np.isnan(flux2)][::-1], mode='same')
 #                 CCCurve = signal.fftconvolve(flux1, flux2[::-1], mode='same')
 #                 if i <5:
 #                     plt.plot(flux1)
@@ -162,9 +161,47 @@ def RVs_CC_t0(thisStar, xDef = 1, CCReferenceSet = 0, printDetails=False, corrHW
 #                     plt.show()
                 try:
 #                     print 'max_idx, len(CCCurve) =',np.where(CCCurve==max(CCCurve)), CCCurve.shape
+                    CCCurve = []
+                    CCCurve = signal.fftconvolve(flux1[-np.isnan(flux1)], flux2[-np.isnan(flux2)][::-1], mode='same')
                     corrMax = np.where(CCCurve==max(CCCurve))[0][0]
+                    p_guess = [corrMax,corrHWidth]
+                    x_mask = np.arange(corrMax-corrHWidth, corrMax+corrHWidth+1)
+                    if max(x_mask)<len(CCCurve):
+        #                 try:
+        #                 print '4 params',p_guess, x_mask, np.sum(x_mask), CCCurve.shape
+                        p = fit_gaussian(p_guess, CCCurve[x_mask], np.arange(len(CCCurve))[x_mask])[0]
+                        print 'p result',p
+                        if np.modf(CCCurve.shape[0]/2.0)[0]>1e-5:
+                            pixelShift = (p[0]-(CCCurve.shape[0]-1)/2.) #odd number of elements
+                        else:
+                            pixelShift = (p[0]-(CCCurve.shape[0])/2.) #even number of elements
+        #                 except:
+        #                     pixelShift = 0
+
+                        thisQ, thisdRV = QdRV(thisCam.wavelengths[i], thisCam.red_fluxes[i])
+                        print  ' thisQ, thisdRV',thisQ, thisdRV
+
+                        mid_px = thisCam.wavelengths.shape[1]/2
+                        dWl = (thisCam.wavelengths[i,mid_px+1]-thisCam.wavelengths[i,mid_px]) / thisCam.wavelengths[i,mid_px]
+                        RV = dWl * pixelShift * constants.c 
+                        print 'RV',RV
+
+                        SNR = np.median(thisCam.red_fluxes[i])/np.std(thisCam.red_fluxes[i])
+                    else:
+                        R = 0
+                        thisQ = 0
+                        thisdRV = 0
+                        RV = 0
+                        SNR = 0
+                        print 'Invalid data point'
+
                 except: 
                     print 'cc',CCCurve,
+                    R = 0
+                    thisQ = 0
+                    thisdRV = 0
+                    RV = 0
+                    SNR = 0
 #                     if plts<5:
 #                         plts+=1
 #                         plt.plot(flux1)
@@ -172,35 +209,6 @@ def RVs_CC_t0(thisStar, xDef = 1, CCReferenceSet = 0, printDetails=False, corrHW
 #                         plt.plot(CCCurve)
 #                         plt.show()
 
-                p_guess = [corrMax,corrHWidth]
-                x_mask = np.arange(corrMax-corrHWidth, corrMax+corrHWidth+1)
-                if max(x_mask)<len(CCCurve):
-    #                 try:
-    #                 print '4 params',p_guess, x_mask, np.sum(x_mask), CCCurve.shape
-                    p = fit_gaussian(p_guess, CCCurve[x_mask], np.arange(len(CCCurve))[x_mask])[0]
-                    print 'p result',p
-                    if np.modf(CCCurve.shape[0]/2.0)[0]>1e-5:
-                        pixelShift = (p[0]-(CCCurve.shape[0]-1)/2.) #odd number of elements
-                    else:
-                        pixelShift = (p[0]-(CCCurve.shape[0])/2.) #even number of elements
-    #                 except:
-    #                     pixelShift = 0
-
-                    thisQ, thisdRV = QdRV(thisCam.wavelengths[i], thisCam.red_fluxes[i])
-                    print  ' thisQ, thisdRV',thisQ, thisdRV
-
-                    mid_px = thisCam.wavelengths.shape[1]/2
-                    dWl = (thisCam.wavelengths[i,mid_px+1]-thisCam.wavelengths[i,mid_px]) / thisCam.wavelengths[i,mid_px]
-                    RV = dWl * pixelShift * constants.c 
-                    print 'RV',RV
-
-                    SNR = np.median(thisCam.red_fluxes[i])/np.std(thisCam.red_fluxes[i])
-                else:
-                    R = 0
-                    thisQ = 0
-                    thisdRV = 0
-                    RV = 0
-                    print 'Invalid data point'
 
             else:
 #                 if i==CCReferenceSet:

@@ -29,7 +29,7 @@ except:
 # RVP.RVs_all_stars()
 
 #Plot
-RVP.RVs_all_stars_NPYs(RVClip = -1, booSave=True, booBaryPlot=False, title = 'HD1581 - 1arc differences')
+RVP.RVs_all_stars_NPYs(RVClip = -1, booSave=False , booBaryPlot=True, title = 'M67 1arc Diff')
 
 
 # if len(fileList)>0:

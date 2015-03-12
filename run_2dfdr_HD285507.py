@@ -22,7 +22,7 @@ if len(sys.argv)>1:
     
 #reduction flags
 useBias = False
-copyFiles = True
+copyFiles = False
 doReduce = True
 overwrite = True
 idxFile = 'no_flat_no_bias.idx'
@@ -34,10 +34,10 @@ dr_dir = '/Users/Carlos/Documents/workspace/2dfdr/6.2/2dfdr_install/bin/' #my la
 
 #target directory. It will copy the data files to sub-directories branching from this directory
 # target_root = '/home/staff/mq20101889/HERMES/reductions/m67_lr_6.2/' #in nut
-target_root = '/Users/Carlos/Documents/HERMES/reductions/HD1581_6.2/' #my laptop
+target_root = '/Users/Carlos/Documents/HERMES/reductions/HD285507_6.2/' #my laptop
 
 #all science reduced (*red.fits) files will be copied to this directory
-final_dir = '/Users/Carlos/Documents/HERMES/reductions/HD1581_6.2/'
+final_dir = '/Users/Carlos/Documents/HERMES/reductions/HD285507_6.2/'
 
 #path to data sources
 HERMES_data_root = []
@@ -55,11 +55,11 @@ root_date_link = np.array([0,0,0,0,0])
 
 
 #Filenumbers for each dataset FLAT_IDX, ARC_IDX, SCIENCE_IDX[S]. Assumes [flat, arc, sci, sci, ...]
-ix_array = [[34,52,53],
-            [47,46]+range(41,44),
-            [32,31]+range(36,39),
-            [53,53]+range(58,63),
-            [39,43]+range(44,47)]
+ix_array = [[37,38]+range(39,42),
+            [36,37]+range(38,41),
+            [40,39]+range(41,44),
+            [66,67]+range(63,66),
+            [47,48]+range(49,52)]
  
 #####End of custom data#################################################################
 
@@ -101,8 +101,14 @@ dr2df.source_dir_array = source_dir_array
      
 #run forest, run
 
-sys.stdout = open(str(reduceSet)+'_'+str(time.strftime('%X'))+'.log', 'w')
+sys.stdout = open(str(startFrom)+str(reduceSet)+'_'+str(time.strftime('%X'))+'.log', 'w')
                   
 print time.strftime('%X %x %Z'), '  Starting reduction'
 dr2df.runReduction()
 print time.strftime('%X %x %Z'), '  Ending reduction'
+
+# n=0
+# for dataset, fileN in zip(filename_prfx, ix_array):
+#     for i in fileN[2:]:
+#         print str(n)+'_'+str(dataset),'\t',str(i)
+#     n+=1

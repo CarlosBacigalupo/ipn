@@ -9,8 +9,13 @@ import pickle
 import RVTools as RVT
 import pylab as plt
 
-folder1 = '/Users/Carlos/Documents/HERMES/reductions/HD1581_6.2'
-folder2 = '/Users/Carlos/Documents/HERMES/reductions/HD1581_1arc_6.2'
+folder1 = '/Users/Carlos/Documents/HERMES/reductions/47Tuc_core_6.2'
+folder2 = '/Users/Carlos/Documents/HERMES/reductions/47Tuc_core_1arc_6.2'
+
+folder1 = '/Users/Carlos/Documents/HERMES/reductions/m67_6.2'
+folder2 = '/Users/Carlos/Documents/HERMES/reductions/m67_1arc_6.2'
+
+
 
 # if len(sys.argv)>1:
 #     fileList = [sys.argv[1]]

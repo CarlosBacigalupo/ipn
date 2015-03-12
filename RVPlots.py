@@ -227,10 +227,10 @@ def RVs_all_stars_NPYs( sigmaClip = -1, RVClip = -1, booSave = False, booShow = 
     else:
         plt.title(title)
         
-    if booBaryPlot==True: plt.plot(X, baryVels, label = 'Barycentric Vel. ')
+    if booBaryPlot==True: plt.plot(X, -baryVels, label = 'Barycentric Vel. ')
     
     for i in range(Y.shape[0])[:]:
-        for cam in range(4)[:]:
+        for cam in range(4)[:1]:
 #             plt.errorbar(X, Y[i,:,cam], yerr=YERR[i,:,cam], fmt='.', label = labels[cam], color = colors[cam])
             plt.scatter(X, Y[i,:,cam], label = labels[cam], color = colors[cam])
     

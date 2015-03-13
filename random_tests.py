@@ -328,8 +328,8 @@ cd ~/Documents/HERMES/reductions/47Tuc_core_6.2/
 # <codecell>
 
 # filename = 'Giant01.obj'
-filename = 'Brght01.obj'
-# filename = 'red_Giant01.obj'
+# filename = 'Brght01.obj'
+filename = 'red_Giant01.obj'
 filehandler = open(filename, 'r')
 thisStar = pickle.load(filehandler)
 
@@ -339,15 +339,16 @@ print np.all([np.nansum(thisCam.red_fluxes,1).astype(bool) for thisCam in thisSt
 
 # <codecell>
 
-plt.plot(thisCam.red_fluxes[])
+plt.plot(thisCam.red_fluxes[0])
 plt.show()
 
 # <codecell>
 
-thisCam = thisStar.exposures.cameras[2]
+thisCam = thisStar.exposures.cameras[3]
 
 # <codecell>
 
+print thisCam.SNRs
 print np.nansum(thisCam.red_fluxes,1)
 print thisCam.fileNames
 
@@ -370,6 +371,97 @@ from scipy import optimize
 # <codecell>
 
 thisStar.exposures.abs_baryVels
+
+# <codecell>
+
+pwd
+
+# <codecell>
+
+print RVs[0].shape
+
+# <codecell>
+
+cd '/Users/Carlos/Documents/HERMES/reductions/47Tuc_core_6.2'
+
+# <codecell>
+
+RVs = np.load('RVs.npy')
+SNRs = np.load('SNRs.npy')
+
+# <codecell>
+
+for epoch in range(RVs.shape[1]):
+    cam = 0
+    R = RVs[:,epoch,cam]
+    S = SNRs[:,epoch,cam]
+    a = np.histogram(R)
+    plt.bar(a[1][:-1],a[0], width = (a[1][-2]-a[1][-1])*0.7)
+    plt.plot(R,S,'.', c='r')
+    plt.show()
+
+# <codecell>
+
+a = np.histogram(R)
+# plt.plot(a[1][:-1],a[0],'.')
+plt.bar(a[1][:-1],a[0], width = (a[1][-2]-a[1][-1])*0.7)
+plt.show()
+
+# <codecell>
+
+a = np.histogram(R)
+plt.plot(R,S,'.', c='r')
+# plt.bar(a[1][:-1],a[0], width = (a[1][-2]-a[1][-1])*0.7)
+plt.show()
+
+# <codecell>
+
+R = RVs[:,15,0]
+S = SNRs[:,15,0]
+
+# <codecell>
+
+a = np.histogram(R)
+# plt.plot(a[1][:-1],a[0],'.')
+plt.bar(a[1][:-1],a[0], width = (a[1][-2]-a[1][-1])*0.7)
+plt.show()
+
+# <codecell>
+
+import os
+
+# <codecell>
+
+os.curdir
+
+# <codecell>
+
+pwd
+
+# <codecell>
+
+os.getcwd().split('/')[-1]
+
+# <codecell>
+
+plt.plot(thisCam.red_fluxes)
+plt.show()
+
+# <codecell>
+
+i=6
+np.nanmean(thisCam.red_fluxes[i])/np.std(thisCam.red_fluxes[i])
+print np.sqrt(np.nanmean(thisCam.red_fluxes[i]))
+print np.nansum(thisCam.red_fluxes[i])
+print stats.nanmedian(thisCam.red_fluxes[i])/stats.nanstd(thisCam.red_fluxes[i])
+
+# <codecell>
+
+from scipy import stats
+
+# <codecell>
+
+print np.sqrt(stats.nanmedian(thisCam.red_fluxes[i]))
 
 # <codecell>
 

@@ -26,6 +26,7 @@ if len(fileList)>0:
             print 'Found', nObs, 'observations'
             data = []
             RVs = np.zeros((len(fileList),nObs,4))
+            SNRs = np.zeros((len(fileList),nObs,4))
             sigmas = np.ones((len(fileList),nObs,4)) * 100
 
 #         if ((thisStar.exposures.cameras[0].sigmas.all()!=0) and
@@ -39,6 +40,10 @@ if len(fileList)>0:
         RVs[i,:,1] = thisStar.exposures.cameras[1].RVs
         RVs[i,:,2] = thisStar.exposures.cameras[2].RVs
         RVs[i,:,3] = thisStar.exposures.cameras[3].RVs
+        SNRs[i,:,0] = thisStar.exposures.cameras[0].SNRs
+        SNRs[i,:,1] = thisStar.exposures.cameras[1].SNRs
+        SNRs[i,:,2] = thisStar.exposures.cameras[2].SNRs
+        SNRs[i,:,3] = thisStar.exposures.cameras[3].SNRs
         sigmas[i,:,0] = thisStar.exposures.cameras[0].sigmas
         sigmas[i,:,1] = thisStar.exposures.cameras[1].sigmas
         sigmas[i,:,2] = thisStar.exposures.cameras[2].sigmas
@@ -64,6 +69,7 @@ if len(fileList)>0:
     #save?
     np.save('data',data)
     np.save('RVs',RVs)
+    np.save('SNRs',SNRs)
     np.save('sigmas',sigmas)
     np.save('baryVels',baryVels)
     np.save('JDs',JDs)
@@ -71,6 +77,7 @@ if len(fileList)>0:
     print ''
     print 'data',len(data)
     print 'RVs',RVs.shape
+    print 'SNRs',SNRs.shape
     print 'sigmas',sigmas.shape
     print 'baryVels',baryVels.shape
     print 'JDs',JDs.shape

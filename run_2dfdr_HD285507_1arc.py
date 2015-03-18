@@ -22,7 +22,7 @@ if len(sys.argv)>1:
     
 #reduction flags
 useBias = False
-copyFiles = True
+copyFiles = False
 doReduce = True
 overwrite = True
 idxFile = 'no_flat_no_bias.idx'

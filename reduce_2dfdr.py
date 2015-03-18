@@ -94,6 +94,10 @@ class dr2df():
             self.file_ix = self.ix_array[self.startFrom]
             self.create_file_list(self.startFrom)
 
+            print time.strftime('%X %x %Z'),'   Copying flats and arcs to subsequent data sets'
+            sys.stdout.flush()
+            self.copy_flat_arc()
+            
             if self.doReduce==True:
                 print time.strftime('%X %x %Z'),'  Reducing master frame', self.filename_prfx[self.startFrom]
                 sys.stdout.flush()
@@ -104,9 +108,10 @@ class dr2df():
                 print time.strftime('%X %x %Z'),'Reduction flag turned off. All done.'
             
             #replace flats and arcs for datasets>0
-            print time.strftime('%X %x %Z'),'   Copying reduced flats and arcs to subsequent data sets'
-            sys.stdout.flush()
-            self.copy_flat_arc()
+#             print time.strftime('%X %x %Z'),'   Copying reduced flats and arcs to subsequent data sets'
+#             sys.stdout.flush()
+#             self.copy_flat_arc(booIncludeReduced=True)
+
 
             no_masters = range(len(self.filename_prfx))
             no_masters.remove(int(self.startFrom))
@@ -324,7 +329,7 @@ class dr2df():
     
     
 
-    def copy_flat_arc(self):     
+    def copy_flat_arc(self, booIncludeReduced = False):     
         
         #crates the list of source files fro dataset=0
         self.target_dir = self.target_root + str(self.startFrom) + '_'+ self.filename_prfx[self.startFrom] +'/'
@@ -333,14 +338,16 @@ class dr2df():
         src_list = []
         for cam,j in enumerate([self.files1, self.files2, self.files3, self.files4]):
             src_list.append(self.target_dir + str(cam+1) + '/' +j[0])
-            src_list.append(self.target_dir + str(cam+1) + '/' +j[0][:-5] + 'ex.fits')
-            src_list.append(self.target_dir + str(cam+1) + '/' +j[0][:-5] + 'im.fits')
-            src_list.append(self.target_dir + str(cam+1) + '/' +j[0][:-5] + 'red.fits')
-            src_list.append(self.target_dir + str(cam+1) + '/' +j[0][:-5] + 'tlm.fits')
+            if booIncludeReduced==True:
+                src_list.append(self.target_dir + str(cam+1) + '/' +j[0][:-5] + 'ex.fits')
+                src_list.append(self.target_dir + str(cam+1) + '/' +j[0][:-5] + 'im.fits')
+                src_list.append(self.target_dir + str(cam+1) + '/' +j[0][:-5] + 'red.fits')
+                src_list.append(self.target_dir + str(cam+1) + '/' +j[0][:-5] + 'tlm.fits')
             src_list.append(self.target_dir + str(cam+1) + '/' +j[1])
-            src_list.append(self.target_dir + str(cam+1) + '/' +j[1][:-5] + 'ex.fits')
-            src_list.append(self.target_dir + str(cam+1) + '/' +j[1][:-5] + 'im.fits')
-            src_list.append(self.target_dir + str(cam+1) + '/' +j[1][:-5] + 'red.fits')
+            if booIncludeReduced==True:
+                src_list.append(self.target_dir + str(cam+1) + '/' +j[1][:-5] + 'ex.fits')
+                src_list.append(self.target_dir + str(cam+1) + '/' +j[1][:-5] + 'im.fits')
+                src_list.append(self.target_dir + str(cam+1) + '/' +j[1][:-5] + 'red.fits')
         
         #for all datasets>0 create target_list and copy src_list to target_list
         no_masters = range(len(self.ix_array))
@@ -352,14 +359,16 @@ class dr2df():
             target_list = []
             for cam,j in enumerate([self.files1, self.files2, self.files3, self.files4]):
                 target_list.append(self.target_dir + str(cam+1) + '/' +j[0])
-                target_list.append(self.target_dir + str(cam+1) + '/' +j[0][:-5] + 'ex.fits')
-                target_list.append(self.target_dir + str(cam+1) + '/' +j[0][:-5] + 'im.fits')
-                target_list.append(self.target_dir + str(cam+1) + '/' +j[0][:-5] + 'red.fits')
-                target_list.append(self.target_dir + str(cam+1) + '/' +j[0][:-5] + 'tlm.fits')
+                if booIncludeReduced==True:
+                    target_list.append(self.target_dir + str(cam+1) + '/' +j[0][:-5] + 'ex.fits')
+                    target_list.append(self.target_dir + str(cam+1) + '/' +j[0][:-5] + 'im.fits')
+                    target_list.append(self.target_dir + str(cam+1) + '/' +j[0][:-5] + 'red.fits')
+                    target_list.append(self.target_dir + str(cam+1) + '/' +j[0][:-5] + 'tlm.fits')
                 target_list.append(self.target_dir + str(cam+1) + '/' +j[1])
-                target_list.append(self.target_dir + str(cam+1) + '/' +j[1][:-5] + 'ex.fits')
-                target_list.append(self.target_dir + str(cam+1) + '/' +j[1][:-5] + 'im.fits')
-                target_list.append(self.target_dir + str(cam+1) + '/' +j[1][:-5] + 'red.fits')
+                if booIncludeReduced==True:
+                    target_list.append(self.target_dir + str(cam+1) + '/' +j[1][:-5] + 'ex.fits')
+                    target_list.append(self.target_dir + str(cam+1) + '/' +j[1][:-5] + 'im.fits')
+                    target_list.append(self.target_dir + str(cam+1) + '/' +j[1][:-5] + 'red.fits')
             
             #copy this set
             for src,tgt in zip(src_list, target_list):

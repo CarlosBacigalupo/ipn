@@ -28,17 +28,17 @@ class star():
 #         stetson_df = pandas.read_pickle('stetson.pd')
         files = glob.glob('cam1/*.fits')
         for thisFile in files:
-            a = pf.open(thisFile)
-            b = a['FIBRES'].data
-            idx = b.field('NAME').strip()==name
-            if b[idx].shape[0] >0:
-                starInfo = b[idx][0]
+            thisFits = pf.open(thisFile)
+            fibreTable = thisFits['FIBRES'].data
+            idx = fibreTable.field('NAME').strip()==name
+            if fibreTable[idx].shape[0] >0: #if there is any star in this file...
+                starInfo = fibreTable[idx][0] 
 
                 self.name = starInfo.field('NAME').strip()
-                self.RA_dec = starInfo.field('RA')
+                self.RA_dec = np.rad2deg(starInfo.field('RA'))
                 self.Dec_dec = starInfo.field('DEC')        
-                self.RA_h, self.RA_min, self.RA_sec = toolbox.dec2sex(self.RA_dec/15)   
-                self.Dec_deg, self.Dec_min, self.Dec_sec = toolbox.dec2sex(self.Dec_dec)
+                self.RA_h, self.RA_min, self.RA_sec = toolbox.dec2sex(np.rad2deg(self.RA_dec)/15)   
+                self.Dec_deg, self.Dec_min, self.Dec_sec = toolbox.dec2sex(np.rad2deg(self.Dec_dec))
                 self.Vmag = starInfo.field('MAGNITUDE')
             
 #                 self.B = stetson_df[stetson_df.target == self.name].B.values[0]
@@ -201,7 +201,7 @@ class exposures():
             vh, vb = toolbox.baryvel(j+2400000+0.5) 
             ra = star.RA_dec    #RA  in radians
             dec = star.Dec_dec  #Dec in radians
-            baryVels.append(-(vb[0]*np.cos(dec)*np.cos(ra) + vb[1]*np.cos(dec)*np.sin(ra) + vb[2]*np.sin(dec))*1000)
+            baryVels.append((vb[0]*np.cos(dec)*np.cos(ra) + vb[1]*np.cos(dec)*np.sin(ra) + vb[2]*np.sin(dec))*1000)
 #         print baryVels
         self.rel_baryVels = np.array(baryVels) - baryVels[0]
         self.abs_baryVels = np.array(baryVels)

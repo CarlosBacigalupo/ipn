@@ -10,8 +10,8 @@ import pylab as plt
 
 
 
-booSave = False
-booShow = True
+booSave = True
+booShow = False
 
 if len(sys.argv)>1:
     fileList = [sys.argv[1]]
@@ -40,10 +40,18 @@ SNRs = np.load('SNRs.npy')
 
 cameras = ['Blue','Green','Red','IR']
 
-for epoch in range(RVs.shape[1]):
-    for cam in range(4):
+# print np.max(RVs,axis=(0,1)),np.max(SNRs,axis=(0,1))
+# maxRVs = np.max(RVs,axis=(0,1))
+maxSNRs =np.max(SNRs,axis=(0,1))
+ 
+
+
+for epoch in range(RVs.shape[1])[:]:
+    for cam in range(4)[:]:
+        print 'Plotting epoch,cam',epoch,cam
         R = RVs[:,epoch,cam]
         S = SNRs[:,epoch,cam]
+        
         a = np.histogram(R)
         title = os.getcwd().split('/')[-1]+ ' - t'+str(epoch)+', '+cameras[cam]+' camera'
         plotName = 'plots/'+str(cam+1)+'/hist_'+str(epoch) 
@@ -52,30 +60,22 @@ for epoch in range(RVs.shape[1]):
         plt.title(title)
     
         ax = fig.add_subplot(111)
-        ax.bar(a[1][:-1],a[0], width = (a[1][-2]-a[1][-1])*0.7)
+        ax.bar(a[1][1:],a[0], width = (a[1][-2]-a[1][-1]))
         ax2 = ax.twinx()
         ax2.scatter(R,S, c='r', s=100)
-        ax.legend(loc=0)
+#         ax.legend(loc=0)
         ax.grid()
         ax2.grid()
         ax.set_ylabel('Counts')
         ax.set_xlabel('RV [m/s]')
-        ax2.set_ylabel('SNR')
     
-    #     ax.set_ylim(0,10)
-    #     ax2.set_ylim(-5, 200)
+#         ax.set_ylim(0,10)
+        ax2.set_ylim(0, maxSNRs[cam])
     #     plt.show()
-        plt.savefig(plotName, dpi = 1000 )
-
-
-#     title = os.getcwd().split('/')[-1]+ ' - t'+str(epoch)+', '+cameras[cam]+' camera'
-#     plotName = 'plots/'+str(cam+1)+'/hist_'+str(epoch) 
-#     plt.title(title)    
-#     plt.ylabel('SNR')
-#     plt.xlabel('RV [m/s]')
-#     #plt.savefig(plotName, dpi = 1000 )
-# #     plt.show()
-#     plt.close()
+        if booSave==True:plt.savefig(plotName)
+    
+        if booShow==True: plt.show()
+        plt.close()
 
 # import numpy as np
 # import matplotlib.pyplot as plt

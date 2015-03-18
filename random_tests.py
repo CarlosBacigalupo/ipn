@@ -319,19 +319,7 @@ import numpy as np
 
 # <codecell>
 
-cd ~/Documents/HERMES/reductions/HD1581_6.2/
-
-# <codecell>
-
 cd ~/Documents/HERMES/reductions/47Tuc_core_6.2/
-
-# <codecell>
-
-# filename = 'Giant01.obj'
-# filename = 'Brght01.obj'
-filename = 'red_Giant01.obj'
-filehandler = open(filename, 'r')
-thisStar = pickle.load(filehandler)
 
 # <codecell>
 
@@ -341,10 +329,6 @@ print np.all([np.nansum(thisCam.red_fluxes,1).astype(bool) for thisCam in thisSt
 
 plt.plot(thisCam.red_fluxes[0])
 plt.show()
-
-# <codecell>
-
-thisCam = thisStar.exposures.cameras[3]
 
 # <codecell>
 
@@ -457,11 +441,123 @@ print stats.nanmedian(thisCam.red_fluxes[i])/stats.nanstd(thisCam.red_fluxes[i])
 
 # <codecell>
 
-from scipy import stats
+PyAstronomy
 
 # <codecell>
 
-print np.sqrt(stats.nanmedian(thisCam.red_fluxes[i]))
+import PyAstronomy
+
+# <codecell>
+
+cd ~/Documents/HERMES/reductions/HD1581_6.2/
+
+# <codecell>
+
+import pickle
+filename = 'HD1581.obj'
+# filename = 'Brght01.obj'
+# filename = 'red_Giant01.obj'
+filehandler = open(filename, 'r')
+thisStar = pickle.load(filehandler)
+thisCam = thisStar.exposures.cameras[3]
+
+# <codecell>
+
+
+# <codecell>
+
+from PyAstronomy import pyasl
+
+def baryTest(thisStar):
+
+    for i,jd in enumerate((thisStar.exposures.JDs+2400000.5)[:]):
+        heli, bary = pyasl.baryvel(jd, deq=2000.0)
+#         print "Earth's velocity at JD: ", jd
+#         print "Heliocentric velocity [km/s]: ", heli
+#         print "Barycentric velocity [km/s] : ", bary
+
+        # Coordinates of Sirius
+        ra  = 101.28715535
+        dec = -16.71611587
+        
+        #thisStar coords
+        ra  = np.rad2deg(thisStar.RA_dec)
+        dec = np.rad2deg(thisStar.Dec_dec)
+        print np.rad2deg(thisStar.RA_dec), np.rad2deg(thisStar.Dec_dec), thisStar.name, thisStar.exposures.abs_baryVels[i]
+
+        
+        vh, vb = pyasl.baryCorr(jd, ra, dec, deq=2000.0)
+        print "Barycentric velocity of Earth toward",thisStar.name,'[m/s]', vb*1000
+        print vb*1000-thisStar.exposures.abs_baryVels[i]
+        print ''
+
+# <codecell>
+
+
+baryTest(thisStar)
+
+# <codecell>
+
+Right ascension	00h 20m 04.25995s
+Declination	−64° 52′ 29.2549″
+
+# <codecell>
+
+print thisStar.RA_dec, thisStar.Dec_dec#, thisStar.RA_h, thisStar.RA_min , thisStar.RA_sec
+
+# <codecell>
+
+import toolbox
+toolbox.dec2sex(thisStar.RA_dec)
+
+# <codecell>
+
+import numpy as np
+
+# <codecell>
+
+thisStar.RA_dec, toolbox.dec2sex(np.rad2deg(thisStar.RA_dec)/15)
+
+# <codecell>
+
+00 20 06.49 -64 52 06.6
+
+# <codecell>
+
+np.deg2rad(toolbox.sex2dec(0,20,06.49)*15)
+
+# <codecell>
+
+np.deg2rad(-toolbox.sex2dec(64,52,6.6))
+
+# <codecell>
+
+-toolbox.sex2dec(64,52,6.6)
+
+# <codecell>
+
+RVs = np.random.random(100)
+stdRV= np.std(RVs)
+medRV = 0.5
+sigmaClip = 0.1
+print RVs,stdRV,medRV
+print RVs[(RVs>=medRV-sigmaClip*stdRV) & (RVs<=medRV+sigmaClip*stdRV)]
+
+# <codecell>
+
+import pylab as plt
+names = a
+
+# <codecell>
+
+g = plt.gca()
+g.xaxis.majorTic
+plt.show()
+
+# <codecell>
+
+import matplotlib.pyplot as plt
+
 
 # <codecell>
 

@@ -196,7 +196,7 @@ def RVs_all_stars(booSave = False, booShow = True):
 
 # <codecell>
 
-def RVs_all_stars_NPYs( sigmaClip = -1, RVClip = -1, booSave = False, booShow = True, booBaryPlot = False, title = ''):
+def RVs_all_stars_NPYs( sigmaClip = -1, RVClip = -1, booSave = False, booShow = True, booBaryPlot = False, booBaryCorrect = False, title = ''):
     
     data=np.load('data.npy')
     RVs=np.load('RVs.npy')
@@ -206,9 +206,13 @@ def RVs_all_stars_NPYs( sigmaClip = -1, RVClip = -1, booSave = False, booShow = 
 
     X = JDs
     Y = RVs
-    print X,Y
+    
     if RVClip>-1:Y[np.abs(Y)>RVClip] = np.nan
-#     if sigmaClip>-1:Y[np.median(Y)>RVClip] = np.nan
+    if sigmaClip>-1:
+        stdY= np.std(Y)
+        medY = np.median(Y)
+        Y[(Y>=medY-sigmaClip*stdY) & (Y<=medY+sigmaClip*stdY)] = np.nan
+    
     YERR = sigmas
     
     colors = ['b','g','r','cyan']
@@ -221,19 +225,93 @@ def RVs_all_stars_NPYs( sigmaClip = -1, RVClip = -1, booSave = False, booShow = 
 #             filehandler = open(objName, 'r')
 #             thisStar = pickle.load(filehandler)
 
-    #Plots RVs, baryvels. Single star, 4 cameras
-    if title=='':
-        plt.title('RV - All Stars')
-    else:
-        plt.title(title)
         
-    if booBaryPlot==True: plt.plot(X, -baryVels, label = 'Barycentric Vel. ')
     
-    for i in range(Y.shape[0])[:]:
-        for cam in range(4)[:1]:
+    for cam in range(4)[:]:
+        for i in range(Y.shape[0])[:]:
+            #Plots RVs, baryvels. Single star, 4 cameras
+            if title=='':
+                plt.title('RV - All Stars - '+labels[cam]+' camera')
+            else:
+                plt.title(title)
+            
+
 #             plt.errorbar(X, Y[i,:,cam], yerr=YERR[i,:,cam], fmt='.', label = labels[cam], color = colors[cam])
             plt.scatter(X, Y[i,:,cam], label = labels[cam], color = colors[cam])
     
+    #sine plot
+#     start_day = 56889.000000 # The Julian date for CE  2014 August 20 00:00:00.0 UT  (10am australia)
+#     end_day = 56895.000000 #The Julian date for CE  2014 August 26 00:00:00.0 UT (10am australia)
+#     days = np.linspace(start_day, end_day) 
+#     K1=26100
+#     peri_time = 19298.85
+#     P=4.8202
+#     peri_arg=269.3
+#     RV = K1* np.sin( (days-peri_time)/P*2*np.pi - peri_arg/360*2*np.pi )
+#     plt.plot(days, RV, linewidth = 1, label = 'rhoTuc' )
+
+        if booBaryPlot==True: plt.plot(X, baryVels, label = 'Barycentric Vel. ')
+
+        plt.xlabel('MJD')
+        plt.ylabel('RV [m/s]')
+    #     plt.legend(loc=0)
+        if booSave==True: 
+            try:
+                plotName = 'plots/All_RVs_'+labels[cam]
+                print 'Attempting to save', plotName, 
+                plt.savefig(plotName, dpi = 1000 )
+
+            except:
+                print 'FAILED'
+        if booShow==True: plt.show()
+        plt.close()
+                
+        
+
+# <codecell>
+
+def RVs_by_star_NPYs(sigmaClip = -1, RVClip = -1, booSave = False, booShow = True, booBaryPlot = False, booBaryCorrect = False, title = ''):
+    
+    data=np.load('data.npy')
+    RVs=np.load('RVs.npy')
+    sigmas=np.load('sigmas.npy')
+    baryVels=np.load('baryVels.npy')
+    JDs=np.load('JDs.npy')
+
+    X = range(data[:,0].shape[0])
+    Y = RVs
+    Y[Y==0]=np.nan
+    
+    if RVClip>-1:Y[np.abs(Y)>RVClip] = np.nan
+    if sigmaClip>-1:
+        stdY= np.std(Y)
+        medY = np.median(Y)
+        Y[(Y>=medY-sigmaClip*stdY) & (Y<=medY+sigmaClip*stdY)] = np.nan
+    
+    YERR = sigmas
+    
+    colors = ['b','g','r','cyan']
+    labels = ['Blue','Green','Red','IR']
+    
+    #Plots RVs, baryvels. all star, 4 cameras
+    print 'About to plot RVs from ',RVs.shape[0],'stars.'
+    fig, ax = plt.subplots()
+    if title=='':
+        plt.title('RVs per star')
+    else:
+        plt.title(title)
+
+    ax.set_xticklabels(data[:,0])
+    plt.xticks(rotation=70)
+
+    if booBaryPlot==True: plt.plot(X, baryVels, label = 'Barycentric Vel. ')
+    
+    for epoch in range(Y.shape[1])[:]:
+        for cam in range(4)[:1]:
+#             plt.errorbar(X, Y[i,:,cam], yerr=YERR[i,:,cam], fmt='.', label = labels[cam], color = colors[cam])
+            plt.scatter(X, Y[:,epoch,cam], label = labels[cam], color = colors[cam])
+    
+
     #sine plot
 #     start_day = 56889.000000 # The Julian date for CE  2014 August 20 00:00:00.0 UT  (10am australia)
 #     end_day = 56895.000000 #The Julian date for CE  2014 August 26 00:00:00.0 UT (10am australia)

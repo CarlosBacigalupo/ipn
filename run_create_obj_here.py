@@ -6,8 +6,9 @@ import glob
 import pyfits as pf
 import numpy as np
 import sys
+import toolbox
 
-
+booHD1581 = False
 
 #load all star names from 1st file
 fileList = glob.glob('cam1/*.fits')
@@ -25,7 +26,7 @@ if len(fileList)>0:
     
         starNames = np.unique(starNames)
     
-    #     starNames = ['Giant01']
+    if booHD1581==True: starNames = ['Giant01']
     
     print 'Collecting data from ',len(starNames),'stars'
     
@@ -35,7 +36,15 @@ if len(fileList)>0:
          
         thisStar.exposures = cr_obj.exposures()
         thisStar.exposures.load_exposures(thisStar.name)
+        
+        if booHD1581==True: #to fix wrong values due to offset field
+            thisStar.RA_dec = 0.087738428718276612
+            thisStar.Dec_dec = -1.1321689058299416       
+            thisStar.RA_h, thisStar.RA_min, thisStar.RA_sec = toolbox.dec2sex(np.rad2deg(thisStar.RA_dec/15))   
+            thisStar.Dec_deg, thisStar.Dec_min, thisStar.Dec_sec = toolbox.dec2sex(np.rad2deg(thisStar.Dec_dec))
+                        
         thisStar.exposures.calculate_baryVels(thisStar)
+        if booHD1581==True: star_name = 'HD1581'
         thisStar.name = star_name
         file_pi = open(star_name+'.obj', 'w') 
         pickle.dump(thisStar, file_pi) 

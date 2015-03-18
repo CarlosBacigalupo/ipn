@@ -10,8 +10,9 @@ import RVPlots as RVP
 
 
 
-booSave = False
-booShow = True
+booSave = True
+booShow = False
+booBaryPlot =True
 
 if len(sys.argv)>1:
     fileList = [sys.argv[1]]
@@ -29,7 +30,11 @@ except:
 # RVP.RVs_all_stars()
 
 #Plot
-RVP.RVs_all_stars_NPYs(RVClip = -1, booSave=False , booBaryPlot=True, title = 'M67 1arc Diff')
+RVP.RVs_all_stars_NPYs(RVClip = -1, booSave = booSave,booShow = booShow  , booBaryPlot=booBaryPlot)
+
+#Plot
+# RVP.RVs_by_star_NPYs(booSave = booSave,booShow = booShow )
+
 
 
 # if len(fileList)>0:

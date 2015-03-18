@@ -15,6 +15,9 @@ folder2 = '/Users/Carlos/Documents/HERMES/reductions/47Tuc_core_1arc_6.2'
 folder1 = '/Users/Carlos/Documents/HERMES/reductions/m67_6.2'
 folder2 = '/Users/Carlos/Documents/HERMES/reductions/m67_1arc_6.2'
 
+folder1 = '/Users/Carlos/Documents/HERMES/reductions/HD1581_6.2'
+folder2 = '/Users/Carlos/Documents/HERMES/reductions/HD1581_1arc_6.2'
+
 
 
 # if len(sys.argv)>1:
@@ -25,6 +28,7 @@ folder2 = '/Users/Carlos/Documents/HERMES/reductions/m67_1arc_6.2'
 # try:os.makedirs('plots')
 # except:pass
 
+print 'Comparing',folder1,'and',folder2
 RVs1 = np.load(folder1+'/RVs.npy')
 RVs2 = np.load(folder2+'/RVs.npy')
 

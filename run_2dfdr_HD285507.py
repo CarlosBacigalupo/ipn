@@ -26,7 +26,7 @@ copyFiles = False
 doReduce = True
 overwrite = True
 idxFile = 'no_flat_no_bias.idx'
-startFrom = 4 #number of data set to begin with. 0 for beginning. Good for starting half way through if it cancelled
+startFrom =  #number of data set to begin with. 0 for beginning. Good for starting half way through if it cancelled
 
 #path to 2dfdr
 # dr_dir = '/home/staff/mq20101889/2dfdr/6.2/2dfdr_install/bin' #in nut

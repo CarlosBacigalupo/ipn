@@ -6,6 +6,7 @@
 import numpy as np
 import pylab as plt
 import sys
+from matplotlib import gridspec
 
 # <codecell>
 
@@ -17,15 +18,14 @@ def onpick1(event):
         ind = event.ind
         x_point = np.take(xdata, ind)[0]
         y_point = np.take(ydata, ind)[0]
-#         print
-        print data[ind]
-#         ax1.clear()
-#         ax1.plot(a, b, 'o', picker=5, c='b')
+        print' Selected:', data[ind[0]]
+        print
         ax1.plot(FIBRE[ind[0]], SNR[ind[0]], 'o', picker=5, c='r')
         ax2.plot(FIBRE[ind[0]], RV[ind[0]], 'o', picker=5, c='r')
         ax4.plot(RV[ind[0]], SNR[ind[0]], 'o', picker=5, c='r')
+        ax5.plot(RA[ind[0]], DEC[ind[0]], 'o', picker=5, c='r')
         plt.draw()
-#         plt.close()
+
         
 
 # <codecell>
@@ -40,45 +40,64 @@ if len(sys.argv)>2:
     SNRs = np.load('npy/SNRs.npy')
     #     JDs=np.load('npy/JDs.npy')
     #     sigmas=np.load('npy/sigmas.npy')
-
+    
+    RVClip = 1e9
+    if len(sys.argv)>3:
+        RVClip = sys.argv[3]
         
     FIBRE = data[:,2].astype(float) #fibres
+    RA = data[:,3].astype(float) #RA
+    DEC = data[:,4].astype(float) #Dec
     RV = RVs[:,epoch,cam] #RV
     SNR = SNRs[:,epoch,cam] #SNR
     # baryVel = baryVels[:,epoch,cam] #baryVels
     maxSNRs = np.nanmax(SNRs,axis=(0,1))
-
-
+    
+    RVfilter = np.abs(RV)>int(RVClip)
+    RV[RVfilter]=np.nan
 
     fig = plt.figure()
+    
+    gs = gridspec.GridSpec(3, 4)
 
-    ax1 = fig.add_subplot(311) #SNRs
+#     ax1 = fig.add_subplot(321) #SNRs
+    ax1 = fig.add_subplot(gs[0,0:2]) #SNRs
     ax1.plot(FIBRE, SNR, 'o', label = 'SNR', color = 'b', picker=5)
     plt.xlabel('Fibre #')
     plt.ylabel('SNR')
-    plt.legend()
+#     plt.legend()
 
 
-    ax2= fig.add_subplot(312) #RVs
+#     ax2= fig.add_subplot(323) #RVs
+    ax2= fig.add_subplot(gs[1,0:2]) #RVs
     ax2.plot(FIBRE, RV, 'o', label = 'RV', color = 'b', picker=5)
     plt.xlabel('Fibre #')
     plt.ylabel('RV [m/s]')
-    plt.legend()
+#     plt.legend()
 
-    ax3 = fig.add_subplot(313) #Histogram
-    hist = np.histogram(RV,50)
+#     ax3 = fig.add_subplot(322) #Histogram
+    ax3 = fig.add_subplot(gs[2,0:2]) #Histogram
+    hist = np.histogram(RV[~np.isnan(RV)],50)
     ax3.bar(hist[1][1:],hist[0], width = (hist[1][-2]-hist[1][-1]), color = 'k', alpha = 0.5)
     ax3.set_ylabel('Counts')
     ax3.set_xlabel('RV [m/s]')
 
+    
+    
     ax4 = ax3.twinx()
-    # ax4.scatter(RV,SNR, c='b', s=50)
+#     # ax4.scatter(RV,SNR, c='b', s=50)
     ax4.plot(RV, SNR, 'o', color = 'b', picker=5)
-    ax4.plot([baryVels[epoch], baryVels[epoch]], [0, maxSNRs[cam]], 'r', lw=2)
+    ax4.plot([baryVels[epoch], baryVels[epoch]], [0, maxSNRs[cam]], 'g', lw=2)
     ax4.plot([0, 0], [0, maxSNRs[cam]], 'k--', lw=2)
     ax4.set_ylabel('SNR')
     ax4.set_ylim(0, maxSNRs[cam])
 
+#     ax5= fig.add_subplot(324) #RVs
+    ax5= fig.add_subplot(gs[:,2:]) #RVs
+    ax5.plot(RA, DEC, 'o', label = 'RV', color = 'b', picker=5)
+    ax5.grid(True)
+    plt.xlabel('Dec [deg]')
+    plt.ylabel('RA [deg]')
 
     plt.tight_layout()
 

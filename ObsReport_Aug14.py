@@ -10,22 +10,15 @@ import os
 import glob
 import pickle
 import RVTools as RVT
+import toolbox
 
 # <codecell>
 
-cd /Users/Carlos/Documents/HERMES/reductions/HD285507_6.0/0_20aug/1/
+cd /Users/Carlos/Documents/HERMES/data/140821/data/ccd_1/
 
 # <codecell>
 
-p2y = RVT.pivot_to_y('20aug10037tlm.fits')
-
-# <codecell>
-
-cd /Users/Carlos/Documents/HERMES/data/140820/data/ccd_1/
-
-# <codecell>
-
-a = pf.open('20aug10050.fits')
+a = pf.open('21aug10030.fits')
 
 # <codecell>
 
@@ -47,36 +40,55 @@ dirs = ['/Users/Carlos/Documents/HERMES/data/140820/data/ccd_1/',
 
 # <codecell>
 
-print a[0].header['OBJECT']
-print good_targets
-print a[0].header['OBJECT'] in good_targets
-print np.where(a[0].header['OBJECT']== np.array(good_targets))
+print a[0].header['UTMJD']
+print a[0].header['UTSTART']
+print a[0].header['UTDATE']
+print a[0].header['EXPOSED']
+print 
+e = float(a[0].header['EXPOSED'])/2/24/60/60 # EXPOSED/2 in days
+inDate = np.hstack((a[0].header['UTDATE'].split(':'),a[0].header['UTSTART'].split(':'))).astype(int)
+print toolbox.gd2jd(inDate, TZ=0)-2400000.5 + e
 
 # <codecell>
 
-raw = []
-print 'Filename & Field Name & Plate & MJD & Exp Time & SNR \\\\'
-good_targets = np.array(['rhoTuc #176 (Pivot 175)', 'HD1581 #176 (Pivot 175)','HD285507 #227 (Pivot 223)' ])
-good_pivots = [175,175,224]
-               
+24./100*7.
+
+# <codecell>
+
+# raw = []
+print 'Obs & Filename & Field Name & Plate & MJD & Relative Day (days) & Exp Time (s) \\\\'
+# good_targets = np.array(['rhoTuc #176 (Pivot 175)', 'HD1581 #176 (Pivot 175)','HD285507 #227 (Pivot 223)' ])
+good_targets = np.array(['HD285507 #227 (Pivot 223)' ])
+# good_targets = np.array(['HD1581 #176 (Pivot 175)'])
+# good_targets = np.array(['47Tuc center'])
+
+# good_pivots = [175,175,224]
+t0 = 0  
+order = 0 
 for j in dirs:
     os.chdir(j)
     for i in glob.glob('*.fits'):
         a = pf.open(i)
-        thisSNR = 0
         if a[0].header['NDFCLASS'] == 'MFOBJECT':
             if a[0].header['OBJECT'] in good_targets:
                 pivot_idx = np.where(a[0].header['OBJECT']== good_targets)[0][0]
-#                 flux = b.data[good_pivots[pivot_idx]]
-#                 thisSNR=np.median(flux)/np.std(flux)
-                print i+' & '+a[0].header['OBJECT']+' & '+a[0].header['SOURCE']+' & '+str(a[0].header['UTMJD'])+' & '+str(a[0].header['EXPOSED']) +' & '+str(thisSNR) + ' \\\\'
-                raw.append((i, a[0].header['OBJECT'],a[0].header['SOURCE'],a[0].header['UTMJD'],a[0].header['EXPOSED']))            
+                e = float(a[0].header['EXPOSED'])/2/24/60/60 # EXPOSED/2 in days
+                inDate = np.hstack((a[0].header['UTDATE'].split(':'),a[0].header['UTSTART'].split(':'))).astype(int)
+                UTMJD = toolbox.gd2jd(inDate, TZ=0)-2400000.5 + e
+                if t0==0:t0=UTMJD
+                tDiff=UTMJD-t0
+#                 print str(order)+' & '+ i+' & HD1581 & '+a[0].header['SOURCE']+' & '+str(UTMJD)+' & '+str(tDiff)+' & '+str(a[0].header['EXPOSED']) +' \\\\'
+                print str(order)+' & '+ i+' & HD285507 & '+a[0].header['SOURCE']+' & '+str(UTMJD)+' & '+str(tDiff)+' & '+str(a[0].header['EXPOSED']) +' \\\\'
+#                 print str(order)+' & '+ i+' & '+a[0].header['OBJECT']+' & '+a[0].header['SOURCE']+' & '+str(UTMJD)+' & '+str(tDiff)+' & '+str(a[0].header['EXPOSED']) +' \\\\'
+                order +=1
+#                 raw.append((i, a[0].header['OBJECT'],a[0].header['SOURCE'],a[0].header['UTMJD'],a[0].header['EXPOSED']))            
         a.close
 # raw = np.array(raw)
 
 # <codecell>
 
-raw[0] = (raw[0][0],'47Tuc center' , raw[0][2], raw[0][3], raw[0][4])
+a = np.array([-5,-1,0,5,3])
+np.abs(a)>4
 
 # <codecell>
 

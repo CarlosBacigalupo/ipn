@@ -1,9 +1,15 @@
+# -*- coding: utf-8 -*-
+# <nbformat>3.0</nbformat>
+
+# <codecell>
+
 import math
 import numpy as np
 import string
 
 from numpy import *
 
+# <codecell>
 
 def gaussian(x, mu, sigma, A):
     
@@ -20,6 +26,9 @@ def deg2rad(degrees):
 
 def rad2deg(radians):
    return radians*180./pi
+
+
+# <codecell>
 
 def baryvel(dje, deq=0):
    """
@@ -472,6 +481,9 @@ def bprecess(ra0, dec0, mu_radec=None, parallax=None, rad_vel=None, epoch=None):
    else:
       return ra_1950, dec_1950
 
+
+
+# <codecell>
 
 def convolve(image, psf, ft_psf=None, ft_image=None, no_ft=None, correlate=None, auto_correlation=None):
    """
@@ -1968,7 +1980,7 @@ def jd2gd(jd):
     return (yyyy, mm, dd, hh, min, sec)
 
 
-def sex2dec(hd, min, sec):
+def sex2dec(hd, mi, sec):
     """ 
     Converts a Sexagesimal number to a Decimal number.
     
@@ -1987,7 +1999,7 @@ def sex2dec(hd, min, sec):
         A decimal number
     
     """
-    return float(hd) + min/60.0 + sec/3600.0
+    return float(hd) + mi/60.0 + sec/3600.0
     
 def dec2sex(deci):
     """ 
@@ -2134,3 +2146,4 @@ def write_fld(main_df, sky_df, fiducials_df, fld_file, cluster_centre_sex, title
 #         print out_final
     f.close()
     
+

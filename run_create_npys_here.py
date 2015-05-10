@@ -8,9 +8,14 @@ import numpy as np
 import RVTools as RVT
 import sys
 
+try: 
+    os.mkdir('npy')
+except:
+    pass
+
 
 #load all star names from 1st file
-fileList = glob.glob('red_*.obj')
+fileList = glob.glob('obj/red_*.obj')
 
 if len(fileList)>0:
 
@@ -35,7 +40,7 @@ if len(fileList)>0:
 #             (thisStar.exposures.cameras[3].sigmas.all()!=0)):
             
         print 'Appending...',
-        data.append([thisStar.name, thisStar.Vmag,np.unique(thisStar.exposures.pivots)[0]])
+        data.append([thisStar.name, thisStar.Vmag,np.unique(thisStar.exposures.pivots)[0], thisStar.RA, thisStar.Dec])
         RVs[i,:,0] = thisStar.exposures.cameras[0].RVs
         RVs[i,:,1] = thisStar.exposures.cameras[1].RVs
         RVs[i,:,2] = thisStar.exposures.cameras[2].RVs
@@ -67,12 +72,12 @@ if len(fileList)>0:
 #     sigmas = sigmas[order]
 #     
     #save?
-    np.save('data',data)
-    np.save('RVs',RVs)
-    np.save('SNRs',SNRs)
-    np.save('sigmas',sigmas)
-    np.save('baryVels',baryVels)
-    np.save('JDs',JDs)
+    np.save('npy/data',data)
+    np.save('npy/RVs',RVs)
+    np.save('npy/SNRs',SNRs)
+    np.save('npy/sigmas',sigmas)
+    np.save('npy/baryVels',baryVels)
+    np.save('npy/JDs',JDs)
 
     print ''
     print 'data',len(data)

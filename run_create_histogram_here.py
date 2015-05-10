@@ -12,12 +12,20 @@ import pylab as plt
 
 booSave = True
 booShow = False
+booShowBary = True
+
 
 if len(sys.argv)>1:
-    fileList = [sys.argv[1]]
-
+    maxRV = np.absolute(float(sys.argv[1]))
 else:
-    fileList = glob.glob('red_*.obj')
+    maxRV = 5000
+minRV = -maxRV
+
+if len(sys.argv)>2:
+    baryOffset = bool(sys.argv[2])
+else:
+    baryOffset = False
+print baryOffset   
 
 try:
     os.makedirs('plots')
@@ -35,45 +43,60 @@ except:
     pass
 
 
-RVs = np.load('RVs.npy')
-SNRs = np.load('SNRs.npy')
+RVs = np.load('npy/RVs.npy')
+SNRs = np.load('npy/SNRs.npy')
+baryVels = np.load('npy/baryVels.npy')
 
+ 
 cameras = ['Blue','Green','Red','IR']
 
 # print np.max(RVs,axis=(0,1)),np.max(SNRs,axis=(0,1))
 # maxRVs = np.max(RVs,axis=(0,1))
-maxSNRs =np.max(SNRs,axis=(0,1))
+maxSNRs = np.nanmax(SNRs,axis=(0,1))
  
 
 
 for epoch in range(RVs.shape[1])[:]:
+    if baryOffset==True:
+        offset = baryVels[epoch]
+    else:
+        offset = 0
+        
     for cam in range(4)[:]:
         print 'Plotting epoch,cam',epoch,cam
+        print '    Limits set to max,min', minRV+offset, maxRV+offset
+        
+        
         R = RVs[:,epoch,cam]
-        S = SNRs[:,epoch,cam]
+        filter = ((R>(minRV+offset)) & (R<(maxRV+offset)))
+        S = SNRs[:,epoch,cam][filter]
+        R = R[filter]
+        hist = np.histogram(R,50)
         
-        a = np.histogram(R)
         title = os.getcwd().split('/')[-1]+ ' - t'+str(epoch)+', '+cameras[cam]+' camera'
-        plotName = 'plots/'+str(cam+1)+'/hist_'+str(epoch) 
-        
+        plotName = 'plots/'+str(cam+1)+'/hist_'+str(epoch)
         fig = plt.figure()
         plt.title(title)
     
         ax = fig.add_subplot(111)
-        ax.bar(a[1][1:],a[0], width = (a[1][-2]-a[1][-1]))
-        ax2 = ax.twinx()
-        ax2.scatter(R,S, c='r', s=100)
-#         ax.legend(loc=0)
-        ax.grid()
-        ax2.grid()
+        ax.bar(hist[1][1:],hist[0], width = (hist[1][-2]-hist[1][-1]))
+#         ax.grid()
         ax.set_ylabel('Counts')
         ax.set_xlabel('RV [m/s]')
-    
+#         ax.set_xlim(baryVels[epoch]-minRV,baryVels[epoch]+maxRV)
 #         ax.set_ylim(0,10)
+
+        ax2 = ax.twinx()
+        ax2.scatter(R,S, c='r', s=100)
+        if booShowBary==True: ax2.plot([baryVels[epoch], baryVels[epoch]], [0, maxSNRs[cam]], 'red', lw=2)
+#             ax2.bar(baryVels[epoch],maxSNRs[cam] ,color = 'green', lw=1)
+#         ax2.grid()
+        ax2.set_ylabel('SNR')
         ax2.set_ylim(0, maxSNRs[cam])
-    #     plt.show()
-        if booSave==True:plt.savefig(plotName)
-    
+        ax2.set_xlim(minRV+offset,maxRV+offset)
+        ax2.plot([0, 0], [0, maxSNRs[cam]], 'k--', lw=2)
+        
+        if booSave==True:plt.savefig(plotName)    
         if booShow==True: plt.show()
         plt.close()
 

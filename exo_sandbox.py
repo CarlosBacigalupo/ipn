@@ -6,6 +6,10 @@
 import numpy as np
 import pylab as plt
 
+# <markdowncell>
+
+# radial velocity semi aplitude
+
 # <codecell>
 
 K0 = 28.4329
@@ -45,9 +49,12 @@ plt.show()
 
 # <codecell>
 
-# P1 = np.random.random(10)*10
+
+# <codecell>
+
+P1 = np.random.random(10)*10
 # sMass = 0.5
-# RV1 = 120*np.sin(P1)
+RV1 = 120*np.sin(P1)
 yerr1 = 200+np.random.random(10)*500
 # yerr1 = np.zeros(10)
 
@@ -92,19 +99,4 @@ plt.xlabel('P (days)')
 plt.title('Simulated oscillations for a 1.6 M$_{sum}$ star')
 plt.legend(loc=0)
 plt.show()
-
-# <codecell>
-
-0.015/7000*3e8
-
-# <codecell>
-
-3e8/28e3
-
-# <codecell>
-
-28e3/7e3
-
-# <codecell>
-
 

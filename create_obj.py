@@ -16,8 +16,8 @@ import toolbox
 class star():
     
     name = ''
-    RA_dec = 0
-    Dec_dec = 0
+    RA = 0
+    Dec = 0
     Vmag = 0
     
     def __init__(self, name):
@@ -35,10 +35,10 @@ class star():
                 starInfo = fibreTable[idx][0] 
 
                 self.name = starInfo.field('NAME').strip()
-                self.RA_dec = np.rad2deg(starInfo.field('RA'))
-                self.Dec_dec = starInfo.field('DEC')        
-                self.RA_h, self.RA_min, self.RA_sec = toolbox.dec2sex(np.rad2deg(self.RA_dec)/15)   
-                self.Dec_deg, self.Dec_min, self.Dec_sec = toolbox.dec2sex(np.rad2deg(self.Dec_dec))
+                self.RA = np.rad2deg(starInfo.field('RA'))
+                self.Dec = np.rad2deg(starInfo.field('DEC'))        
+                self.RA_deg, self.RA_min, self.RA_sec = toolbox.dec2sex(self.RA)   
+                self.Dec_deg, self.Dec_min, self.Dec_sec = toolbox.dec2sex(self.Dec)
                 self.Vmag = starInfo.field('MAGNITUDE')
             
 #                 self.B = stetson_df[stetson_df.target == self.name].B.values[0]
@@ -115,7 +115,10 @@ class exposures():
             print 'cam'+str(camIdx+1)+':',len(files) #,files
             for thisFile in files:    
                 HDUList = pf.open(thisFile)
-                self.JDs.append(HDUList[0].header['UTMJD'])
+                e = float(HDUList[0].header['EXPOSED'])/2/24/60/60 # EXPOSED/2 in days
+                inDate = np.hstack((HDUList[0].header['UTDATE'].split(':'),HDUList[0].header['UTSTART'].split(':'))).astype(int)
+                MJD = toolbox.gd2jd(inDate, TZ=0) - 2400000.5 + e
+                self.JDs.append(MJD)
         a = np.unique(np.round(np.array(self.JDs).astype(float),3))
         self.JDs = np.sort(a)
         nExposures = len(a)
@@ -154,7 +157,11 @@ class exposures():
                     
                     #one time per exposure (because they are equal in all cameras)
                     thisMJDidx = ''
-                    thisMJDidx = np.where(self.JDs==round(float(HDUList[0].header['UTMJD']),3))[0]
+                    e = float(HDUList[0].header['EXPOSED'])/2/24/60/60 # EXPOSED/2 in days
+                    inDate = np.hstack((HDUList[0].header['UTDATE'].split(':'),HDUList[0].header['UTSTART'].split(':'))).astype(int)
+                    MJD = toolbox.gd2jd(inDate, TZ=0) - 2400000.5 + e
+
+                    thisMJDidx = np.where(self.JDs==round(float(MJD),3))[0]
                     if len(thisMJDidx)>0:
                         thisMJDidx = thisMJDidx[0]
                         print 'MJD',self.JDs[thisMJDidx]                          
@@ -199,9 +206,9 @@ class exposures():
         baryVels = []
         for j in self.JDs:
             vh, vb = toolbox.baryvel(j+2400000+0.5) 
-            ra = star.RA_dec    #RA  in radians
-            dec = star.Dec_dec  #Dec in radians
-            baryVels.append((vb[0]*np.cos(dec)*np.cos(ra) + vb[1]*np.cos(dec)*np.sin(ra) + vb[2]*np.sin(dec))*1000)
+            ra = star.RA    #RA  in degress
+            dec = star.Dec  #Dec in degrees
+            baryVels.append((vb[0]*np.cos(np.radians(dec))*np.cos(np.radians(ra)) + vb[1]*np.cos(np.radians(dec))*np.sin(np.radians(ra)) + vb[2]*np.sin(np.radians(dec)))*1000)
 #         print baryVels
         self.rel_baryVels = np.array(baryVels) - baryVels[0]
         self.abs_baryVels = np.array(baryVels)

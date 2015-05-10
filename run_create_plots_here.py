@@ -10,48 +10,68 @@ import RVPlots as RVP
 
 
 
-booSave = True
+booSave = True 
 booShow = False
-booBaryPlot =True
+booBaryPlot = False
+thisCamIdx = 0
+RVClip = 5000
+topStars = -1 #how many stars to read. -1 for all.
+booBaryCorrect = True
 
 if len(sys.argv)>1:
     fileList = [sys.argv[1]]
 
 else:
-    fileList = glob.glob('red_*.obj')
+    fileList = glob.glob('obj/red_*.obj')
 
 try:
     os.makedirs('plots')
 except:
-    print 'Falied to create plots/'
-    print ''
+    pass
+
+try:
+    os.makedirs('plots/1')
+    os.makedirs('plots/2')
+    os.makedirs('plots/3')
+    os.makedirs('plots/4')
+except:
+    pass
 
 #Plot
 # RVP.RVs_all_stars()
 
 #Plot
-RVP.RVs_all_stars_NPYs(RVClip = -1, booSave = booSave,booShow = booShow  , booBaryPlot=booBaryPlot)
+RVP.RVs_all_stars_NPYs(sigmaClip = -1,RVClip = RVClip, topStars=topStars, booSave = booSave,booShow = booShow  , booBaryPlot=booBaryPlot, booBaryCorrect = booBaryCorrect)
 
 #Plot
-# RVP.RVs_by_star_NPYs(booSave = booSave,booShow = booShow )
+# RVP.RVs_by_star_NPYs(RVClip = RVClip, booSave = booSave,booShow = booShow )
+
+#Plot
+# RVP.SNR_RV_vs_fibre(RVClip = RVClip, booSave = booSave,booShow = booShow)
+ 
+#Plot
+# RVP.RV_vs_fibre(RVClip = RVClip, booSave = booSave,booShow = booShow)
+
+#Plot
+# RVP.flux_and_CC(RVref = RVClip, booSave = booSave, booShow = booShow)
 
 
-
+  
 # if len(fileList)>0:
 #     for objName in fileList[:2]:
 #         print 'Reading',objName
 #         filehandler = open(objName, 'r')
 #         thisStar = pickle.load(filehandler)
-        
-        #Plot
-#         RVP.all_spec_overlap(thisStar, booSave = booSave,booShow = booShow )
-        
-        #Plot
-#         RVP.RVs_single_star(thisStar, sigmaClip = -1, RVClip = 3000)
-
-            
+#          
+#         #Plot
+#         RVP.all_spec_overlap(thisStar, booSave = booSave, thisCamIdx = thisCamIdx, booShow = booShow )
+#          
+#         #Plot
+# #         RVP.RVs_single_star(thisStar, sigmaClip = -1, RVClip = 3000)
+#  
+#              
 #         thisStar = None
 #         print ''
 # else:
 #     print 'No red_*.obj files here.'
-    
+#     

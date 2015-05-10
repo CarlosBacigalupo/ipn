@@ -449,14 +449,15 @@ import PyAstronomy
 
 # <codecell>
 
-cd ~/Documents/HERMES/reductions/HD1581_6.2/
+cd ~/Documents/HERMES/reductions/HD285507_6.2/obj/
 
 # <codecell>
 
 import pickle
-filename = 'HD1581.obj'
+# filename = 'HD1581.obj'
 # filename = 'Brght01.obj'
 # filename = 'red_Giant01.obj'
+filename = 'Giant01.obj'
 filehandler = open(filename, 'r')
 thisStar = pickle.load(filehandler)
 thisCam = thisStar.exposures.cameras[3]
@@ -493,7 +494,34 @@ def baryTest(thisStar):
 
 # <codecell>
 
+from PyAstronomy import pyasl
 
+def baryTest2(baryVels, JDs):
+
+    for i,jd in enumerate((JDs+2400000.5)[:]):
+        heli, bary = pyasl.baryvel(jd, deq=2000.0)
+#         print "Earth's velocity at JD: ", jd
+#         print "Heliocentric velocity [km/s]: ", heli
+#         print "Barycentric velocity [km/s] : ", bary
+
+        # Coordinates of Sirius
+        ra  = 101.28715535
+        dec = -16.71611587
+        
+        #thisStar coords
+        ra  = np.rad2deg(thisStar.RA_dec)
+        dec = np.rad2deg(thisStar.Dec_dec)
+        print np.rad2deg(thisStar.RA_dec), np.rad2deg(thisStar.Dec_dec), thisStar.name, thisStar.exposures.abs_baryVels[i]
+
+        
+        vh, vb = pyasl.baryCorr(jd, ra, dec, deq=2000.0)
+        print "Barycentric velocity of Earth toward",thisStar.name,'[m/s]', vb*1000
+        print vb*1000-thisStar.exposures.abs_baryVels[i]
+        print ''
+
+# <codecell>
+
+import numpy as np
 baryTest(thisStar)
 
 # <codecell>
@@ -546,7 +574,6 @@ print RVs[(RVs>=medRV-sigmaClip*stdRV) & (RVs<=medRV+sigmaClip*stdRV)]
 # <codecell>
 
 import pylab as plt
-names = a
 
 # <codecell>
 
@@ -558,6 +585,212 @@ plt.show()
 
 import matplotlib.pyplot as plt
 
+
+# <codecell>
+
+fig = plt.figure()
+# plt.title(title)
+
+ax = fig.add_subplot(111)
+# ax.bar(hist[1][1:],hist[0], width = (hist[1][-2]-hist[1][-1]))
+# ax.grid()
+# ax.set_ylabel('Counts')
+# ax.set_xlabel('RV [m/s]')
+# #         ax.set_ylim(0,10)
+
+# ax2 = ax.twinx()
+# ax2.scatter(R,S, c='r', s=100)
+ax.bar(0,1 , width = (1), color='k')
+
+# <codecell>
+
+plt.show()
+
+# <codecell>
+
+pwd
+
+# <codecell>
+
+cd 47Tuc_core_6.2/
+
+# <codecell>
+
+cd obj
+
+# <codecell>
+
+import pickle
+# filename = 'HD1581.obj'
+# filename = 'Brght01.obj'
+# filename = 'red_Giant01.obj'
+filename = 'red_Brght01.obj'
+# filename = 'Giant01.obj'
+filehandler = open(filename, 'r')
+thisStar = pickle.load(filehandler)
+thisCam = thisStar.exposures.cameras[3]
+
+# <codecell>
+
+print thisStar.exposures
+thisCam.fileNames
+
+# <codecell>
+
+thisCam.red_fluxes
+
+# <codecell>
+
+np.nanmax(thisCam.red_fluxes, 1)
+
+# <codecell>
+
+data=np.load('npy/data.npy')
+
+# <codecell>
+
+data[:,2].astype(float)
+
+# <codecell>
+
+import pylab as plt
+plt.plot(RVs[:,:,0])
+plt.show()
+
+# <codecell>
+
+    data=np.load('npy/data.npy')
+    RVs=np.load('npy/RVs.npy')
+#     sigmas=np.load('npy/sigmas.npy')
+#     baryVels=np.load('npy/baryVels.npy')
+#     JDs=np.load('npy/JDs.npy')
+    SNRs = np.load('npy/SNRs.npy')
+
+# <codecell>
+
+pwd
+
+# <codecell>
+
+
+filehandler = open('obj/red_N104-S1084.obj', 'r')
+thisStar = pickle.load(filehandler)
+
+# <codecell>
+
+thisCam = thisStar.exposures.cameras[0]
+
+# <headingcell level=1>
+
+# Bary tests
+
+# <codecell>
+
+import toolbox as tb
+from PyAstronomy import pyasl
+
+
+# <codecell>
+
+MJD = 57131.84792 
+RA = tb.deg2rad(tb.sex2dec(0,24,05.67)*15) #47tuc in rad
+Dec = tb.deg2rad(-tb.sex2dec(72,4,52.6)) #47Tuc in rad
+
+# <codecell>
+
+RA, Dec
+
+# <codecell>
+
+MJDs = []
+RVs = []
+RV2s = []
+RV3s = []
+for i in np.arange(MJD-200, MJD+200):
+    vh, vb = tb.baryvel(i+2400000+0.5) 
+    vh2, vb2 = pyasl.baryvel(i+2400000+0.5, deq = 0.0)
+    __, RV3 = pyasl.baryCorr(i+2400000+0.5,tb.rad2deg(RA), tb.rad2deg(Dec))
+    
+    RV = (vb[0]*np.cos(Dec)*np.cos(RA) + vb[1]*np.cos(Dec)*np.sin(RA) + vb[2]*np.sin(Dec))*1000
+    RV2 = (vb2[0]*np.cos(Dec)*np.cos(RA) + vb2[1]*np.cos(Dec)*np.sin(RA) + vb2[2]*np.sin(Dec))*1000
+    MJDs.append(i)
+    RVs.append(RV)
+    RV2s.append(RV2)
+    RV3s.append(RV3*1000)
+RVs = np.array(RVs)
+RV2s = np.array(RV2s)
+RV3s = np.array(RV3s)
+
+# <codecell>
+
+plt.plot(MJDs, RVs)
+plt.plot(MJDs, RV2s)
+plt.plot(MJDs, RV3s)
+plt.show()
+
+plt.plot(MJDs, RVs-RV2s, label = '1-2')
+plt.plot(MJDs, RV2s-RV3s, label = '2-3')
+plt.legend(loc=0)
+plt.show()
+
+
+# <headingcell level=1>
+
+# plot app
+
+# <codecell>
+
+import numpy as np
+import pylab as plt
+a = np.random.rand(10)
+b = np.random.rand(10)
+c = np.random.rand(10)
+plt.scatter(a,b)
+plt.show()
+fig = plt.figure()
+ax1 = fig.add_subplot(111)
+ax1.set_title('custom picker for line data')
+line, = ax1.plot(a, b, 'o', picker=5)
+fig.canvas.mpl_connect('pick_event', onpick2)
+
+
+def onpick2():
+    a=2
+    print a
+
+# <codecell>
+
+def aaa():
+    xxx = 'sdd'
+    print 'asdasd'
+    return xxx
+
+# <codecell>
+
+def test():
+    print 'adasd'
+
+# <codecell>
+
+import glob
+import numpy as np
+import os
+
+# <codecell>
+
+
+# <codecell>
+
+
+# <codecell>
+
+os.chdir('/Users/Carlos/Documents/HERMES/reductions/')
+a = glob.glob('*')
+for i in a:
+    if i!='HD1581_6.0':
+        print i,
+        b = np.load(i+'/npy/data.npy')
+        print b.shape[0]
 
 # <codecell>
 

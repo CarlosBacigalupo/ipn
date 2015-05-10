@@ -122,7 +122,7 @@ def find_max_wl_range(thisStar):
 # <codecell>
 
 #Create cross correlation curves wrt epoch 0
-def RVs_CC_t0(thisStar, xDef = 1, CCReferenceSet = 0, printDetails=False, corrHWidth=10):
+def RVs_CC_t0(thisStar, xDef = 1, CCReferenceSet = 0, printDetails=False, corrHWidth=10, medianRange = 0):
 
     print '#############################################################################################################'
     print '#############################################################################################################'
@@ -146,14 +146,14 @@ def RVs_CC_t0(thisStar, xDef = 1, CCReferenceSet = 0, printDetails=False, corrHW
             CCReferenceSet = 0
             
             
-        lambda1, flux1 = clean_flux(thisCam.wavelengths[CCReferenceSet], thisCam.red_fluxes[CCReferenceSet], thisCam)
+        lambda1, flux1 = clean_flux(thisCam.wavelengths[CCReferenceSet], thisCam.red_fluxes[CCReferenceSet], thisCam, medianRange=medianRange)
         print 'Reference wl,fl sum', np.nansum(lambda1), np.nansum(flux1)
         print 
         
         plts = 0    
         for i, JD in enumerate(thisStar.exposures.JDs):
             print 'Set,MJD',i,JD
-            lambda2, flux2 = clean_flux(thisCam.wavelengths[i], thisCam.red_fluxes[i], thisCam)
+            lambda2, flux2 = clean_flux(thisCam.wavelengths[i], thisCam.red_fluxes[i], thisCam, medianRange=medianRange)
             print 'This wl,fl sum', np.nansum(lambda2), np.nansum(flux2)
 
             if validDates[i]==True:
@@ -239,6 +239,43 @@ def RVs_CC_t0(thisStar, xDef = 1, CCReferenceSet = 0, printDetails=False, corrHW
         thisCam.Qs = np.array(Qs)
         thisCam.RVs = np.array(RVs)
         thisCam.SNRs = np.array(SNRs)
+
+# <codecell>
+
+#Create cross correlation curves wrt epoch 0
+def single_RVs_CC_t0(thisStar, cam = 0, t = 0, corrHWidth =10, xDef = 1):
+
+        print 'Camera',cam, '- t0 wrt t',t
+        
+        thisCam = thisStar.exposures.cameras[cam]
+            
+        lambda1, flux1 = clean_flux(thisCam.wavelengths[0], thisCam.red_fluxes[0], thisCam, medianRange=5, xDef=xDef )
+        
+        lambda2, flux2 = clean_flux(thisCam.wavelengths[t], thisCam.red_fluxes[t], thisCam, medianRange=5, xDef=xDef)
+        CCCurve = []
+        CCCurve = signal.fftconvolve(flux1[-np.isnan(flux1)], flux2[-np.isnan(flux2)][::-1], mode='same')
+        corrMax = np.where(CCCurve==max(CCCurve))[0][0]
+        p_guess = [corrMax,corrHWidth]
+        x_mask = np.arange(corrMax-corrHWidth, corrMax+corrHWidth+1)
+        if max(x_mask)<len(CCCurve):
+            p = fit_gaussian(p_guess, CCCurve[x_mask], np.arange(len(CCCurve))[x_mask])[0]
+            if np.modf(CCCurve.shape[0]/2.0)[0]>1e-5:
+                pixelShift = (p[0]-(CCCurve.shape[0]-1)/2.) #odd number of elements
+            else:
+                pixelShift = (p[0]-(CCCurve.shape[0])/2.) #even number of elements
+
+
+            mid_px = thisCam.wavelengths.shape[1]/2
+            dWl = (thisCam.wavelengths[t,mid_px+1]-thisCam.wavelengths[t,mid_px]) / thisCam.wavelengths[t,mid_px]/xDef
+            RV = dWl * pixelShift * constants.c 
+            print 'RV',RV
+        else:
+            p=RV=0
+            
+#         print 'HERE:'
+
+        return lambda1,flux1, lambda2,flux2, CCCurve, p, x_mask, RV 
+        
 
 # <codecell>
 

@@ -449,7 +449,7 @@ import PyAstronomy
 
 # <codecell>
 
-cd ~/Documents/HERMES/reductions/HD285507_6.2/obj/
+cd ~/Documents/HERMES/reductions/HD1581_1arc_6.2/obj/
 
 # <codecell>
 
@@ -457,13 +457,17 @@ import pickle
 # filename = 'HD1581.obj'
 # filename = 'Brght01.obj'
 # filename = 'red_Giant01.obj'
-filename = 'Giant01.obj'
+# filename = 'Giant01.obj'
+filename = 'Field01.obj'
 filehandler = open(filename, 'r')
 thisStar = pickle.load(filehandler)
 thisCam = thisStar.exposures.cameras[3]
 
 # <codecell>
 
+import pylab as plt
+plt.plot(thisCam.red_fluxes[0])
+plt.show()
 
 # <codecell>
 
@@ -772,17 +776,18 @@ def test():
 
 # <codecell>
 
+
+# <codecell>
+
+
+# <codecell>
+
+
+# <codecell>
+
 import glob
 import numpy as np
 import os
-
-# <codecell>
-
-
-# <codecell>
-
-
-# <codecell>
 
 os.chdir('/Users/Carlos/Documents/HERMES/reductions/')
 a = glob.glob('*')
@@ -794,4 +799,241 @@ for i in a:
 
 # <codecell>
 
+data
+
+# <codecell>
+
+cd HD285507_1arc_6.2/
+
+# <codecell>
+
+cd HERMES/reductions/HD285507_1arc_6.2/
+
+# <codecell>
+
+import glob
+import numpy as np
+import os
+data=np.load('npy/data.npy')
+RVs=np.load('npy/RVs.npy')
+SNRs=np.load('npy/SNRs.npy')
+
+# <codecell>
+
+RVs.shape
+W = np.zeros(np.hstack((RVs.shape, RVs.shape[0])))
+for thisStarIdx in range(RVs.shape[0]):
+    W1 = np.ones(RVs.shape)/(RVs.shape[0]-1)
+    W1[thisStarIdx,:,:]=0
+    W[:,:,:,thisStarIdx]=W1
+    
+
+# <codecell>
+
+data[thisStarIdx,2].astype(float).astype(int)
+
+# <codecell>
+
+import RVTools as RVT
+reload(RVT)
+import pylab as plt
+import pandas as pd
+
+# <codecell>
+
+data=np.load('npy/data.npy')
+RVs=np.load('npy/RVs.npy')
+SNRs=np.load('npy/SNRs.npy')
+
+# <codecell>
+
+def create_allW(data = [], SNRs = []):
+
+    if ((data!=[]) and (SNRs!=[])):
+
+        #load function that translates pivot# to y-pixel  p2y(pivot)=y-pixel of pivot
+        p2y = RVT.pivot_to_y('/Users/Carlos/Documents/HERMES/reductions/rhoTuc_6.2/0_20aug/1/20aug10042tlm.fits') 
+
+        #gets the y position of for the data array
+        datay = p2y[data[:,2].astype(float).astype(int)]
+
+        #Creates empty array for relative weights
+        #allW[Weights, camera, staridx of the star to be corrected]
+        allW = np.zeros((data.shape[0],4,data.shape[0]))
+
+        for thisStarIdx in range(data.shape[0]):
+
+            #converts datay into deltay
+            deltay = datay-datay[thisStarIdx]
+            for cam in range(4):
+
+                thisSNRs = SNRs[:,0,cam].copy()
+                thisSNRs[np.isnan(thisSNRs)]=1  #sets NaNs into SNR=1 
+
+                W = calibrator_weights(deltay,thisSNRs)
+                allW[:,cam,thisStarIdx] = W
+
+        #         order = np.argsort(deltay)
+        #         plt.plot(deltay[order], label = 'deltay')
+        #         plt.plot(thisSNRs[order], label= 'SNR')
+        #         plt.plot((W*np.max(deltay))[order], label = 'W')
+        #         plt.legend(loc=0)
+        #         plt.show()
+
+        # a= pd.DataFrame(deltay)
+        # # a.columns = labels
+        # print a.head(n=40)
+        # print W, np.sum(W)
+    else:
+        print 'Create allW: Input arrays missing'
+        allW =[]
+
+    return allW
+
+# <codecell>
+
+def create_RV_corr(RVs, allW, RVClip = 1e17):
+    RV_corr = np.zeros(RVs.shape)
+    RVs[np.abs(RVs)>RVClip]=0
+    for thisStarIdx in range(data.shape[0]):
+        for epoch in range(RVs.shape[1]):
+            for cam in range(4):
+                RV_corr[thisStarIdx,epoch,cam] = np.nansum(allW[:,cam,thisStarIdx]*RVs[:,epoch,cam])
+    return RV_corr
+
+# <codecell>
+
+# for i in range(40):
+i=37
+plt.plot(RVs[i,:,0], label = 'RV')
+plt.plot(RV_corr[i,:,0], label = 'Correction')
+plt.plot(RVs[i,:,0]-RV_corr[i,:,0], label = 'Result', marker = 'o')
+plt.legend(loc=0)
+plt.show()
+
+# <codecell>
+
+np.where(data[:,0]=='Giant01')
+
+# <codecell>
+
+def calibrator_weights2(deltay,SNR):
+
+    c = SNR/np.abs(deltay)
+    c[deltay==0]=0
+    c /=np.sum(c)
+    return c
+
+# <codecell>
+
+def calibrator_weights(deltay, sigma):
+	"""For calibrator stars with CCD y values deltay from the target star
+	and radial velocity errors sigma, create an optimal set of weights.
+	
+	We want to minimise the variance of the weighted sum of calibrator
+	radial velocities where we have the following constraints:
+	
+	1) \Sigma w_i = 1  (i.e. the average value of the calibrators measure CCD shifts)
+	2) \Sigma w_i dy_i = 0 (i.e. allow the wavelength solution to rotate about the target)
+	
+	See http://en.wikipedia.org/wiki/Quadratic_programming
+	"""
+	N = len(sigma)
+	#Start of with a matrix of zeros then fill it with the "Q" and "E" matrices
+	M = np.zeros((N+2,N+2))
+	M[(range(N),range(N))] = sigma
+	M[N,0:N] = deltay
+	M[0:N,N] = deltay
+	M[N+1,0:N] = np.ones(N)
+	M[0:N,N+1] = np.ones(N)
+	b = np.zeros(N+2)
+	b[N+1] = 1
+	#Solve the problem M * x = b
+	x = np.linalg.solve(M,b)
+	#The first N elements of x contain the weights.
+	return x[0:N]
+
+# <codecell>
+
+for epoch in range(RVs.shape[1]):
+    print np.sum(RVs[:,epoch,1])/RVs.shape[1]
+
+# <codecell>
+
+def create_corrRVs(RVs,W):
+#Creates corrRVs with RV corrections for each RV. 
+#has the same shape than RVs and W
+#RVs-corrRVs = trueRVs (values without systematics)
+
+    corrRVs = np.ones(RVs.shape)*np.nan
+    
+    #1 - loop retarded method. should be array operation.
+    
+    #check shape
+    if ((RVs.shape==W.shape[:3]) and (len(W.shape)==4) and (RVs.shape[0]==W.shape[3])):
+        for thisStaridx in range(RVs.shape[0]):
+            for epoch in range(RVs.shape[1]):
+                for cam in range(RVs.shape[2]):
+                    corrRVs[thisStaridx,epoch,cam] = np.sum(RVs[:,epoch,cam]*W[:,epoch,cam,thisStaridx])
+                
+    else:
+        print 'Bad array shape.'
+        print 'RVs=', RVs.shape
+        print 'W=', W.shape
+        
+    return corrRVs
+
+# <headingcell level=3>
+
+# Solar Spectrum
+
+# <codecell>
+
+import pyfits as pf
+import pylab as plt
+import RVTools as RVT
+
+fileList = glob.glob('cam1/*.fits')
+b=[]
+wl = RVT.extract_HERMES_wavelength(fileList[0])
+#build fibre filter
+a = pf.open(fileList[0])
+filt = np.logical_or((a['FIBRES'].data['TYPE']=='P'),(a['FIBRES'].data['TYPE']=='S'))
+filt[175]=False
+
+plt.plot(wl,np.sum(a[0].data[filt], axis=0))
+plt.show()
+
+
+
+# for fits in fileList[:]:
+#     print 'Reading',fits
+#     a = pf.getdata(fits)
+#     if b==[]:
+#         b =a
+#     else:
+#         b+=a
+
+
+# <codecell>
+
+
+# <codecell>
+
+RVT.extract_HERMES_wavelength(fileList[0])
+
+# <codecell>
+
+
+# <codecell>
+
+np.where(a['FIBRES'].data['NAME']=='Giant01')
+
+# <codecell>
+
+a['FIBRES'].data['NAME'][filt]=='Giant01'
+
+# <codecell>
+
+a = np.
 

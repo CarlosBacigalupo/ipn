@@ -26,18 +26,18 @@ copyFiles = False
 doReduce = True
 overwrite = True
 idxFile = 'no_flat_no_bias.idx'
-startFrom =  #number of data set to begin with. 0 for beginning. Good for starting half way through if it cancelled
+idxFile = 'hermes.idx'
+startFrom =  0 #number of data set to begin with. 0 for beginning. Good for starting half way through if it cancelled
 
 #path to 2dfdr
-# dr_dir = '/home/staff/mq20101889/2dfdr/6.2/2dfdr_install/bin' #in nut
-dr_dir = '/Users/Carlos/Documents/workspace/2dfdr/6.2/2dfdr_install/bin/' #my laptop
+# dr_dir = '/home/staff/mq20101889/2dfdr/6.4/2dfdr_install/bin' #in nut
+dr_dir = '/Users/Carlos/Documents/workspace/2dfdr/6.4/src_code/2dfdr-6.4/bin/' #my laptop
 
 #target directory. It will copy the data files to sub-directories branching from this directory
-# target_root = '/home/staff/mq20101889/HERMES/reductions/m67_lr_6.2/' #in nut
-target_root = '/Users/Carlos/Documents/HERMES/reductions/HD285507_6.2/' #my laptop
+target_root = '/Users/Carlos/Documents/HERMES/reductions/6.4/HD285507_6.4/' #my laptop
 
 #all science reduced (*red.fits) files will be copied to this directory
-final_dir = '/Users/Carlos/Documents/HERMES/reductions/HD285507_6.2/'
+final_dir = '/Users/Carlos/Documents/HERMES/reductions/6.4/HD285507_6.4/'
 
 #path to data sources
 HERMES_data_root = []

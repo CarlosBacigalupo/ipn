@@ -3,14 +3,6 @@
 
 # <codecell>
 
-import pyfits as pf
-import numpy as np
-import pylab as plt
-import os
-import glob
-import pickle
-import RVTools as RVT
-import toolbox
 
 # <codecell>
 
@@ -51,23 +43,37 @@ print toolbox.gd2jd(inDate, TZ=0)-2400000.5 + e
 
 # <codecell>
 
-24./100*7.
+cd ..
 
 # <codecell>
+
+import pyfits as pf
+import numpy as np
+import pylab as plt
+import os
+import glob
+import pickle
+import RVTools as RVT
+import toolbox
 
 # raw = []
 print 'Obs & Filename & Field Name & Plate & MJD & Relative Day (days) & Exp Time (s) \\\\'
 # good_targets = np.array(['rhoTuc #176 (Pivot 175)', 'HD1581 #176 (Pivot 175)','HD285507 #227 (Pivot 223)' ])
-good_targets = np.array(['HD285507 #227 (Pivot 223)' ])
+# good_targets = np.array(['HD285507 #227 (Pivot 223)' ])
+good_targets = np.array(['M67 12V14','M67 Bright Stars' ])
 # good_targets = np.array(['HD1581 #176 (Pivot 175)'])
 # good_targets = np.array(['47Tuc center'])
 
 # good_pivots = [175,175,224]
 t0 = 0  
 order = 0 
+dirs = glob.glob('*')
+# print dirs
 for j in dirs:
-    os.chdir(j)
-    for i in glob.glob('*.fits'):
+#     print os.path.abspath(j +'/data/ccd_1/')
+#     os.chdir(j+'/data/ccd_1/')
+#     print j +'/data/ccd_1/'
+    for i in glob.glob(os.path.abspath(j +'/data/ccd_1/*.fits')):
         a = pf.open(i)
         if a[0].header['NDFCLASS'] == 'MFOBJECT':
             if a[0].header['OBJECT'] in good_targets:
@@ -78,7 +84,7 @@ for j in dirs:
                 if t0==0:t0=UTMJD
                 tDiff=UTMJD-t0
 #                 print str(order)+' & '+ i+' & HD1581 & '+a[0].header['SOURCE']+' & '+str(UTMJD)+' & '+str(tDiff)+' & '+str(a[0].header['EXPOSED']) +' \\\\'
-                print str(order)+' & '+ i+' & HD285507 & '+a[0].header['SOURCE']+' & '+str(UTMJD)+' & '+str(tDiff)+' & '+str(a[0].header['EXPOSED']) +' \\\\'
+                print str(order)+' & '+ i.split('/')[-1]+' & HD285507 & '+a[0].header['SOURCE']+' & '+str(UTMJD)+' & '+str(tDiff)+' & '+str(a[0].header['EXPOSED']) +' \\\\'
 #                 print str(order)+' & '+ i+' & '+a[0].header['OBJECT']+' & '+a[0].header['SOURCE']+' & '+str(UTMJD)+' & '+str(tDiff)+' & '+str(a[0].header['EXPOSED']) +' \\\\'
                 order +=1
 #                 raw.append((i, a[0].header['OBJECT'],a[0].header['SOURCE'],a[0].header['UTMJD'],a[0].header['EXPOSED']))            

@@ -438,6 +438,60 @@ def calibrator_weights(deltay, sigma):
 
 # <codecell>
 
+def calibrator_weights2(deltay,SNR):
+
+    c = SNR/np.abs(deltay)
+    c[deltay==0]=0
+    c /=np.sum(c)
+    return c
+
+# <codecell>
+
+def create_allW(data = [], SNRs = []):
+
+    if ((data!=[]) and (SNRs!=[])):
+
+        #load function that translates pivot# to y-pixel  p2y(pivot)=y-pixel of pivot
+        p2y = pivot_to_y('/Users/Carlos/Documents/HERMES/reductions/rhoTuc_6.2/0_20aug/1/20aug10042tlm.fits') 
+
+        #gets the y position of for the data array
+        datay = p2y[data[:,2].astype(float).astype(int)]
+
+        #Creates empty array for relative weights
+        #allW[Weights, camera, staridx of the star to be corrected]
+        allW = np.zeros((data.shape[0],4,data.shape[0]))
+
+        for thisStarIdx in range(data.shape[0]):
+
+            #converts datay into deltay
+            deltay = datay-datay[thisStarIdx]
+
+            for cam in range(4):
+
+                thisSNRs = SNRs[:,0,cam].copy()
+                thisSNRs[np.isnan(thisSNRs)]=1  #sets NaNs into SNR=1 
+
+                W = calibrator_weights(deltay,thisSNRs)
+                allW[:,cam,thisStarIdx] = W
+    else:
+        print 'Create allW: Input arrays missing'
+        allW =[]
+
+    return allW
+
+# <codecell>
+
+def create_RV_corr(RVs, allW, RVClip = 1e17):
+    RV_corr = np.zeros(RVs.shape)
+    RVs[np.abs(RVs)>RVClip]=0
+    for thisStarIdx in range(data.shape[0]):
+        for epoch in range(RVs.shape[1]):
+            for cam in range(4):
+                RV_corr[thisStarIdx,epoch,cam] = np.nansum(allW[:,cam,thisStarIdx]*RVs[:,epoch,cam])
+    return RV_corr
+
+# <codecell>
+
 def quad(x,a,b,c):
     curve  = a*x**2+b*x+c
     return curve

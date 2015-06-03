@@ -17,6 +17,7 @@ thisCamIdx = 0
 RVClip = 5000
 topStars = -1 #how many stars to read. -1 for all.
 booBaryCorrect = True
+idStars = ['Giant01'] #name od stars to id in RV plot
 
 if len(sys.argv)>1:
     fileList = [sys.argv[1]]
@@ -41,7 +42,7 @@ except:
 # RVP.RVs_all_stars()
 
 #Plot
-RVP.RVs_all_stars_NPYs(sigmaClip = -1,RVClip = RVClip, topStars=topStars, booSave = booSave,booShow = booShow  , booBaryPlot=booBaryPlot, booBaryCorrect = booBaryCorrect)
+# RVP.RVs_all_stars_NPYs(idStars= idStars, sigmaClip = -1,RVClip = RVClip, topStars=topStars, booSave = booSave,booShow = booShow  , booBaryPlot=booBaryPlot, booBaryCorrect = booBaryCorrect)
 
 #Plot
 # RVP.RVs_by_star_NPYs(RVClip = RVClip, booSave = booSave,booShow = booShow )
@@ -57,21 +58,21 @@ RVP.RVs_all_stars_NPYs(sigmaClip = -1,RVClip = RVClip, topStars=topStars, booSav
 
 
   
-# if len(fileList)>0:
-#     for objName in fileList[:2]:
-#         print 'Reading',objName
-#         filehandler = open(objName, 'r')
-#         thisStar = pickle.load(filehandler)
-#          
-#         #Plot
-#         RVP.all_spec_overlap(thisStar, booSave = booSave, thisCamIdx = thisCamIdx, booShow = booShow )
-#          
-#         #Plot
-# #         RVP.RVs_single_star(thisStar, sigmaClip = -1, RVClip = 3000)
-#  
-#              
-#         thisStar = None
-#         print ''
-# else:
-#     print 'No red_*.obj files here.'
-#     
+if len(fileList)>0:
+    for objName in fileList[:]:
+        print 'Reading',objName
+        filehandler = open(objName, 'r')
+        thisStar = pickle.load(filehandler)
+          
+        #Plot
+        RVP.all_spec_overlap(thisStar, booSave = booSave, thisCamIdx = thisCamIdx, booShow = booShow )
+          
+        #Plot
+#         RVP.RVs_single_star(thisStar, sigmaClip = -1, RVClip = 3000)
+  
+              
+        thisStar = None
+        print ''
+else:
+    print 'No red_*.obj files here.'
+     

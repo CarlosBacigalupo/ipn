@@ -29,14 +29,14 @@ def all_spec_overlap(thisStar, thisCamIdx = '', booShow = True, booSave = False)
         thisCam = thisStar.exposures.cameras[cam]
         fileNames =  thisCam.fileNames
         nFluxes = thisCam.wavelengths.shape[0]
-        ax[0,0].set_yticks(np.arange(0,nFluxes))
-        ax[0,0].set_ylim(-1,nFluxes)
+#         ax[0,0].set_yticks(np.arange(0,nFluxes))
+#         ax[0,0].set_ylim(-1,nFluxes)
     
         for i in np.arange(nFluxes):
                 if np.sum(thisCam.wavelengths[i])>0:
                     d, f = thisCam.wavelengths[i], thisCam.red_fluxes[i]/np.median(thisCam.red_fluxes[i])
                     if cam ==0:
-                        ax[0,0].plot(d, f+i, 'b')
+                        ax[0,0].plot(d, f+i*10, 'b')
                     elif cam==1:
                         ax[0,1].plot(d, f+i, 'g')
                     elif cam==2:
@@ -50,18 +50,18 @@ def all_spec_overlap(thisStar, thisCamIdx = '', booShow = True, booSave = False)
 #     plt.gca().set_yticks(range(thisCam.wavelengths.shape[0]))
 #     plt.gca().set_yticklabels(thisCam.fileNames)
 
-    ax.set_yticklabels(thisCam.fileNames)
-    ax.set_yticks(range(thisCam.wavelengths.shape[0]))
+#     ax.set_yticklabels(thisCam.fileNames)
+#     ax.set_yticks(range(thisCam.wavelengths.shape[0]))
 
     
-    plt.xticks(rotation=70)
+#     plt.xticks(rotation=70)
 
 #     ax[0,0].set_yticklabels(fileNames)
     if booSave==True: 
         try:
-            plt.savefig('plots/' + objName[:-4] + 'SOvl_cam' + str(cam+1), dpi = 1000 )
+            plt.savefig('plots/' + thisStar.name + 'SOvl_cam' + str(cam+1), dpi = 1000 )
         except:
-            pass
+            print 'Couldn''t save'
     if booShow==True: plt.show()
 
 # <codecell>
@@ -204,7 +204,7 @@ def RVs_all_stars(booSave = False, booShow = True):
 
 # <codecell>
 
-def RVs_all_stars_NPYs( sigmaClip = -1, RVClip = -1, topStars = -1, booSave = False, booShow = True, booBaryPlot = False, booBaryCorrect = False, title = ''):
+def RVs_all_stars_NPYs(idStars = [], sigmaClip = -1, RVClip = -1, topStars = -1, booSave = False, booShow = True, booBaryPlot = False, booBaryCorrect = False, title = ''):
     
     data=np.load('npy/data.npy')
     RVs=np.load('npy/RVs.npy')
@@ -263,13 +263,24 @@ def RVs_all_stars_NPYs( sigmaClip = -1, RVClip = -1, topStars = -1, booSave = Fa
             else:
                 plt.title(title, y=1.1)
             
-
+            if data[i,0] in idStars:
+                m = '+'
+                s=100
+                c='k'
+            else:
+                m = 'o'
+                s=1
+                c=colors[cam]
+                
+            
 #             plt.errorbar(X, Y[i,:,cam], yerr=YERR[i,:,cam]*1000, fmt='.', label = labels[cam], color = colors[cam])
             if booBaryCorrect==True: 
-                plt.scatter(X, Y[i,:,cam]- baryVels, label = labels[cam], color = colors[cam])
-            else:
-                plt.scatter(X, Y[i,:,cam], label = labels[cam], color = colors[cam])
+                plt.scatter(X, Y[i,:,cam]- baryVels, label = labels[cam], color = c, s=s, marker=m)
 
+            else:
+                plt.scatter(X, Y[i,:,cam], label = labels[cam], color = c, s=s, marker=m)
+
+            
 #             plt.plot(X, Y[i,:,cam], label = labels[cam], color = colors[cam])
 #             plt.scatter(X, Y[i,:,cam], label = labels[cam], color = 'k')
 
@@ -582,8 +593,8 @@ def flux_and_CC(RVref=5000, booSave = False, booShow = True):
     data=np.load('npy/data.npy')
     RVs=np.load('npy/RVs.npy')
     i=0
-    for cam in range(RVs.shape[2])[:]:
-        for epoch in range(RVs.shape[1])[:]:
+    for cam in range(RVs.shape[2])[1:2]:
+        for epoch in range(RVs.shape[1])[3:]:
             for star in range(RVs.shape[0])[:]:
 #                 if np.abs(RVs[star,epoch,cam])>RVref:
 #                 if ((RVs[star,epoch,cam]<-1000) & (RVs[star,epoch,cam]>-3000)):
@@ -626,13 +637,4 @@ def flux_and_CC(RVref=5000, booSave = False, booShow = True):
                 thisStar = None
                 filehandler.close()
                 print 
-
-# <codecell>
-
-
-# <codecell>
-
-
-# <codecell>
-
 

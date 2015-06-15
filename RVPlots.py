@@ -412,6 +412,140 @@ def RVs_by_star_NPYs(sigmaClip = -1, RVClip = -1, booSave = False, booShow = Tru
 
 # <codecell>
 
+def SNR_W(RVCorrMethod = 'PM', thisStarName = 'Giant01', sigmaClip = -1, RVClip = -1, booSave = False, booShow = True, booBaryPlot = False, booBaryCorrect = False, title = ''):
+
+    data=np.load('npy/data.npy')
+    SNRs=np.load('npy/SNRs.npy')
+    if RVCorrMethod=='PM':
+        allW = np.load('npy/allW_PM.npy')
+    else:
+        allW = np.load('npy/allW_DM.npy')        
+
+    idx = np.where(data[:,0]==thisStarName)[0][0]
+
+    for cam in range(4):
+        
+        W = allW[:,cam,idx]
+
+        thisSNRs = SNRs[:,0,cam]
+
+        plt.plot(thisSNRs, label= 'SNR')
+        plt.plot(W*np.nanmax(thisSNRs), label = 'W')
+        plt.legend(loc=0)
+        if title=='':
+            title ='SNR and W - '+RVCorrMethod+' method - '+data[idx,0]+' - '+labels[cam]+' camera'            
+        plt.title(title)
+        plt.grid(True)
+        plt.savefig(('PM_'+str(cam)))
+        plt.show()
+
+        if booSave==True: 
+            try:
+                plotName = 'plots/SNR_W_'+labels[cam]
+                print 'Attempting to save', plotName
+                plt.savefig(plotName)
+
+            except:
+                print 'FAILED'
+        if booShow==True: plt.show()
+        plt.close()        
+        
+
+# <codecell>
+
+def RVCorr_RV(RVCorrMethod = 'PM', thisStarName = 'Giant01', sigmaClip = -1, RVClip = -1, booSave = False, booShow = True, booBaryPlot = False, booBaryCorrect = False, title = ''):
+    
+    data=np.load('npy/data.npy')
+    RVs=np.load('npy/RVs.npy')
+    sigmas=np.load('npy/sigmas.npy')
+    baryVels=np.load('npy/baryVels.npy')
+    JDs=np.load('npy/JDs.npy')
+    if RVCorrMethod=='PM':
+        RVCorr=np.load('npy/RVCorr_PM.npy')
+    else:
+        RVCorr=np.load('npy/RVCorr_DM.npy')
+
+    i = np.where(data[:,0]==thisStarName)[0][0]
+#     X = range(data[:,0].shape[0])
+#     Y = RVs
+#     Y[Y==0.]=np.nan
+    
+#     if RVClip>-1:Y[np.abs(Y)>RVClip] = np.nan
+#     if sigmaClip>-1:
+#         stdY= np.std(Y)
+#         medY = np.median(Y)
+#         Y[(Y>=medY-sigmaClip*stdY) & (Y<=medY+sigmaClip*stdY)] = np.nan
+    
+    
+    
+    colors = ['b','g','r','cyan']
+    labels = ['Blue','Green','Red','IR']
+    
+#     #Plots RVs, baryvels. all star, 4 cameras
+#     print 'About to plot RVs from ',RVs.shape[0],'stars.'
+    
+    for cam in range(4)[:]:
+        print data[i]
+        print 'RV:',RVs[i,:,cam]
+        print 'RVCorr:',RVCorr[i,:,cam]
+        print 'JDs:',JDs
+        RVs[np.abs(RVs)>RVClip] = np.nan
+        plt.plot(JDs,RVs[i,:,cam], label = 'RV', marker='.')
+        plt.plot(JDs,RVCorr[i,:,cam], label = 'Correction', marker='.')
+        plt.plot(JDs,RVs[i,:,cam]-RVCorr[i,:,cam], label = 'Result', marker='.')
+
+        if booBaryPlot==True: plt.plot(JDs, baryVels, label = 'Barycentric Vel. ', marker='.')
+
+        plt.legend(loc=0)
+
+
+
+#         ax.set_xticklabels(data[:,0])
+#         ax.set_xticks(X)
+#         plt.xticks(rotation=70)
+
+
+        if title=='':
+            plt.title('RVCorr and RV for '+data[i,0]+' - '+labels[cam]+' camera')
+        else:
+            plt.title(title)
+
+#         Y[:,:,cam] = Y[:,:,cam][order[:,cam]]
+#         YERR[:,:,cam] = YERR[:,:,cam][order[:,cam]]
+        
+#         #median
+#         plt.scatter(X, stats.nanmedian(Y[:,:,cam], axis = 1), label = labels[cam], color = 'k')
+        
+#         #sigma
+#         plt.scatter(X, stats.nanmedian(Y[:,:,cam], axis = 1)+stats.nanstd(Y[:,:,cam], axis = 1), label = labels[cam], color = 'r')
+#         plt.scatter(X, stats.nanmedian(Y[:,:,cam], axis = 1)-stats.nanstd(Y[:,:,cam], axis = 1), label = labels[cam], color = 'r')
+        
+        
+#         #min max
+#         for star in range(Y.shape[0]):
+#             x = np.nanmax(Y[star,:,cam])
+#             n = np.nanmin(Y[star,:,cam])
+#             plt.plot([star,star],[x,n], color = 'g', lw=2)
+#             print star, n, x
+        
+#         plt.xlabel('MJD')
+#         plt.ylabel('RV [m/s]')
+
+
+        if booSave==True: 
+            try:
+                plotName = 'plots/RVCorr_RV_'+labels[cam]
+                print 'Attempting to save', plotName
+                plt.savefig(plotName)
+
+            except:
+                print 'FAILED'
+        if booShow==True: plt.show()
+        plt.close()        
+        
+
+# <codecell>
+
 def SNR_RV_vs_fibre(RVClip = -1, booSave = False, booShow = True, title = ''):
     
     data=np.load('npy/data.npy')

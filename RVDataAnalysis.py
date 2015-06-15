@@ -99,6 +99,10 @@ cd ~/Documents/HERMES/reductions/NGC2477_1arc_6.2/
 
 cd ~/Documents/HERMES/reductions/rhoTuc_6.2/npy
 
+# <codecell>
+
+cd ~/Documents/HERMES/reductions/6.2/rhoTuc_1arc_6.2/npy
+
 # <headingcell level=3>
 
 # % of stars within a given RV
@@ -115,7 +119,7 @@ totalStars = RVs.shape[0]
 goodStars = np.sum(((thisSlice<5000) & (thisSlice!=0)), axis=0).astype(float)
 size = np.array(thisSlice.shape)
 total = np.reshape(np.repeat(size[0], size[1]*size[2]),(size[1],size[2]))
-labels = ['Blue','Green','Red','IR']
+labels = ['Blue','Green','Red','IR']
 a = pd.DataFrame(goodStars/total*100)
 a.columns = labels
 
@@ -196,9 +200,42 @@ a.columns = labels
 
 print a.to_latex()
 
+# <headingcell level=3>
+
+# W tests
+
 # <codecell>
 
-data
+
+# deltay = np.linspace(0, 4000)
+# deltay = np.linspace(-2000, 2000)
+# deltay = np.linspace(-4000, 0)
+# SNRs = np.ones(50)*30
+# SNRs = np.linspace(10, 100)
+# SNRs = np.linspace(100, 10)
+# W = calibrator_weights2(deltay,SNRs)
+
+data=np.load('npy/data.npy')
+# RVs=np.load('npy/RVs.npy')
+SNRs=np.load('npy/SNRs.npy')
+allW = np.load('npy/allW_PM.npy')
+idx = np.where(data[:,0]=='Giant01')[0]
+for cam in range(4):
+    W = allW[:,cam,idx]
+
+    thisSNRs = SNRs[:,0,cam]
+
+#     plt.plot(deltay/np.max(np.abs(deltay)), label = 'deltay')
+    plt.plot(thisSNRs, label= 'SNR')
+    plt.plot(W*np.nanmax(thisSNRs), label = 'W')
+    plt.legend(loc=0)
+    # title = 'PM - deltay '+str(np.min(deltay))+','+str(np.max(deltay))+' - SNR '+str(np.min(SNRs))+','+str(np.max(SNRs))
+#     title = 'DM - deltay '+str(np.min(deltay))+','+str(np.max(deltay))+' - SNR '+str(np.min(SNRs))+','+str(np.max(SNRs))
+    title = 'PM - cam '+str(cam)+ ' ,' + str(data[idx])
+    plt.title(title)
+    plt.grid(True)
+    plt.savefig(('PM_'+str(cam)))
+    plt.show()
 
 # <codecell>
 

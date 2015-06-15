@@ -447,12 +447,15 @@ def calibrator_weights2(deltay,SNR):
 
 # <codecell>
 
-def create_allW(data = [], SNRs = []):
+def create_allW(data = [], SNRs = [], starSet=[], RVCorrMethod = 'PM'):
 
     if ((data!=[]) and (SNRs!=[])):
+#         if ((starSet!=[]) and (len(starSet.shape)==1) and (starSet[0]>0)):
+#             data = data[starSet]
+#             SNRs = SNRs[starSet]
 
         #load function that translates pivot# to y-pixel  p2y(pivot)=y-pixel of pivot
-        p2y = pivot_to_y('/Users/Carlos/Documents/HERMES/reductions/rhoTuc_6.2/0_20aug/1/20aug10042tlm.fits') 
+        p2y = pivot_to_y('/Users/Carlos/Documents/HERMES/reductions/6.2/rhoTuc_6.2/0_20aug/1/20aug10042tlm.fits') 
 
         #gets the y position of for the data array
         datay = p2y[data[:,2].astype(float).astype(int)]
@@ -470,9 +473,18 @@ def create_allW(data = [], SNRs = []):
 
                 thisSNRs = SNRs[:,0,cam].copy()
                 thisSNRs[np.isnan(thisSNRs)]=1  #sets NaNs into SNR=1 
-
-                W = calibrator_weights(deltay,thisSNRs)
+                
+#                 print deltay,thisSNRs
+                if np.sum(thisSNRs)>0:
+                    if RVCorrMethod == 'PM':
+                        W = calibrator_weights(deltay,thisSNRs)
+                    else:
+                        W = calibrator_weights2(deltay,thisSNRs)
+                        
+                else:
+                    W = np.zeros(deltay.shape[0]) #hack to fix an all zeros SNRs for failed reductions
                 allW[:,cam,thisStarIdx] = W
+                    
     else:
         print 'Create allW: Input arrays missing'
         allW =[]
@@ -481,14 +493,20 @@ def create_allW(data = [], SNRs = []):
 
 # <codecell>
 
-def create_RV_corr(RVs, allW, RVClip = 1e17):
-    RV_corr = np.zeros(RVs.shape)
+def create_RVCorr(RVs, allW, RVClip = 1e17,starSet=[]):
+    RVCorr = np.zeros(RVs.shape)
+    print 'Clipping to',RVClip
     RVs[np.abs(RVs)>RVClip]=0
-    for thisStarIdx in range(data.shape[0]):
+    
+    for thisStarIdx in range(RVs.shape[0]):
         for epoch in range(RVs.shape[1]):
-            for cam in range(4):
-                RV_corr[thisStarIdx,epoch,cam] = np.nansum(allW[:,cam,thisStarIdx]*RVs[:,epoch,cam])
-    return RV_corr
+            for cam in range(RVs.shape[2]):
+                thisRVCorr = np.nansum(allW[:,cam,thisStarIdx]*RVs[:,epoch,cam])
+                RVCorr[thisStarIdx,epoch,cam] = thisRVCorr
+                print thisRVCorr,
+            print 
+        print 
+    return RVCorr
 
 # <codecell>
 

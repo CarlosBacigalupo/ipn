@@ -1,3 +1,4 @@
+#!/opt/local/bin/python
 
 import os
 import pickle
@@ -52,8 +53,8 @@ cameras = ['Blue','Green','Red','IR']
 
 # print np.max(RVs,axis=(0,1)),np.max(SNRs,axis=(0,1))
 # maxRVs = np.max(RVs,axis=(0,1))
-maxSNRs = np.nanmax(SNRs,axis=(0,1))
- 
+# maxSNRs = np.nanmax(SNRs,axis=(0,1))
+maxSNRs = np.ones(4)*170
 
 
 for epoch in range(RVs.shape[1])[:]:
@@ -62,7 +63,7 @@ for epoch in range(RVs.shape[1])[:]:
     else:
         offset = 0
         
-    for cam in range(4)[:]:
+    for cam in range(4)[:2]:
         print 'Plotting epoch,cam',epoch,cam
         print '    Limits set to max,min', minRV+offset, maxRV+offset
         

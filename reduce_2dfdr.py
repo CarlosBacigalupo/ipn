@@ -224,12 +224,16 @@ class dr2df():
                     print time.strftime('%X %x %Z'),'Target folder', self.target_dir,' not empty. Overwrite is off. '
                     sys.stdout.flush()
                     return False
-        os.mkdir(self.target_dir)
-        os.mkdir(self.target_dir+'1/')
-        os.mkdir(self.target_dir+'2/')
-        os.mkdir(self.target_dir+'3/')
-        os.mkdir(self.target_dir+'4/')
-                
+        try:
+            os.mkdir(self.target_dir)
+            os.mkdir(self.target_dir+'1/')
+            os.mkdir(self.target_dir+'2/')
+            os.mkdir(self.target_dir+'3/')
+            os.mkdir(self.target_dir+'4/')
+        except Exception as e: 
+            print self.target_dir
+            print(e)
+        
         try:
             os.mkdir(self.final_dir+'cam1/')
             os.mkdir(self.final_dir+'cam2/')
@@ -261,20 +265,20 @@ class dr2df():
 
 
                 #flat
-                try:
-                    os.rmdir(self.target_dir + str(cam+1) + '/' + j[0][:-5]+'_outdir')
-                except OSError as ex:
-                    if ex.errno == 66:
-                        print "Target folder not empty."
-                        return False
+#                 try:
+#                     os.rmdir(self.target_dir + str(cam+1) + '/' + j[0][:-5]+'_outdir')
+#                 except OSError as ex:
+#                     if ex.errno == 66:
+#                         print "Target folder not empty."
+#                         return False
 
-                print time.strftime('%X %x %Z'),'      >>Reducing flat'    
-                os.mkdir (j[0][:-5]+'_outdir')                   
-                os_command =  'drcontrol'
-                os_command += ' reduce_fflat ' + j[0]
+                print time.strftime('%X %x %Z'),'      >>Reducing tlm'    
+#                 os.mkdir (j[0][:-5]+'_outdir')                   
+                os_command =  'aaorun'
+                os_command += ' make_tlm ' + j[0]
     #            if useBias==True: os_command += ' -BIAS_FILENAME BIAScombined.fits'
                 os_command += ' -idxfile ' + self.idxFile
-                os_command += ' -OUT_DIRNAME '  + j[0][:-5]+'_outdir'
+#                 os_command += ' -OUT_DIRNAME '  + j[0][:-5]+'_outdir'
                 os.system('cleanup')
                 print '      OS Command '+ os_command
                 sys.stdout.flush()
@@ -283,22 +287,22 @@ class dr2df():
 
 
                 #arc                 
-                try:
-                    os.rmdir(self.target_dir + str(cam+1) + '/' + j[1][:-5]+'_outdir')
-                except OSError as ex:
-                    if ex.errno == 66:
-                        print "Target folder not empty."
-                        return False
+#                 try:
+#                     os.rmdir(self.target_dir + str(cam+1) + '/' + j[1][:-5]+'_outdir')
+#                 except OSError as ex:
+#                     if ex.errno == 66:
+#                         print "Target folder not empty."
+#                         return False
 
                 print time.strftime('%X %x %Z'),'      >>Reducing arc'    
                 sys.stdout.flush()
-                os.mkdir(self.target_dir + str(cam+1) + '/' + j[1][:-5]+'_outdir')                   
-                os_command =  'drcontrol'
+#                 os.mkdir(self.target_dir + str(cam+1) + '/' + j[1][:-5]+'_outdir')                   
+                os_command =  'aaorun'
                 os_command += ' reduce_arc '  + j[1]
     #             if useBias==True: os_command += ' -BIAS_FILENAME BIAScombined.fits'
                 os_command += ' -idxfile ' + self.idxFile
                 os_command += ' -TLMAP_FILENAME ' + j[0][:-5] + 'tlm.fits'
-                os_command += ' -OUT_DIRNAME ' + j[1][:-5]+'_outdir'
+#                 os_command += ' -OUT_DIRNAME ' + j[1][:-5]+'_outdir'
                 os.system('cleanup')
                 print '      OS Command '+ os_command
                 sys.stdout.flush()
@@ -310,12 +314,12 @@ class dr2df():
                 #flat
                 print time.strftime('%X %x %Z'),'      >>Scrunching flat'    
                 sys.stdout.flush()
-                os_command =  'drcontrol'
+                os_command =  'aaorun'
                 os_command += ' reduce_fflat ' + j[0]
                 os_command += ' -idxfile ' + self.idxFile
     #             if useBias==True: os_command += ' -BIAS_FILENAME BIAScombined.fits'
                 os_command += ' -WAVEL_FILENAME ' + j[1][:-5] + 'red.fits'
-                os_command += ' -OUT_DIRNAME ' + j[0][:-5]+'_outdir'
+#                 os_command += ' -OUT_DIRNAME ' + j[0][:-5]+'_outdir'
                 os.system('cleanup')
                 print '      OS Command '+ os_command
                 sys.stdout.flush()
@@ -385,24 +389,24 @@ class dr2df():
         #science
         obj_files = np.array(j[2:])
         for obj in obj_files:
-            try:
-                os.rmdir(obj[:-5]+'_outdir')
-            except OSError as ex:
-                if ex.errno == 66:
-                    print 'Target folder (', obj[:-5]+'_outdir', 'not empty.'
-                    return False
+#             try:
+#                 os.rmdir(obj[:-5]+'_outdir')
+#             except OSError as ex:
+#                 if ex.errno == 66:
+#                     print 'Target folder (', obj[:-5]+'_outdir', 'not empty.'
+#                     return False
 
             print time.strftime('%X %x %Z'),'      >>Reducing science '+ obj                        
             sys.stdout.flush()
-            os.mkdir(obj[:-5]+'_outdir')                   
-            os_command =  'drcontrol'
+#             os.mkdir(obj[:-5]+'_outdir')                   
+            os_command =  'aaorun'
             os_command += ' reduce_object ' + obj
             os_command += ' -idxfile ' + self.idxFile
             os_command += ' -WAVEL_FILENAME ' + j[1][:-5] + 'red.fits'
 #                 if useBias==True: os_command += ' -BIAS_FILENAME BIAScombined.fits'
             os_command += ' -TLMAP_FILENAME ' + j[0][:-5] + 'tlm.fits'
             os_command += ' -FFLAT_FILENAME ' + j[0][:-5] + 'red.fits'
-            os_command += ' -OUT_DIRNAME ' + obj[:-5]+'_outdir'
+#             os_command += ' -OUT_DIRNAME ' + obj[:-5]+'_outdir'
 #                                 os_command += ' -TPMETH OFFSKY'
             os.system('cleanup')
 
@@ -449,7 +453,7 @@ class dr2df():
                     print j
                     
                     for obj in j:
-                        os_command =  'drcontrol'
+                        os_command =  'aaorun'
                         os_command += ' reduce_bias ' + obj
                         os_command += ' -idxfile ' + idxFile
                         os.system('clenaup')

@@ -1,3 +1,4 @@
+#!/opt/local/bin/python
 
 import os
 import pickle
@@ -12,12 +13,12 @@ import RVPlots as RVP
 
 booSave = True 
 booShow = False
-booBaryPlot = False
+booBaryPlot = True
 thisCamIdx = 0
-RVClip = 5000
+RVClip = 2000
 topStars = -1 #how many stars to read. -1 for all.
-booBaryCorrect = True
-idStars = ['Giant01'] #name od stars to id in RV plot
+booBaryCorrect = False
+idStars = ['Giant01'] #name of stars to id in RV plot
 
 if len(sys.argv)>1:
     fileList = [sys.argv[1]]
@@ -56,23 +57,25 @@ except:
 #Plot
 # RVP.flux_and_CC(RVref = RVClip, booSave = booSave, booShow = booShow)
 
+#Plot
+RVP.RVCorr_RV(RVCorrMethod = 'PM', RVClip = RVClip, booSave = booSave, booShow = booShow,booBaryPlot=booBaryPlot)
 
   
-if len(fileList)>0:
-    for objName in fileList[:]:
-        print 'Reading',objName
-        filehandler = open(objName, 'r')
-        thisStar = pickle.load(filehandler)
-          
-        #Plot
-        RVP.all_spec_overlap(thisStar, booSave = booSave, thisCamIdx = thisCamIdx, booShow = booShow )
-          
-        #Plot
-#         RVP.RVs_single_star(thisStar, sigmaClip = -1, RVClip = 3000)
-  
-              
-        thisStar = None
-        print ''
-else:
-    print 'No red_*.obj files here.'
+# if len(fileList)>0:
+#     for objName in fileList[:]:
+#         print 'Reading',objName
+#         filehandler = open(objName, 'r')
+#         thisStar = pickle.load(filehandler)
+#           
+#         #Plot
+#         RVP.all_spec_overlap(thisStar, booSave = booSave, thisCamIdx = thisCamIdx, booShow = booShow )
+#           
+#         #Plot
+# #         RVP.RVs_single_star(thisStar, sigmaClip = -1, RVClip = 3000)
+#   
+#               
+#         thisStar = None
+#         print ''
+# else:
+#     print 'No red_*.obj files here.'
      

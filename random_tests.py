@@ -847,12 +847,70 @@ SNRs=np.load('npy/SNRs.npy')
 
 # <codecell>
 
+# SNRs[:,:,0][SNRs[:,:,0]<1]
+SNRs[np.isnan(SNRs)]=0
+SNRs+=1e-17
+create_allW(data,SNRs)
+
+# <codecell>
+
+import numpy as np
+import pylab as plt
+
+# <codecell>
+
+cd /Users/Carlos/Documents/HERMES/reductions/6.2/HD285507_1arc_6.2/
+
+# <codecell>
+
+allW = np.load('npy/allW_DM.npy')
+allW[0,:,0][0]
+
+# <codecell>
+
+
+# deltay = np.linspace(0, 4000)
+# deltay = np.linspace(-2000, 2000)
+# deltay = np.linspace(-4000, 0)
+# SNRs = np.ones(50)*30
+# SNRs = np.linspace(10, 100)
+# SNRs = np.linspace(100, 10)
+# W = calibrator_weights2(deltay,SNRs)
+
+data=np.load('npy/data.npy')
+# RVs=np.load('npy/RVs.npy')
+SNRs=np.load('npy/SNRs.npy')
+allW = np.load('npy/allW_PM.npy')
+idx = np.where(data[:,0]=='Giant01')[0]
+for cam in range(4):
+    W = allW[:,cam,idx]
+
+    thisSNRs = SNRs[:,0,cam]
+
+#     plt.plot(deltay/np.max(np.abs(deltay)), label = 'deltay')
+    plt.plot(thisSNRs, label= 'SNR')
+    plt.plot(W*np.nanmax(thisSNRs), label = 'W')
+    plt.legend(loc=0)
+    # title = 'PM - deltay '+str(np.min(deltay))+','+str(np.max(deltay))+' - SNR '+str(np.min(SNRs))+','+str(np.max(SNRs))
+#     title = 'DM - deltay '+str(np.min(deltay))+','+str(np.max(deltay))+' - SNR '+str(np.min(SNRs))+','+str(np.max(SNRs))
+    title = 'PM - cam '+str(cam)+ ' ,' + str(data[idx])
+    plt.title(title)
+    plt.grid(True)
+    plt.savefig(('PM_'+str(cam)))
+    plt.show()
+
+# <codecell>
+
+import numpy as np
+
+# <codecell>
+
 def create_allW(data = [], SNRs = []):
 
     if ((data!=[]) and (SNRs!=[])):
 
         #load function that translates pivot# to y-pixel  p2y(pivot)=y-pixel of pivot
-        p2y = RVT.pivot_to_y('/Users/Carlos/Documents/HERMES/reductions/rhoTuc_6.2/0_20aug/1/20aug10042tlm.fits') 
+        p2y = RVT.pivot_to_y('/Users/Carlos/Documents/HERMES/reductions/6.2//rhoTuc_6.2/0_20aug/1/20aug10042tlm.fits') 
 
         #gets the y position of for the data array
         datay = p2y[data[:,2].astype(float).astype(int)]
@@ -865,7 +923,7 @@ def create_allW(data = [], SNRs = []):
 
             #converts datay into deltay
             deltay = datay-datay[thisStarIdx]
-            for cam in range(4):
+            for cam in range(2):
 
                 thisSNRs = SNRs[:,0,cam].copy()
                 thisSNRs[np.isnan(thisSNRs)]=1  #sets NaNs into SNR=1 
@@ -873,12 +931,12 @@ def create_allW(data = [], SNRs = []):
                 W = calibrator_weights(deltay,thisSNRs)
                 allW[:,cam,thisStarIdx] = W
 
-        #         order = np.argsort(deltay)
-        #         plt.plot(deltay[order], label = 'deltay')
-        #         plt.plot(thisSNRs[order], label= 'SNR')
-        #         plt.plot((W*np.max(deltay))[order], label = 'W')
-        #         plt.legend(loc=0)
-        #         plt.show()
+                order = np.argsort(deltay)
+                plt.plot(deltay[order], label = 'deltay')
+                plt.plot(thisSNRs[order], label= 'SNR')
+                plt.plot((W*np.max(deltay))[order], label = 'W')
+                plt.legend(loc=0)
+                plt.show()
 
         # a= pd.DataFrame(deltay)
         # # a.columns = labels
@@ -892,14 +950,14 @@ def create_allW(data = [], SNRs = []):
 
 # <codecell>
 
-def create_RV_corr(RVs, allW, RVClip = 1e17):
-    RV_corr = np.zeros(RVs.shape)
+def create_RVCorr(RVs, allW, RVClip = 1e17):
+    RVCorr = np.zeros(RVs.shape)
     RVs[np.abs(RVs)>RVClip]=0
     for thisStarIdx in range(data.shape[0]):
         for epoch in range(RVs.shape[1]):
             for cam in range(4):
-                RV_corr[thisStarIdx,epoch,cam] = np.nansum(allW[:,cam,thisStarIdx]*RVs[:,epoch,cam])
-    return RV_corr
+                RVCorr[thisStarIdx,epoch,cam] = np.nansum(allW[:,cam,thisStarIdx]*RVs[:,epoch,cam])
+    return RVCorr
 
 # <codecell>
 
@@ -1035,5 +1093,25 @@ a['FIBRES'].data['NAME'][filt]=='Giant01'
 
 # <codecell>
 
-a = np.
+from os.path import expanduser
+home = expanduser("~")
+
+# <codecell>
+
+import os
+
+# <codecell>
+
+os.path.expanduser('~')
+
+# <codecell>
+
+a = 'dasdf'
+
+# <codecell>
+
+trim(a)
+
+# <codecell>
+
 

@@ -1,3 +1,5 @@
+#!/opt/local/bin/python
+
 import reduce_2dfdr 
 import os
 import numpy as np
@@ -30,13 +32,13 @@ startFrom = 0 #number of data set to begin with. 0 for beginning. Good for start
 
 #path to 2dfdr
 # dr_dir = '/home/staff/mq20101889/2dfdr/6.2/2dfdr_install/bin' #in nut
-dr_dir = '/Users/Carlos/Documents/workspace/2dfdr/6.2/2dfdr_install/bin/' #my laptop
+dr_dir = '/Users/Carlos/Documents/workspace/2dfdr/6.4/2dfdr_install/bin/' #my laptop
 
 #target directory. It will copy the data files to sub-directories branching from this directory
-target_root = '/Users/Carlos/Documents/HERMES/reductions/HD285507_1arc_6.2/' #my laptop
+target_root = '/Users/Carlos/Documents/HERMES/reductions/6.4/HD285507_1arc_6.4/' #my laptop
 
 #all science reduced (*red.fits) files will be copied to this directory
-final_dir = '/Users/Carlos/Documents/HERMES/reductions/HD285507_1arc_6.2/'
+final_dir = '/Users/Carlos/Documents/HERMES/reductions/6.4/HD285507_1arc_6.4/'
 
 #path to data sources
 HERMES_data_root = []
@@ -102,5 +104,7 @@ dr2df.source_dir_array = source_dir_array
 sys.stdout = open(str(startFrom)+str(reduceSet)+'_'+str(time.strftime('%X'))+'.log', 'w')
                   
 print time.strftime('%X %x %Z'), '  Starting reduction'
-dr2df.runReduction()
+# dr2df.runReduction()
+dr2df.create_folders()
+dr2df.collect_red_files()
 print time.strftime('%X %x %Z'), '  Ending reduction'

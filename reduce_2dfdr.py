@@ -417,7 +417,10 @@ class dr2df():
     
             print '      Copying '+ obj[:-5]+'red.fits to ' + self.final_dir + 'cam' + str(cam+1) + '/'  
             sys.stdout.flush()
-            shutil.copyfile(obj[:-5]+'red.fits', self.final_dir + 'cam' + str(cam+1) + '/' + obj[:-5]+'red.fits')
+            try:
+                shutil.copyfile(obj[:-5]+'red.fits', self.final_dir + 'cam' + str(cam+1) + '/' + obj[:-5]+'red.fits')
+            except:
+                print '!!!!!!!!!!!!!',obj[:-5]+'red.fits not copied' 
 #                                     shutil.copyfile(obj, '../../cam' +str(cam)+'/'+ obj)
     
     

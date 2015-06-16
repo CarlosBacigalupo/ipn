@@ -8,6 +8,7 @@ import time
 
 
 reduceCam = -1
+final_dir =''
 
 #RV run, HD285507
 
@@ -23,26 +24,59 @@ if len(sys.argv)>1:
     
     
 #reduction flags
+ver = 6.5
 useBias = False
 copyFiles = False
 doReduce = True
 overwrite = True
+copyReducedFiles = True
 idxFile = 'no_flat_no_bias.idx'
 startFrom = 0 #number of data set to begin with. 0 for beginning. Good for starting half way through if it cancelled
 
-#path to 2dfdr
-# dr_dir = '/home/staff/mq20101889/2dfdr/6.2/2dfdr_install/bin' #in nut
-dr_dir = '/Users/Carlos/Documents/workspace/2dfdr/6.4/2dfdr_install/bin/' #my laptop
+location = 'mylaptop'
+if os.path.expanduser('~')=='/home/staff/mq20101889':
+    location = 'nut'
 
-#target directory. It will copy the data files to sub-directories branching from this directory
-target_root = '/Users/Carlos/Documents/HERMES/reductions/6.4/HD285507_1arc_6.4/' #my laptop
+if location=='mylaptop':
+    if ver==6.5:
+        #path to 2dfdr
+        dr_dir = '/Users/Carlos/Documents/workspace/2dfdr/6.5/binaries-macosx-Lion/2dfdr_install/bin' #my laptop 6.5
+        
+        #target directory. It will copy the data files to sub-directories branching from this directory
+        target_root = '/Users/Carlos/Documents/HERMES/reductions/6.5/HD285507_1arc_6.5/' #my laptop
+    if ver==6.4:
+        dr_dir = '/Users/Carlos/Documents/workspace/2dfdr/6.4/2dfdr_install/bin/' #my laptop
 
-#all science reduced (*red.fits) files will be copied to this directory
-final_dir = '/Users/Carlos/Documents/HERMES/reductions/6.4/HD285507_1arc_6.4/'
+elif location=='nut':
+    if ver==6.5:  
+        #path to 2dfdr
+        dr_dir='/disks/nut/data/mq20101889/2dfdr/6.5/binaries-linux/2dfdr_install/bin' #in nut 6.5
+        
+        #target directory. It will copy the data files to sub-directories branching from this directory
+        target_root = '/disks/nut/data/mq20101889/HERMES/reductions/6.5/HD285507_1arc_6.5/' #in nut 6.5
+
+    if ver==6.4:
+        #path to 2dfdr
+        dr_dir='/home/staff/mq20101889/2dfdr/6.4/2dfdr_install/bin' #in nut 6.4
+   
+print location, 'v',ver
+
+if final_dir =='':
+    final_dir = target_root
+
+if copyFiles==True:
+    try:
+        os.mkdir(target_root)
+    except:
+        pass
+    
 
 #path to data sources
 HERMES_data_root = []
-HERMES_data_root.append('/Users/Carlos/Documents/HERMES/data/')
+if location=='mylaptop': 
+    HERMES_data_root.append('/Users/Carlos/Documents/HERMES/data/')
+elif location=='nut':
+    HERMES_data_root.append('/disks/nut/data/mq20101889/HERMES/data/RV_data/')
 HERMES_data_root = np.array(HERMES_data_root)
 
 #len(date_list) = number of observations (can have more than 1 science file per observation)
@@ -104,7 +138,7 @@ dr2df.source_dir_array = source_dir_array
 sys.stdout = open(str(startFrom)+str(reduceSet)+'_'+str(time.strftime('%X'))+'.log', 'w')
                   
 print time.strftime('%X %x %Z'), '  Starting reduction'
-# dr2df.runReduction()
+dr2df.runReduction()
 dr2df.create_folders()
 dr2df.collect_red_files()
 print time.strftime('%X %x %Z'), '  Ending reduction'

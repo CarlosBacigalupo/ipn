@@ -1,3 +1,5 @@
+#!/opt/local/bin/python
+
 import reduce_2dfdr 
 import os
 import numpy as np

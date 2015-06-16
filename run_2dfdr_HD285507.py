@@ -31,7 +31,7 @@ doReduce = True
 overwrite = False
 copyReducedFiles = True
 idxFile = 'no_flat_no_bias.idx'
-startFrom =  0 #number of data set to begin with. 0 for beginning. Good for starting half way if it cancelled
+startFrom =  4 #number of data set to begin with. 0 for beginning. Good for starting half way if it cancelled
 
 location = 'mylaptop'
 if os.path.expanduser('~')=='/home/staff/mq20101889':
@@ -40,7 +40,7 @@ if os.path.expanduser('~')=='/home/staff/mq20101889':
 if location=='mylaptop':
     if ver==6.5:
         #path to 2dfdr
-        dr_dir = '/Users/Carlos/Documents/workspace/2dfdr/6.4/src_code/2dfdr-6.4/bin/' #my laptop 6.5
+        dr_dir = '/Users/Carlos/Documents/workspace/2dfdr/6.5/binaries-macosx-Lion/2dfdr_install/bin' #my laptop 6.5
         
         #target directory. It will copy the data files to sub-directories branching from this directory
         target_root = '/Users/Carlos/Documents/HERMES/reductions/6.5/HD285507_6.5/' #my laptop
@@ -100,7 +100,7 @@ ix_array = [[37,38]+range(39,42),
 
 
 #adds 2dfdr bi path to PATH variable
-os.environ['PATH'] = dr_dir + ':' + os.environ['PATH'] 
+# os.environ['PATH'] = dr_dir + ':' + os.environ['PATH'] 
 
 #compose absolute path names
 source_dir_array = np.core.defchararray.add(HERMES_data_root[root_date_link], [s + '/data/' for s in date_list]) 

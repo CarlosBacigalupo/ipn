@@ -1,0 +1,1 @@
+find . -type d -exec unreduce.sh {} \;

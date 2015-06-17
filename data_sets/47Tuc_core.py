@@ -9,7 +9,7 @@ date_list = ['140821',
              '140824',
              '140825']
 
-root_date_link = np.array([2,2,2,2,2])
+root_date_link = [2,2,2,2,2]
 
 #Filenumbers for each dataset FLAT_IDX, ARC_IDX, SCIENCE_IDX[S]. Assumes [flat, arc, sci, sci, ...]
 ix_array = [range(25,31),
@@ -17,3 +17,5 @@ ix_array = [range(25,31),
             [51,52]+range(48,51),
             [48,49]+range(50,53),
             [34,38]+range(35,38)]
+
+reduceMode = 'starting_set'

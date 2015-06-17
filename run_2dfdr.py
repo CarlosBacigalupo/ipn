@@ -83,10 +83,10 @@ if len(sys.argv)>1:
         HERMES_data_root.append('/Users/Carlos/Documents/HERMES/data/')
         HERMES_data_root.append('')
     elif location=='nut':
-        HERMES_data_root.append('/home/staff/mq20101889/galah_data/')
-        HERMES_data_root.append('/home/staff/mq20101889/galah_pilot/')
-        HERMES_data_root.append('/home/staff/mq20101889/RV_data/')
-        HERMES_data_root.append('/home/staff/mq20101889/jan14_data/')
+        HERMES_data_root.append('/disks/nut/data/mq20101889/HERMES/data/galah_data/')
+        HERMES_data_root.append('/disks/nut/data/mq20101889/HERMES/data/galah_pilot/')
+        HERMES_data_root.append('/disks/nut/data/mq20101889/HERMES/data/RV_data/')
+        HERMES_data_root.append('/disks/nut/data/mq20101889/HERMES/data/jan14_data/')
     HERMES_data_root = np.array(HERMES_data_root)
     
     #compose absolute path names

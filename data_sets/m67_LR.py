@@ -1,6 +1,9 @@
+#m67
+
+reduceMode = 'starting_set'
 
 #target directory. It will copy the data files to sub-directories branching from this directory
-target_root = '/m67_lr/' 
+target_root = 'm67_lr/' 
 
 #len(date_list) = number of observations (can have more than 1 science file per observation)
 date_list = ['131217',
@@ -50,4 +53,4 @@ ix_array = [[42,43]+range(39,42),
             [47,46]+[45],
             [52,51]+range(48,51)]
 
-reduceMode = 'starting_set'
+

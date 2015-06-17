@@ -53,7 +53,7 @@ cd ~/Documents/HERMES/reductions/HD285507_6.2/npy/
 
 # <codecell>
 
-cd ~/Documents/HERMES/reductions/HD285507_1arc_6.2/npy_150509/
+cd ~/Documents/HERMES/reductions/6.5/HD285507_1arc/npy/
 
 # <codecell>
 
@@ -180,6 +180,10 @@ for j in dirs:
 # <headingcell level=3>
 
 # Stars Names and magnitudes
+
+# <codecell>
+
+data
 
 # <codecell>
 

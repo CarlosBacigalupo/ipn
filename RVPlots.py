@@ -413,6 +413,7 @@ def RVs_by_star_NPYs(sigmaClip = -1, RVClip = -1, booSave = False, booShow = Tru
 # <codecell>
 
 def SNR_W(RVCorrMethod = 'PM', thisStarName = 'Giant01', sigmaClip = -1, RVClip = -1, booSave = False, booShow = True, booBaryPlot = False, booBaryCorrect = False, title = ''):
+#plots SNR and W vs value
 
     data=np.load('npy/data.npy')
     SNRs=np.load('npy/SNRs.npy')

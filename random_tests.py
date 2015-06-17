@@ -64,10 +64,27 @@ plt.show()
 
 # <codecell>
 
+import pickle
+import toolbox
+
+# <codecell>
+
+cd /Users/Carlos/Documents/HERMES/reductions/6.5/HD285507_1arc/obj
+
+# <codecell>
+
 filename = 'Giant01.obj'
 # filename = 'red_Giant01.obj'
 filehandler = open(filename, 'r')
 thisStar = pickle.load(filehandler)
+
+# <codecell>
+
+toolbox.dec2sex(thisStar.RA/15)
+
+# <codecell>
+
+toolbox.dec2sex(thisStar.Dec)
 
 # <codecell>
 

@@ -1,3 +1,7 @@
+#47Tuc core 1arc
+
+reduceMode = 'one_arc'
+
 #target directory. It will copy the data files to sub-directories branching from this directory
 target_root = '47Tuc_core_1arc/'
 
@@ -10,7 +14,6 @@ date_list = ['140821',
 
 root_date_link = [2,2,2,2,2]
 
-
 #Filenumbers for each dataset FLAT_IDX, ARC_IDX, SCIENCE_IDX[S]. Assumes [flat, arc, sci, sci, ...]
 ix_array = [range(25,31),
             [30,26]+range(27,30),
@@ -18,4 +21,3 @@ ix_array = [range(25,31),
             [48,49]+range(50,53),
             [34,38]+range(35,38)]
 
-reduceMode = 'one_arc'

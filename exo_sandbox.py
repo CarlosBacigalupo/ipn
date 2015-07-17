@@ -100,3 +100,46 @@ plt.title('Simulated oscillations for a 1.6 M$_{sum}$ star')
 plt.legend(loc=0)
 plt.show()
 
+# <codecell>
+
+m= np.arange(300e-9,800e-9,1e-9)
+
+# <codecell>
+
+m_shifted = m[:-1]
+
+# <codecell>
+
+m_final =1/m[1:]*3e8
+
+# <codecell>
+
+plt.plot(m[:-1]*1e10,m_final)
+
+# <codecell>
+
+plt.show()
+
+# <codecell>
+
+m_final
+
+# <codecell>
+
+m[1:] - m_shifted
+
+# <codecell>
+
+m_shifted
+
+# <codecell>
+
+m[1:]
+
+# <codecell>
+
+m
+
+# <codecell>
+
+

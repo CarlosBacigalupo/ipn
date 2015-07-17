@@ -54,7 +54,7 @@ cameras = ['Blue','Green','Red','IR']
 # print np.max(RVs,axis=(0,1)),np.max(SNRs,axis=(0,1))
 # maxRVs = np.max(RVs,axis=(0,1))
 # maxSNRs = np.nanmax(SNRs,axis=(0,1))
-maxSNRs = np.ones(4)*170
+maxSNRs = np.ones(4)*270
 
 
 for epoch in range(RVs.shape[1])[:]:
@@ -63,7 +63,7 @@ for epoch in range(RVs.shape[1])[:]:
     else:
         offset = 0
         
-    for cam in range(4)[:2]:
+    for cam in range(4)[:]:
         print 'Plotting epoch,cam',epoch,cam
         print '    Limits set to max,min', minRV+offset, maxRV+offset
         

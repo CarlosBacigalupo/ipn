@@ -18,6 +18,26 @@ def extract_HERMES_wavelength(header):
 
 # <codecell>
 
+import pylab as plt
+import pyfits as pf
+
+# <codecell>
+
+a = pf.open('25aug10035.ms.fits')
+
+# <codecell>
+
+a[0].header.items()
+
+# <codecell>
+
+ax = extract_HERMES_wavelength(a[0].header)
+
+# <codecell>
+
+
+# <codecell>
+
 CRVAL1 = 4714.9999999
 CDELTA1 = .045177
 CRPIX1 = 1.
@@ -77,6 +97,10 @@ filename = 'Giant01.obj'
 # filename = 'red_Giant01.obj'
 filehandler = open(filename, 'r')
 thisStar = pickle.load(filehandler)
+
+# <codecell>
+
+thisStar.
 
 # <codecell>
 
@@ -662,15 +686,7 @@ thisCam.red_fluxes
 
 # <codecell>
 
-np.nanmax(thisCam.red_fluxes, 1)
-
-# <codecell>
-
-data=np.load('npy/data.npy')
-
-# <codecell>
-
-data[:,2].astype(float)
+float(np.sum(np.isnan(SNRs)))/(SNRs.shape[0]*SNRs.shape[1]*SNRs.shape[2])*100
 
 # <codecell>
 
@@ -1051,6 +1067,370 @@ plt.show()
 #     else:
 #         b+=a
 
+
+# <headingcell level=3>
+
+# SNR 3d plots
+
+# <codecell>
+
+SNRs=np.load('npy/SNRs.npy')
+Data=np.load('npy/Data.npy')
+
+labels = Data[:,0]
+
+# <codecell>
+
+from mpl_toolkits.mplot3d import Axes3D
+from matplotlib import cm
+from matplotlib.ticker import LinearLocator, FormatStrFormatter
+import matplotlib.pyplot as plt
+import numpy as np
+
+fig = plt.figure()
+ax = fig.gca(projection='3d')
+# X = np.arange(-5, 5, 0.25)
+# Y = np.arange(-5, 5, 0.25)
+X = np.arange(SNRs.shape[1])
+Y = np.arange(SNRs.shape[0])
+X, Y = np.meshgrid(X, Y)
+# R = np.sqrt(X**2 + Y**2)
+Z = SNRs[:,:,0]
+surf = ax.plot_surface(X, Y, Z, rstride=1, cstride=1, cmap=cm.jet, linewidth=0,  vmin=0, vmax=100, antialiased=True)
+ax.set_xlabel('Epoch')
+ax.set_ylabel('Star')
+ax.set_zlabel('SNR')
+# ax.set_zlim(-1.01, 1.01)
+ax.set_yticks(np.arange(0,SNRs.shape[0],5))
+# ax.set_yticklabels(labels)
+# ax.zaxis.set_major_locator(LinearLocator(10))
+# ax.zaxis.set_major_formatter(FormatStrFormatter('%.02f'))
+
+# fig.colorbar(surf, shrink=0.5, aspect=5)
+
+plt.show()
+
+
+# <headingcell level=3>
+
+# Comments array
+
+# <codecell>
+
+def comment(star, epoch, cam, comment):
+    comments = []
+    try:
+        comments = np.load('npy/comments.npy')
+    except:
+        pass
+    
+    if comments==[]:
+        comments = np.zeros((1,),dtype=('i4,i4,i4,a10'))
+        comments[:] = [(star, epoch, cam, comment)]
+    else:
+        x = np.zeros((1,),dtype=('i4,i4,i4,a10'))
+        x[:] = [(star, epoch, cam, comment)]
+        print x,comments
+        comments = np.append(comments,x)
+    
+    np.save('npy/comments.npy',comments)
+        
+
+# <codecell>
+
+comment(0,0,0,'test')
+
+# <codecell>
+
+c = np.load('npy/comments.npy')
+d = np.load('npy/data.npy')
+
+# <codecell>
+
+d[1]
+
+# <codecell>
+
+filename = 'obj/Field03.obj'
+# filename = 'red_Giant01.obj'
+filehandler = open(filename, 'r')
+thisStar = pickle.load(filehandler)
+
+# <codecell>
+
+from scipy import stats
+
+# <codecell>
+
+thisCam = thisStar.exposures.cameras[0]
+
+# <codecell>
+
+stats.nanmedian(thisCam.red_fluxes[13])
+
+# <codecell>
+
+c
+
+# <codecell>
+
+[np.asarray(a), np.asarray(a)]
+
+# <codecell>
+
+x = np.zeros((2,),dtype=('i4,i4,i4,a10'))
+x[:] = [(1,2,3,'Hello'),(2,3,4,"World")]
+
+# <codecell>
+
+np.append(x,x)
+
+# <codecell>
+
+np.vstack((x,(1,2,3,'Hello')))
+
+# <headingcell level=3>
+
+# Check RVCorr
+
+# <codecell>
+
+data=np.load('npy/data.npy')
+RVs=np.load('npy/RVs.npy')
+sigmas=np.load('npy/sigmas.npy')
+baryVels=np.load('npy/baryVels.npy')
+JDs=np.load('npy/JDs.npy')    
+# RVCorr_PM=np.load('npy/RVCorr_PM.npy')
+# # RVCorr_DM=np.load('npy/RVCorr_DM.npy')
+# cRVs_PM=np.load('npy/cRVs_PM.npy')
+# cRVs_DM=np.load('npy/cRVs_DM.npy')
+# cRVs_PMDM=np.load('npy/cRVs_PMDM.npy')
+
+# <codecell>
+
+idx = np.where(data[:,0]=='Giant01')[0][0]
+
+# <codecell>
+
+starIdx = idx
+cam = 0
+
+RVs[RVs>5000]=np.nan
+RVs[RVs<-5000]=np.nan
+
+# <codecell>
+
+plt.plot(RVs[starIdx,:,cam])
+# plt.plot(RVCorr_DM[starIdx,:,cam])
+plt.plot(RVCorr_PM[starIdx,:,cam])
+# plt.plot(RVs[starIdx,:,cam]-RVCorr_DM[starIdx,:,cam])
+plt.plot(RVs[starIdx,:,cam]-RVCorr_PM[starIdx,:,cam])
+plt.show()
+
+# <codecell>
+
+reload(RVT)
+
+# <codecell>
+
+allW_PM = RVT.create_allW(data, SNRs, starSet = [], RVCorrMethod = 'PM', refEpoch = 0) 
+# RVCorr_PM = RVT.create_RVCorr_PM(RVs, allW_PM, RVClip = 2000, starSet = [])
+
+# <codecell>
+
+plt.plot(allW_PM[:,0,starIdx])
+plt.plot(SNRs[:,0,starIdx])
+plt.plot(W)
+plt.show()
+
+# <codecell>
+
+data[starIdx]
+
+# <codecell>
+
+p2y = RVT.pivot_to_y('/Users/Carlos/Documents/HERMES/reductions/6.2/rhoTuc_6.2/0_20aug/1/20aug10042tlm.fits') 
+datay = p2y[data[:,2].astype(float).astype(int)]
+deltay = datay-datay[starIdx]
+
+thisSigma = 1./SNRs[:,0,0].copy()
+thisSigma[np.isnan(thisSigma)]=1e+17  #sets NaNs into SNR=1e-17
+W = RVT.calibrator_weights(deltay,thisSigma)
+
+# <codecell>
+
+W
+
+# <codecell>
+
+import psycopg2 as mdb
+con = mdb.connect("dbname=hermes_master user=Carlos")
+cur = con.cursor()
+cur.execute("CREATE TABLE fields(id int)")
+
+# <codecell>
+
+con.rollback()
+
+# <codecell>
+
+con.commit()
+
+# <codecell>
+
+con.close()
+
+# <codecell>
+
+import psycopg2 as mdb
+con=mdb.connect("host=/tmp/ dbname=hermes_master user=Carlos");
+
+# <codecell>
+
+con=mdb.connect("dbname=hermes_master user=Carlos");
+
+# <codecell>
+
+
+con=mdb.connect("host=/usr/local/var dbname=hermes_master user=Carlos");
+
+# <codecell>
+
+cur = con.cursor()
+
+# <codecell>
+
+cur.execute("SELECT spec_path,name from fields where ymd=140825 and ccd='ccd_1' and obstype='BIAS'")
+
+# <codecell>
+
+objs=cur.fetchall()
+
+# <codecell>
+
+from pyraf import iraf
+
+# <codecell>
+
+iraf.noao(_doprint=0,Stdout="/dev/null")
+iraf.imred(_doprint=0,Stdout="/dev/null")
+iraf.ccdred(_doprint=0,Stdout="/dev/null")
+
+# <codecell>
+
+iraf.ccdproc(images='tmp/flats/25aug10034.fits', ccdtype='', fixpix='no', oversca='no', trim='no', zerocor='yes', darkcor='no', flatcor='no', zero='tmp/masterbias',Stdout="/dev/null")
+
+# <codecell>
+
+pwd
+
+# <codecell>
+
+cd ~/Documents/workspace/GAP/IrafReduction/140825/ccd11/
+
+# <codecell>
+
+import pyfits as pf
+
+# <codecell>
+
+pf.open('tmp/masterbias.fits')
+
+# <codecell>
+
+import cosmics
+
+# <codecell>
+
+import numpy as np
+import pylab as plt
+
+# <codecell>
+
+a = np.arange(5)
+b = np.array([1,5,3,2,5])
+c = np.arange(0.5,4.5)
+
+# <codecell>
+
+d = np.interp(c,a,b)
+
+# <codecell>
+
+b
+
+# <codecell>
+
+plt.plot(a,b,marker='+')
+plt.scatter(c,d, marker = '+', s=200, c='r')
+plt.show()
+
+# <codecell>
+
+import os
+import create_obj as cr_obj
+import pickle
+import glob
+import pyfits as pf
+import numpy as np
+import sys
+import toolbox
+import importlib
+
+# <codecell>
+
+booHD1581 = False
+IRAFFiles = '/Users/Carlos/Documents/workspace/GAP/IrafReduction/results/'   #folder to IRAF reduced files
+dataset = 'HD285507'
+
+# <codecell>
+
+os.mkdir('cam1')
+os.mkdir('cam2')
+os.mkdir('cam3')
+os.mkdir('cam4')
+os.mkdir('obj')
+
+# <codecell>
+
+thisDataset = importlib.import_module('data_sets.'+dataset)
+
+    
+
+# <codecell>
+
+months = np.array(['', 'jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'])
+d = np.array([s[4:] for s in thisDataset.date_list])
+m = months[np.array([s[2:4] for s in thisDataset.date_list]).astype(int)]
+filename_prfx = np.core.defchararray.add(d, m)
+
+# <codecell>
+
+for i,folder in enumerate(thisDataset.date_list):
+    for files in thisDataset.ix_array[i][2:]:
+        for cam in range(1,5):
+            strCopy = 'cp ' + IRAFFiles + folder + '/norm/' + filename_prfx[i] + str(cam) + "%04d" % (files,) + '.ms.fits ' 
+            strCopy += 'cam'+ str(cam) + '/' + filename_prfx[i] + str(cam) + "%04d" % (files,) + '.fits ' 
+            print strCopy
+            try:
+                os.system(strCopy)
+            except:
+                print 'no copy'
+
+# <codecell>
+
+thisDataset.ix_array[1][2:]
+
+# <codecell>
+
+
+# <codecell>
+
+filename_prfx
+
+# <codecell>
+
+thisDataset.ix_array
 
 # <codecell>
 

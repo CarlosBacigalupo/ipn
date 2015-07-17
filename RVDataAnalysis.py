@@ -5,6 +5,7 @@
 
 import numpy as np
 import pandas as pd
+import pylab as plt
 
 # <codecell>
 
@@ -183,10 +184,6 @@ for j in dirs:
 
 # <codecell>
 
-data
-
-# <codecell>
-
 data=np.load('data.npy')
 # RVs=np.load('RVs.npy')
 # sigmas=np.load('sigmas.npy')
@@ -210,36 +207,101 @@ print a.to_latex()
 
 # <codecell>
 
+#real data
 
-# deltay = np.linspace(0, 4000)
-# deltay = np.linspace(-2000, 2000)
-# deltay = np.linspace(-4000, 0)
-# SNRs = np.ones(50)*30
-# SNRs = np.linspace(10, 100)
-# SNRs = np.linspace(100, 10)
-# W = calibrator_weights2(deltay,SNRs)
+method = 'PM'
 
 data=np.load('npy/data.npy')
-# RVs=np.load('npy/RVs.npy')
+
 SNRs=np.load('npy/SNRs.npy')
-allW = np.load('npy/allW_PM.npy')
-idx = np.where(data[:,0]=='Giant01')[0]
+
+if method=='PM':
+    allW = np.load('npy/allW_PM.npy')
+elif method=='DM':
+    allW = np.load('npy/allW_DM.npy')
+    
+idx = np.where(data[:,0]=='Giant01')[0][0]
+
 for cam in range(4):
     W = allW[:,cam,idx]
 
     thisSNRs = SNRs[:,0,cam]
 
 #     plt.plot(deltay/np.max(np.abs(deltay)), label = 'deltay')
-    plt.plot(thisSNRs, label= 'SNR')
-    plt.plot(W*np.nanmax(thisSNRs), label = 'W')
+    plt.plot(thisSNRs, label= 'SNR', c='g')
+    plt.plot(W*np.nanmax(thisSNRs), label = 'W', c='r')
+    plt.plot([idx,idx],[0,np.nanmax(thisSNRs)], label = 'Ref. Star', c='cyan')
     plt.legend(loc=0)
-    # title = 'PM - deltay '+str(np.min(deltay))+','+str(np.max(deltay))+' - SNR '+str(np.min(SNRs))+','+str(np.max(SNRs))
-#     title = 'DM - deltay '+str(np.min(deltay))+','+str(np.max(deltay))+' - SNR '+str(np.min(SNRs))+','+str(np.max(SNRs))
-    title = 'PM - cam '+str(cam)+ ' ,' + str(data[idx])
+
+    title = method + ' - cam '+str(cam)+ ' ,' + str(data[idx])
+    
     plt.title(title)
     plt.grid(True)
-    plt.savefig(('PM_'+str(cam)))
-    plt.show()
+    plt.savefig((method+'_'+str(cam)));plt.close()
+#     plt.show()
+
+
+# <codecell>
+
+#SIMULATION
+import RVTools as RVT
+reload(RVT)
+
+deltays = np.zeros((3,50))
+SNRss = np.zeros((3,50))
+idxs = [1,20,40]
+
+yrange = np.linspace(0, 4000)
+# deltays[0] = 
+# deltays[1] = np.linspace(-1999, 2000)
+# deltays[1,25]=0
+# deltays[2] = np.linspace(-3999, 0)
+SNRss[0] = np.ones(50)*10
+SNRss[1] = np.linspace(1, 10)
+SNRss[2] = np.linspace(10, 1)
+
+method = 'PM'
+
+for i in range(3):
+    for j in range(3):
+        idx = idxs[j]
+        deltay = yrange - yrange[idx]
+        SNRs = SNRss[i]
+        if method=='PM':
+#             W = RVT.calibrator_weights2(deltay,SNRs)
+            W = RVT.calibrator_weights(deltay,1/SNRs)
+        elif method=='DM':
+            W = RVT.calibrator_weights2(deltay,1/SNRs)
+
+        plt.plot(deltay/np.max(np.abs(deltay)), label = 'deltay')
+        plt.plot(SNRs, label= 'SNR')
+        plt.plot(W*10, label = 'W')
+        plt.plot([idx,idx],[0,np.nanmax(SNRs)], label = 'Ref. Star')
+
+#         plt.plot(W2*100, label = 'W New')
+        plt.legend(loc=0)
+    
+        title = method +' - Ref Star index = '+str(idx)+' - SNR '+str(np.min(SNRs))+','+str(np.max(SNRs))
+
+        plt.title(title)
+        plt.grid(True)
+        figTitle = method+'_'+str(i)+'_'+str(j)
+        plt.savefig(figTitle); plt.close()
+#         plt.show()
+
+# <codecell>
+
+SNRs=np.load('SNRs.npy')
+import toolbox as tb
+
+# <codecell>
+
+for i,a in enumerate(zip(data[:,],SNRs[:,0,0])):
+    print i,a[0],a[1], tb.dec2sex(float(a[0][3])/15), tb.dec2sex(float(a[0][4]))
+
+# <codecell>
+
+pwd
 
 # <codecell>
 

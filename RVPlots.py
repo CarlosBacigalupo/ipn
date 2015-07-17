@@ -275,10 +275,10 @@ def RVs_all_stars_NPYs(idStars = [], sigmaClip = -1, RVClip = -1, topStars = -1,
             
 #             plt.errorbar(X, Y[i,:,cam], yerr=YERR[i,:,cam]*1000, fmt='.', label = labels[cam], color = colors[cam])
             if booBaryCorrect==True: 
-                plt.scatter(X, Y[i,:,cam]- baryVels, label = labels[cam], color = c, s=s, marker=m)
+                plt.scatter(X, Y[i,:,cam]- baryVels, color = c, s=s, marker=m)
 
             else:
-                plt.scatter(X, Y[i,:,cam], label = labels[cam], color = c, s=s, marker=m)
+                plt.scatter(X, Y[i,:,cam], color = c, s=s, marker=m)
 
             
 #             plt.plot(X, Y[i,:,cam], label = labels[cam], color = colors[cam])
@@ -316,7 +316,7 @@ def RVs_all_stars_NPYs(idStars = [], sigmaClip = -1, RVClip = -1, topStars = -1,
 #         ax2.set_xlabel('Epoch')
         
 
-    #     plt.legend(loc=0)
+        plt.legend(loc=0)
         if booSave==True: 
             try:
                 plotName = 'plots/All_RVs_'+labels[cam]+''
@@ -454,88 +454,114 @@ def SNR_W(RVCorrMethod = 'PM', thisStarName = 'Giant01', sigmaClip = -1, RVClip 
 
 # <codecell>
 
-def RVCorr_RV(RVCorrMethod = 'PM', thisStarName = 'Giant01', sigmaClip = -1, RVClip = -1, booSave = False, booShow = True, booBaryPlot = False, booBaryCorrect = False, title = ''):
+def RVCorr_RV(thisStarName = 'Giant01', RVClip = -1, booSave = False, booShow = True, booBaryPlot = False, booBaryCorrect = False, title = ''):
     
     data=np.load('npy/data.npy')
     RVs=np.load('npy/RVs.npy')
     sigmas=np.load('npy/sigmas.npy')
     baryVels=np.load('npy/baryVels.npy')
-    JDs=np.load('npy/JDs.npy')
-    if RVCorrMethod=='PM':
-        RVCorr=np.load('npy/RVCorr_PM.npy')
-    else:
-        RVCorr=np.load('npy/RVCorr_DM.npy')
+    JDs=np.load('npy/JDs.npy')    
+    RVCorr_PM=np.load('npy/RVCorr_PM.npy')
+    RVCorr_DM=np.load('npy/RVCorr_DM.npy')
+    cRVs_PMDM=np.load('npy/cRVs_PMDM.npy')
 
-    i = np.where(data[:,0]==thisStarName)[0][0]
-#     X = range(data[:,0].shape[0])
-#     Y = RVs
-#     Y[Y==0.]=np.nan
-    
-#     if RVClip>-1:Y[np.abs(Y)>RVClip] = np.nan
-#     if sigmaClip>-1:
-#         stdY= np.std(Y)
-#         medY = np.median(Y)
-#         Y[(Y>=medY-sigmaClip*stdY) & (Y<=medY+sigmaClip*stdY)] = np.nan
-    
-    
-    
+    idx = np.where(data[:,0]==thisStarName)[0][0]
+   
     colors = ['b','g','r','cyan']
     labels = ['Blue','Green','Red','IR']
+    methods = ['PM', 'DM', 'PMDM']
     
-#     #Plots RVs, baryvels. all star, 4 cameras
-#     print 'About to plot RVs from ',RVs.shape[0],'stars.'
+    for i,RVCorr in enumerate([RVCorr_PM, RVCorr_DM,'']):
+        for cam in range(4)[:]:
+#             print data[idx]
+#             print 'RV:',RVs[idx,:,cam]
+#             print 'RVCorr:',RVCorr[idx,:,cam]
+#             print 'JDs:',JDs
+            RVs[np.abs(RVs)>RVClip] = np.nan
+
+            plt.plot(JDs,RVs[idx,:,cam], label = 'RV', marker='.', c='b')
+            if booBaryPlot==True: plt.plot(JDs, baryVels, label = 'Barycentric Vel. ', marker='.', c='cyan')
+        
+            if i==0:
+                plt.plot(JDs,RVCorr[idx,:,cam], label = 'Correction', marker='.', c='r')
+                plt.plot(JDs,RVs[idx,:,cam]-RVCorr[idx,:,cam], label = 'Result', marker='.', c='g')
+            elif i==1:
+                plt.plot(JDs,RVCorr[idx,:,cam], label = 'Correction', marker='.', c='r')
+                plt.plot(JDs,RVs[idx,:,cam]-RVCorr[idx,:,cam], label = 'Result', marker='.', c='g')
+            elif i==2:
+                plt.plot(JDs,cRVs_PMDM[idx,:,cam], label = 'Result', marker='.', c='g')
+
+            plt.legend(loc=0)
+            plt.title('RVCorr_'+methods[i]+' for '+data[idx,0]+' - '+labels[cam]+' camera')
+
+            if booSave==True: 
+                try:
+                    plotName = 'plots/RVCorr_'+methods[i]+'_'+labels[cam]
+                    print 'Attempting to save', plotName
+                    plt.savefig(plotName)
+
+                except:
+                    print 'FAILED'
+            if booShow==True: plt.show()
+            plt.close()        
+
+# <codecell>
+
+def RVCorr_Slit(thisStarName = 'Giant01', RVClip = -1, booSave = False, booShow = True, booBaryPlot = False, booBaryCorrect = False, title = ''):
+    import RVTools as RVT
     
-    for cam in range(4)[:]:
-        print data[i]
-        print 'RV:',RVs[i,:,cam]
-        print 'RVCorr:',RVCorr[i,:,cam]
-        print 'JDs:',JDs
-        RVs[np.abs(RVs)>RVClip] = np.nan
-        plt.plot(JDs,RVs[i,:,cam], label = 'RV', marker='.')
-        plt.plot(JDs,RVCorr[i,:,cam], label = 'Correction', marker='.')
-        plt.plot(JDs,RVs[i,:,cam]-RVCorr[i,:,cam], label = 'Result', marker='.')
+    data=np.load('npy/data.npy')
+    RVs=np.load('npy/RVs.npy')
+    sigmas=np.load('npy/sigmas.npy')
+    baryVels=np.load('npy/baryVels.npy')
+    JDs=np.load('npy/JDs.npy')    
+    RVCorr_PM=np.load('npy/RVCorr_PM.npy')
+    RVCorr_DM=np.load('npy/RVCorr_DM.npy')
+    allW_PM=np.load('npy/allW_PM.npy')
+    allW_DM=np.load('npy/allW_DM.npy')
+    cRVs_PMDM=np.load('npy/cRVs_PMDM.npy')
 
-        if booBaryPlot==True: plt.plot(JDs, baryVels, label = 'Barycentric Vel. ', marker='.')
+    #load function that translates pivot# to y-pixel  p2y(pivot)=y-pixel of pivot
+    p2y = RVT.pivot_to_y('/Users/Carlos/Documents/HERMES/reductions/6.2/rhoTuc_6.2/0_20aug/1/20aug10042tlm.fits') 
 
-        plt.legend(loc=0)
-
-
-
-#         ax.set_xticklabels(data[:,0])
-#         ax.set_xticks(X)
-#         plt.xticks(rotation=70)
-
-
-        if title=='':
-            plt.title('RVCorr and RV for '+data[i,0]+' - '+labels[cam]+' camera')
-        else:
-            plt.title(title)
-
-#         Y[:,:,cam] = Y[:,:,cam][order[:,cam]]
-#         YERR[:,:,cam] = YERR[:,:,cam][order[:,cam]]
-        
-#         #median
-#         plt.scatter(X, stats.nanmedian(Y[:,:,cam], axis = 1), label = labels[cam], color = 'k')
-        
-#         #sigma
-#         plt.scatter(X, stats.nanmedian(Y[:,:,cam], axis = 1)+stats.nanstd(Y[:,:,cam], axis = 1), label = labels[cam], color = 'r')
-#         plt.scatter(X, stats.nanmedian(Y[:,:,cam], axis = 1)-stats.nanstd(Y[:,:,cam], axis = 1), label = labels[cam], color = 'r')
+    #gets the y position of for the data array
+    datay = p2y[data[:,2].astype(float).astype(int)]
+    
+    idx = np.where(data[:,0]==thisStarName)[0][0]
+   
+    colors = ['b','g','r','cyan']
+    labels = ['Blue','Green','Red','IR']
+    methods = ['PM', 'DM', 'PMDM']
+    i=0
+#     for i,RVCorr in enumerate([RVCorr_PM, RVCorr_DM,'']):
+    
+    for cam in range(4)[:1]:
+#         RVs[np.abs(RVs)>RVClip] = np.nan
+        plt.scatter(allW_PM[:,cam,idx],datay, s=2, c='k')
+        plt.plot([0,0],[np.min(datay),np.max(datay)])
+        plt.plot([0,0],[np.min(datay),np.max(datay)])
+        plt.xlim(-np.max(allW_PM[:,cam,idx]),np.max(allW_PM[:,cam,idx]))
+        plt.plot(plt.xlim(),[datay[idx],datay[idx]])
         
         
-#         #min max
-#         for star in range(Y.shape[0]):
-#             x = np.nanmax(Y[star,:,cam])
-#             n = np.nanmin(Y[star,:,cam])
-#             plt.plot([star,star],[x,n], color = 'g', lw=2)
-#             print star, n, x
-        
-#         plt.xlabel('MJD')
-#         plt.ylabel('RV [m/s]')
+#         plt.plot(JDs,RVs[idx,:,cam], label = 'RV', marker='.', c='b')
+#         if booBaryPlot==True: plt.plot(JDs, baryVels, label = 'Barycentric Vel. ', marker='.', c='cyan')
 
+#         if i==0:
+#             plt.plot(JDs,RVCorr[idx,:,cam], label = 'Correction', marker='.', c='r')
+#             plt.plot(JDs,RVs[idx,:,cam]-RVCorr[idx,:,cam], label = 'Result', marker='.', c='g')
+#         elif i==1:
+#             plt.plot(JDs,RVCorr[idx,:,cam], label = 'Correction', marker='.', c='r')
+#             plt.plot(JDs,RVs[idx,:,cam]-RVCorr[idx,:,cam], label = 'Result', marker='.', c='g')
+#         elif i==2:
+#             plt.plot(JDs,cRVs_PMDM[idx,:,cam], label = 'Result', marker='.', c='g')
+
+#         plt.legend(loc=0)
+        plt.title('RVCorr_'+methods[i]+' for '+data[idx,0]+' - '+labels[cam]+' camera')
 
         if booSave==True: 
             try:
-                plotName = 'plots/RVCorr_RV_'+labels[cam]
+                plotName = 'plots/RVCorr_'+methods[i]+'_'+labels[cam]
                 print 'Attempting to save', plotName
                 plt.savefig(plotName)
 
@@ -543,7 +569,6 @@ def RVCorr_RV(RVCorrMethod = 'PM', thisStarName = 'Giant01', sigmaClip = -1, RVC
                 print 'FAILED'
         if booShow==True: plt.show()
         plt.close()        
-        
 
 # <codecell>
 

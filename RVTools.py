@@ -122,15 +122,11 @@ def find_max_wl_range(thisStar):
 # <codecell>
 
 #Create cross correlation curves wrt epoch 0
-def RVs_CC_t0(thisStar, xDef = 1, CCReferenceSet = 0, printDetails=False, corrHWidth=10, medianRange = 0):
-
-    print '#############################################################################################################'
-    print '#############################################################################################################'
-    print '#############################################################################################################'
+def RVs_CC_t0(thisStar, starIdx,  xDef = 1, CCReferenceSet = 0, printDetails=False, corrHWidth=10, medianRange = 0):
 
 #     validDates = np.all([np.nansum(thisCam.red_fluxes,1).astype(bool) for thisCam in thisStar.exposures.cameras],0)
-    
-    for j,thisCam in enumerate(thisStar.exposures.cameras):
+    print ''
+    for cam,thisCam in enumerate(thisStar.exposures.cameras):
         RVs = []
         sigmas = [] 
         Qs = []
@@ -138,7 +134,7 @@ def RVs_CC_t0(thisStar, xDef = 1, CCReferenceSet = 0, printDetails=False, corrHW
 
         validDates = np.nansum(thisCam.red_fluxes,1).astype(bool)
         
-        print 'Camera',j,validDates
+        print 'Camera',cam
         
         if len(np.arange(len(validDates))[validDates])>0:
             CCReferenceSet = np.arange(len(validDates))[validDates][0]
@@ -147,18 +143,15 @@ def RVs_CC_t0(thisStar, xDef = 1, CCReferenceSet = 0, printDetails=False, corrHW
             
             
         lambda1, flux1 = clean_flux(thisCam.wavelengths[CCReferenceSet], thisCam.red_fluxes[CCReferenceSet], thisCam, medianRange=medianRange)
-        print 'Reference wl,fl sum', np.nansum(lambda1), np.nansum(flux1)
-        print 
         
         plts = 0    
-        for i, JD in enumerate(thisStar.exposures.JDs):
-            print 'Set,MJD',i,JD
-            lambda2, flux2 = clean_flux(thisCam.wavelengths[i], thisCam.red_fluxes[i], thisCam, medianRange=medianRange)
-            print 'This wl,fl sum', np.nansum(lambda2), np.nansum(flux2)
+        for epoch, JD in enumerate(thisStar.exposures.JDs):
+            print epoch,
+            lambda2, flux2 = clean_flux(thisCam.wavelengths[epoch], thisCam.red_fluxes[epoch], thisCam, medianRange=medianRange)
 
-            if validDates[i]==True:
+            if validDates[epoch]==True:
 #                 CCCurve = signal.fftconvolve(flux1, flux2[::-1], mode='same')
-#                 if i <5:
+#                 if epoch <5:
 #                     plt.plot(flux1)
 #                     plt.plot(flux2)
 #                     plt.plot(CCCurve)
@@ -174,7 +167,6 @@ def RVs_CC_t0(thisStar, xDef = 1, CCReferenceSet = 0, printDetails=False, corrHW
         #                 try:
         #                 print '4 params',p_guess, x_mask, np.sum(x_mask), CCCurve.shape
                         p = fit_gaussian(p_guess, CCCurve[x_mask], np.arange(len(CCCurve))[x_mask])[0]
-                        print 'p result',p
                         if np.modf(CCCurve.shape[0]/2.0)[0]>1e-5:
                             pixelShift = (p[0]-(CCCurve.shape[0]-1)/2.) #odd number of elements
                         else:
@@ -182,32 +174,27 @@ def RVs_CC_t0(thisStar, xDef = 1, CCReferenceSet = 0, printDetails=False, corrHW
         #                 except:
         #                     pixelShift = 0
 
-                        thisQ, thisdRV = QdRV(thisCam.wavelengths[i], thisCam.red_fluxes[i])
-                        print  ' thisQ, thisdRV',thisQ, thisdRV
+                        thisQ, thisdRV = QdRV(thisCam.wavelengths[epoch], thisCam.red_fluxes[epoch])
 
                         mid_px = thisCam.wavelengths.shape[1]/2
-                        dWl = (thisCam.wavelengths[i,mid_px+1]-thisCam.wavelengths[i,mid_px]) / thisCam.wavelengths[i,mid_px]
+                        dWl = (thisCam.wavelengths[epoch,mid_px+1]-thisCam.wavelengths[epoch,mid_px]) / thisCam.wavelengths[epoch,mid_px]
                         RV = dWl * pixelShift * constants.c 
                         print 'RV',RV
 
-                        SNR = np.sqrt(stats.nanmedian(thisCam.red_fluxes[i]))
                     else:
                         R = 0
                         thisQ = 0
                         thisdRV = 0
                         RV = 0
-                        SNR = 0
                         print 'Invalid data point'
 
                 except Exception,e: 
-                    print 
+                    print 'CC Error'
                     print str(e)
-                    print 'cc',CCCurve,
                     R = 0
                     thisQ = 0
                     thisdRV = 0
                     RV = 0
-                    SNR = 0
 #                     if plts<5:
 #                         plts+=1
 #                         plt.plot(flux1)
@@ -220,13 +207,22 @@ def RVs_CC_t0(thisStar, xDef = 1, CCReferenceSet = 0, printDetails=False, corrHW
 #                 if i==CCReferenceSet:
 #                     print 'The CC reference set is not present. Can\'t continue. Launch again with different reference set.'
 #                     sys.exit()
-                SNR = 0
                 thisQ = 0
                 thisdRV = 0
                 RV = 0
                 print 'Invalid data point'
 
-            print ''
+            SNR = np.sqrt(stats.nanmedian(thisCam.red_fluxes[epoch]))
+            
+            if np.isnan(SNR)==True: 
+                msg = 'NaN in SNR calculation sqrt(median(flux)).'
+                msg += str(np.sum(np.isnan(thisCam.red_fluxes[epoch])))
+                msg += '/'+str(thisCam.red_fluxes[epoch].shape[0])+' NaNs in flux.'
+                msg += ' Median_flux='+str(stats.nanmedian(thisCam.red_fluxes[epoch]))
+                print msg
+                comment(starIdx,epoch,cam,msg )
+                print 'SNR NaN',
+            print SNR
 
             SNRs.append(SNR)
             Qs.append(thisQ)
@@ -239,6 +235,26 @@ def RVs_CC_t0(thisStar, xDef = 1, CCReferenceSet = 0, printDetails=False, corrHW
         thisCam.Qs = np.array(Qs)
         thisCam.RVs = np.array(RVs)
         thisCam.SNRs = np.array(SNRs)
+
+# <codecell>
+
+def comment(star, epoch, cam, comment):
+    comments = []
+    try:
+        comments = np.load('npy/comments.npy')
+    except:
+        pass
+    
+    if comments==[]:
+        comments = np.zeros((1,),dtype=('i4,i4,i4,a100'))
+        comments[:] = [(star, epoch, cam, comment)]
+    else:
+        x = np.zeros((1,),dtype=('i4,i4,i4,a100'))
+        x[:] = [(star, epoch, cam, comment)]
+        comments = np.append(comments,x)
+    
+    np.save('npy/comments.npy',comments)
+        
 
 # <codecell>
 
@@ -410,56 +426,68 @@ def pivot_to_y(ref_file):
 
 
 def calibrator_weights(deltay, sigma):
-	"""For calibrator stars with CCD y values deltay from the target star
-	and radial velocity errors sigma, create an optimal set of weights.
-	
-	We want to minimise the variance of the weighted sum of calibrator
-	radial velocities where we have the following constraints:
-	
-	1) \Sigma w_i = 1  (i.e. the average value of the calibrators measure CCD shifts)
-	2) \Sigma w_i dy_i = 0 (i.e. allow the wavelength solution to rotate about the target)
-	
-	See http://en.wikipedia.org/wiki/Quadratic_programming
-	"""
-	N = len(sigma)
-	#Start of with a matrix of zeros then fill it with the "Q" and "E" matrices
-	M = np.zeros((N+2,N+2))
-	M[(range(N),range(N))] = sigma
-	M[N,0:N] = deltay
-	M[0:N,N] = deltay
-	M[N+1,0:N] = np.ones(N)
-	M[0:N,N+1] = np.ones(N)
-	b = np.zeros(N+2)
-	b[N+1] = 1.0
-	#Solve the problem M * x = b
-	x = np.linalg.solve(M,b)
-	#The first N elements of x contain the weights.
-	return x[0:N]
+    """For calibrator stars with CCD y values deltay from the target star
+    and radial velocity errors sigma, create an optimal set of weights.
+
+    We want to minimise the variance of the weighted sum of calibrator
+    radial velocities where we have the following constraints:
+
+    1) \Sigma w_i = 1  (i.e. the average value of the calibrators measure CCD shifts)
+    2) \Sigma w_i dy_i = 0 (i.e. allow the wavelength solution to rotate about the target)
+
+    See http://en.wikipedia.org/wiki/Quadratic_programming
+    """
+    N = len(sigma)
+    #Start of with a matrix of zeros then fill it with the "Q" and "E" matrices
+    M = np.zeros((N+2,N+2))
+    M[(range(N),range(N))] = sigma
+#     idx = np.where(deltay==0)[0][0]
+#     M[idx,idx] = 1e17
+    M[N,0:N] = deltay
+    M[0:N,N] = deltay
+    M[N+1,0:N] = np.ones(N)
+    M[0:N,N+1] = np.ones(N)
+    b = np.zeros(N+2)
+    b[N+1] = 1.0
+    #Solve the problem M * x = b
+    x = np.linalg.solve(M,b)
+    #The first N elements of x contain the weights.
+    return x[0:N]
 
 # <codecell>
 
 def calibrator_weights2(deltay,SNR):
 
-    c = SNR/np.abs(deltay)
+    c = 1/np.abs(deltay)/SNR
     c[deltay==0]=0
     c /=np.sum(c)
     return c
 
 # <codecell>
 
-def create_allW(data = [], SNRs = [], starSet=[], RVCorrMethod = 'PM'):
+def calibrator_weights3(deltay,SNR):
+#nope
+    c = (SNR+np.abs(deltay))/np.abs(deltay)
+    c[deltay==0]=0
+    c /=np.sum(c)
+    return c
+
+# <codecell>
+
+def create_allW(data = [], SNRs = [], starSet=[], RVCorrMethod = 'PM', refEpoch = 0):
 
     if ((data!=[]) and (SNRs!=[])):
-#         if ((starSet!=[]) and (len(starSet.shape)==1) and (starSet[0]>0)):
-#             data = data[starSet]
-#             SNRs = SNRs[starSet]
+        if ((starSet!=[]) and (len(starSet.shape)==1) and (starSet[0]>0)):
+            data = data[starSet]
+            SNRs = SNRs[starSet]
 
         #load function that translates pivot# to y-pixel  p2y(pivot)=y-pixel of pivot
         p2y = pivot_to_y('/Users/Carlos/Documents/HERMES/reductions/6.2/rhoTuc_6.2/0_20aug/1/20aug10042tlm.fits') 
 
         #gets the y position of for the data array
         datay = p2y[data[:,2].astype(float).astype(int)]
-
+        order = np.argsort(datay)
+        
         #Creates empty array for relative weights
         #allW[Weights, camera, staridx of the star to be corrected]
         allW = np.zeros((data.shape[0],4,data.shape[0]))
@@ -471,18 +499,24 @@ def create_allW(data = [], SNRs = [], starSet=[], RVCorrMethod = 'PM'):
 
             for cam in range(4):
 
-                thisSNRs = SNRs[:,0,cam].copy()
-                thisSNRs[np.isnan(thisSNRs)]=1  #sets NaNs into SNR=1 
+                thisSigma = 1./SNRs[:,refEpoch,cam].copy()
+                thisSigma[np.isnan(thisSigma)]=1e+17  #sets NaNs into SNR=1e-17
                 
-#                 print deltay,thisSNRs
-                if np.sum(thisSNRs)>0:
+                if np.sum(thisSigma)>0:
                     if RVCorrMethod == 'PM':
-                        W = calibrator_weights(deltay,thisSNRs)
-                    else:
-                        W = calibrator_weights2(deltay,thisSNRs)
+                        W = calibrator_weights(deltay,thisSigma)
+                    elif RVCorrMethod == 'DM':
+                        W = calibrator_weights2(deltay,thisSigma)
                         
+#                         print data[thisStarIdx,0],RVCorrMethod
+                        if data[thisStarIdx,0]=='Giant01':
+                            for a,b,c in zip(thisSigma[order],W[order], thisSigma[order]):
+                                print 1./a,b,c
+                        print ''
+
                 else:
                     W = np.zeros(deltay.shape[0]) #hack to fix an all zeros SNRs for failed reductions
+                
                 allW[:,cam,thisStarIdx] = W
                     
     else:
@@ -493,7 +527,21 @@ def create_allW(data = [], SNRs = [], starSet=[], RVCorrMethod = 'PM'):
 
 # <codecell>
 
-def create_RVCorr(RVs, allW, RVClip = 1e17,starSet=[]):
+def create_RVCorr_PM(RVs, allW, RVClip = 1e17,starSet=[]):
+    RVCorr = np.zeros(RVs.shape)
+    print 'Clipping to',RVClip
+    RVs[np.abs(RVs)>RVClip]=0
+    
+    for thisStarIdx in range(RVs.shape[0]):
+        for epoch in range(RVs.shape[1]):
+            thisRVCorr = (allW[:,:,thisStarIdx]+1)*RVs[:,epoch,:]
+            RVCorr[:,epoch,:] = thisRVCorr + RVs[:,epoch,:] 
+
+    return RVCorr
+
+# <codecell>
+
+def create_RVCorr_DM(RVs, allW, RVClip = 1e17,starSet=[]):
     RVCorr = np.zeros(RVs.shape)
     print 'Clipping to',RVClip
     RVs[np.abs(RVs)>RVClip]=0
@@ -503,9 +551,7 @@ def create_RVCorr(RVs, allW, RVClip = 1e17,starSet=[]):
             for cam in range(RVs.shape[2]):
                 thisRVCorr = np.nansum(allW[:,cam,thisStarIdx]*RVs[:,epoch,cam])
                 RVCorr[thisStarIdx,epoch,cam] = thisRVCorr
-                print thisRVCorr,
-            print 
-        print 
+
     return RVCorr
 
 # <codecell>

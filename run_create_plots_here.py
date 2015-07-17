@@ -11,8 +11,8 @@ import RVPlots as RVP
 
 
 
-booSave = True 
-booShow = False
+booSave = False    
+booShow = True
 booBaryPlot = True
 thisCamIdx = 0
 RVClip = 2000
@@ -58,9 +58,13 @@ except:
 # RVP.flux_and_CC(RVref = RVClip, booSave = booSave, booShow = booShow)
 
 #Plot
-RVP.RVCorr_RV(RVCorrMethod = 'PM', RVClip = RVClip, booSave = booSave, booShow = booShow,booBaryPlot=booBaryPlot)
+# RVP.RVCorr_RV(RVClip = RVClip, booSave = booSave, booShow = booShow, booBaryPlot=booBaryPlot)
+
+#Plot
+RVP.RVCorr_Slit(RVClip = RVClip, booSave = booSave, booShow = booShow, booBaryPlot=booBaryPlot)
 
   
+
 # if len(fileList)>0:
 #     for objName in fileList[:]:
 #         print 'Reading',objName

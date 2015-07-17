@@ -68,9 +68,11 @@ if len(fileList)>0:
     data = np.array(data)
     order = np.argsort(data[:,2].astype(float).astype(int))
     
-#     data = data[order]
-#     RVs = RVs[order]
-#     sigmas = sigmas[order]
+    data = data[order]
+    RVs = RVs[order]
+    SNRs = SNRs[order]
+    sigmas = sigmas[order]
+
 #     
     #save?
     np.save('npy/data',data)

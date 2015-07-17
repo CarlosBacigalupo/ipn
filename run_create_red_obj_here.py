@@ -21,6 +21,7 @@ else:
     fileList = glob.glob('obj/*.obj')
 
 if len(fileList)>0:
+    i=0
     for filename in fileList    :
         if 'red' not in filename:
             print filename
@@ -28,7 +29,8 @@ if len(fileList)>0:
             thisStar = pickle.load(filehandler)
     #         try:
     #         RVT.find_max_wl_range(thisStar)
-            RVT.RVs_CC_t0(thisStar, CCReferenceSet=CCReferenceSet, medianRange=medianRange)
+            RVT.RVs_CC_t0(thisStar,i, CCReferenceSet=CCReferenceSet, medianRange=medianRange)
+            i+=1
     
             file_pi = open('obj/red_'+thisStar.name+'.obj', 'w') 
             pickle.dump(thisStar, file_pi) 

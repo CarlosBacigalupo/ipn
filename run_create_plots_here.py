@@ -11,14 +11,17 @@ import RVPlots as RVP
 
 
 
-booSave = False    
-booShow = True
-booBaryPlot = True
-thisCamIdx = 0
+booSave = True    
+booShow = False
+booBaryPlot = False
+thisCamIdx = -1
 RVClip = 2000
 topStars = -1 #how many stars to read. -1 for all.
-booBaryCorrect = False
+booBaryCorrect = True
 idStars = ['Giant01'] #name of stars to id in RV plot
+# idStars = ['HD1581'] #name of stars to id in RV plot
+booShowArcRVs = True
+booFit = True
 
 if len(sys.argv)>1:
     fileList = [sys.argv[1]]
@@ -43,7 +46,7 @@ except:
 # RVP.RVs_all_stars()
 
 #Plot
-# RVP.RVs_all_stars_NPYs(idStars= idStars, sigmaClip = -1,RVClip = RVClip, topStars=topStars, booSave = booSave,booShow = booShow  , booBaryPlot=booBaryPlot, booBaryCorrect = booBaryCorrect)
+# RVP.RVs_all_stars_NPYs(booShowArcRVs = booShowArcRVs, idStars= idStars, sigmaClip = -1,RVClip = RVClip, topStars=topStars, booSave = booSave,booShow = booShow  , booBaryPlot=booBaryPlot, booBaryCorrect = booBaryCorrect)
 
 #Plot
 # RVP.RVs_by_star_NPYs(RVClip = RVClip, booSave = booSave,booShow = booShow )
@@ -61,7 +64,11 @@ except:
 # RVP.RVCorr_RV(RVClip = RVClip, booSave = booSave, booShow = booShow, booBaryPlot=booBaryPlot)
 
 #Plot
-RVP.RVCorr_Slit(RVClip = RVClip, booSave = booSave, booShow = booShow, booBaryPlot=booBaryPlot)
+# RVP.RVCorr_Slit(RVClip = RVClip, booSave = booSave, booShow = booShow, booBaryPlot=booBaryPlot)
+
+#Plot
+RVP.arcRVs(booSave = booSave, booShow = booShow, booFit = booFit)
+
 
   
 
@@ -70,16 +77,17 @@ RVP.RVCorr_Slit(RVClip = RVClip, booSave = booSave, booShow = booShow, booBaryPl
 #         print 'Reading',objName
 #         filehandler = open(objName, 'r')
 #         thisStar = pickle.load(filehandler)
-#           
+#              
 #         #Plot
 #         RVP.all_spec_overlap(thisStar, booSave = booSave, thisCamIdx = thisCamIdx, booShow = booShow )
-#           
+#   
 #         #Plot
 # #         RVP.RVs_single_star(thisStar, sigmaClip = -1, RVClip = 3000)
-#   
-#               
+#      
+#                  
 #         thisStar = None
+#         filehandler.close()
 #         print ''
 # else:
 #     print 'No red_*.obj files here.'
-     
+#       

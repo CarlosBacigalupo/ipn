@@ -8,13 +8,20 @@ import numpy as np
 import glob
 import pickle
 import scipy.stats as stats
+import RVTools as RVT
+
+# <codecell>
+
 
 # <codecell>
 
 def all_spec_overlap(thisStar, thisCamIdx = '', booShow = True, booSave = False):
+    import gc
     '''
     All spectra for thisCam, or all cams if thisCam is skipped.
     '''
+    gc.enable()
+    
     fig, ax = plt.subplots(2,2, sharey='all')
     
     # ax.set_yticks(thisStar.exposures.JDs)
@@ -31,22 +38,29 @@ def all_spec_overlap(thisStar, thisCamIdx = '', booShow = True, booSave = False)
         nFluxes = thisCam.wavelengths.shape[0]
 #         ax[0,0].set_yticks(np.arange(0,nFluxes))
 #         ax[0,0].set_ylim(-1,nFluxes)
+        ax[0,0].set_ylim(-50 ,(nFluxes+2)*10)
     
         for i in np.arange(nFluxes):
                 if np.sum(thisCam.wavelengths[i])>0:
-                    d, f = thisCam.wavelengths[i], thisCam.red_fluxes[i]/np.median(thisCam.red_fluxes[i])
+                    d, f = thisCam.wavelengths[i], thisCam.red_fluxes[i]/np.abs(np.median(thisCam.red_fluxes[i]))
                     if cam ==0:
                         ax[0,0].plot(d, f+i*10, 'b')
                     elif cam==1:
-                        ax[0,1].plot(d, f+i, 'g')
+                        ax[0,1].plot(d, f+i*10, 'g')
                     elif cam==2:
-                        ax[1,0].plot(d, f+i, 'r')
+                        ax[1,0].plot(d, f+i*10, 'r')
                     elif cam==3:
-                        ax[1,1].plot(d, f+i, 'cyan')
+                        ax[1,1].plot(d, f+i*10, 'cyan')
                 #         ax.plot(d, f+thisStar.exposures.JDs[i], 'k')
-    
+    thisCam = None
+    name = thisStar.name
+    thisStar = None
+    fig = None
+    ax = None
+    time = None
+    gc.collect()
     plt.xlabel('Wavelength [Ang]')
-    plt.title(thisStar.name+' - Camera '+str(cam+1))
+    plt.title(name+' - Camera '+str(cam+1))
 #     plt.gca().set_yticks(range(thisCam.wavelengths.shape[0]))
 #     plt.gca().set_yticklabels(thisCam.fileNames)
 
@@ -58,11 +72,14 @@ def all_spec_overlap(thisStar, thisCamIdx = '', booShow = True, booSave = False)
 
 #     ax[0,0].set_yticklabels(fileNames)
     if booSave==True: 
-        try:
-            plt.savefig('plots/' + thisStar.name + 'SOvl_cam' + str(cam+1), dpi = 1000 )
-        except:
-            print 'Couldn''t save'
+#         try:
+        plt.savefig('plots/' + name + 'SOvl_cam' + str(cam+1), dpi = 1000 )
+#         except:
+#             print 'Couldn''t save'
     if booShow==True: plt.show()
+
+    plt.close()
+    
 
 # <codecell>
 
@@ -204,13 +221,14 @@ def RVs_all_stars(booSave = False, booShow = True):
 
 # <codecell>
 
-def RVs_all_stars_NPYs(idStars = [], sigmaClip = -1, RVClip = -1, topStars = -1, booSave = False, booShow = True, booBaryPlot = False, booBaryCorrect = False, title = ''):
+def RVs_all_stars_NPYs(booShowArcRVs = False, idStars = [], sigmaClip = -1, RVClip = -1, topStars = -1, booSave = False, booShow = True, booBaryPlot = False, booBaryCorrect = False, title = ''):
     
     data=np.load('npy/data.npy')
     RVs=np.load('npy/RVs.npy')
     sigmas=np.load('npy/sigmas.npy')
     baryVels=np.load('npy/baryVels.npy')
     JDs=np.load('npy/JDs.npy')
+    arcRVS=np.load('npy/arcRVs.npy')
     
 #     order = np.argsort(np.nanstd(RVs,axis=1),axis=0)
 #     np.save('npy/order.npy',order)
@@ -264,7 +282,7 @@ def RVs_all_stars_NPYs(idStars = [], sigmaClip = -1, RVClip = -1, topStars = -1,
                 plt.title(title, y=1.1)
             
             if data[i,0] in idStars:
-                m = '+'
+                m = '*'
                 s=100
                 c='k'
             else:
@@ -275,12 +293,18 @@ def RVs_all_stars_NPYs(idStars = [], sigmaClip = -1, RVClip = -1, topStars = -1,
             
 #             plt.errorbar(X, Y[i,:,cam], yerr=YERR[i,:,cam]*1000, fmt='.', label = labels[cam], color = colors[cam])
             if booBaryCorrect==True: 
-                plt.scatter(X, Y[i,:,cam]- baryVels, color = c, s=s, marker=m)
+                plt.scatter(X, Y[i,:,cam]- baryVels, color = c, s=s, marker=m, label = 'Stars')
 
             else:
-                plt.scatter(X, Y[i,:,cam], color = c, s=s, marker=m)
+                plt.scatter(X, Y[i,:,cam], color = c, s=s, marker=m, label = 'Stars')
 
-            
+            if booShowArcRVs==True:
+                if data[i,0] in idStars:
+                    print i,data[i,:],RVT.pivot2idx(data[i,2].astype(int))
+                    arcRVs = np.load('npy/arcRVs.npy')
+                    plt.scatter(X, arcRVs[RVT.pivot2idx(data[i,2].astype(int)),:,cam], marker = '+' , label = 'ARC RV', color = 'm', s=500)
+                    plt.scatter(X, np.nanmean(arcRVs, axis=0)[:,cam], marker = '_' , label = 'mean ARC RV', color='k', s=300)
+                
 #             plt.plot(X, Y[i,:,cam], label = labels[cam], color = colors[cam])
 #             plt.scatter(X, Y[i,:,cam], label = labels[cam], color = 'k')
 
@@ -316,7 +340,9 @@ def RVs_all_stars_NPYs(idStars = [], sigmaClip = -1, RVClip = -1, topStars = -1,
 #         ax2.set_xlabel('Epoch')
         
 
-        plt.legend(loc=0)
+
+        plt.grid(True)
+#         plt.legend(loc=0)
         if booSave==True: 
             try:
                 plotName = 'plots/All_RVs_'+labels[cam]+''
@@ -334,11 +360,11 @@ def RVs_all_stars_NPYs(idStars = [], sigmaClip = -1, RVClip = -1, topStars = -1,
 
 def RVs_by_star_NPYs(sigmaClip = -1, RVClip = -1, booSave = False, booShow = True, booBaryPlot = False, booBaryCorrect = False, title = ''):
     
-    data=np.load('data.npy')
-    RVs=np.load('RVs.npy')
-    sigmas=np.load('sigmas.npy')
-    baryVels=np.load('baryVels.npy')
-    JDs=np.load('JDs.npy')
+    data=np.load('npy/data.npy')
+    RVs=np.load('npy/RVs.npy')
+    sigmas=np.load('npy/sigmas.npy')
+    baryVels=np.load('npy/baryVels.npy')
+    JDs=np.load('npy/JDs.npy')
 
     X = range(data[:,0].shape[0])
     Y = RVs
@@ -508,7 +534,6 @@ def RVCorr_RV(thisStarName = 'Giant01', RVClip = -1, booSave = False, booShow = 
 # <codecell>
 
 def RVCorr_Slit(thisStarName = 'Giant01', RVClip = -1, booSave = False, booShow = True, booBaryPlot = False, booBaryCorrect = False, title = ''):
-    import RVTools as RVT
     
     data=np.load('npy/data.npy')
     RVs=np.load('npy/RVs.npy')
@@ -746,15 +771,14 @@ def SNR_vs_fibre(RVClip = -1, booSave = False, booShow = True, title = ''):
 
 def flux_and_CC(RVref=5000, booSave = False, booShow = True):
     #Creates plots of 2fluxes and the corresponding CC for RVs >RVref
-    import RVTools
 
     labels = ['Blue','Green','Red','IR']
     
     data=np.load('npy/data.npy')
     RVs=np.load('npy/RVs.npy')
     i=0
-    for cam in range(RVs.shape[2])[1:2]:
-        for epoch in range(RVs.shape[1])[3:]:
+    for cam in range(RVs.shape[2])[:]:
+        for epoch in range(RVs.shape[1])[:]:
             for star in range(RVs.shape[0])[:]:
 #                 if np.abs(RVs[star,epoch,cam])>RVref:
 #                 if ((RVs[star,epoch,cam]<-1000) & (RVs[star,epoch,cam]>-3000)):
@@ -765,7 +789,7 @@ def flux_and_CC(RVref=5000, booSave = False, booShow = True):
                 filehandler = open('obj/'+fileName, 'r')
                 thisStar = pickle.load(filehandler)
 
-                lambda1,flux1, lambda2,flux2, CCCurve, p, x_mask, RV = RVTools.single_RVs_CC_t0(thisStar, cam = cam, t = epoch)
+                lambda1,flux1, lambda2,flux2, CCCurve, p, x_mask, RV = RVT.single_RVs_CC_t0(thisStar, cam = cam, t = epoch)
 
                 plt.subplot(2,1,1)
                 plt.title(thisStar.name +' '+ labels[cam]+' Original Fluxes - RV='+str(RV))
@@ -775,12 +799,12 @@ def flux_and_CC(RVref=5000, booSave = False, booShow = True):
                 plt.subplot(2,1,2)
                 plt.title('Cross Correlation')
                 plt.plot(CCCurve/np.max(CCCurve), label='CC Curve')
-                plt.plot(x_mask,RVTools.gaussian(x_mask, p[0], p[1] ), label='Gaussian fit', c='r')
+                plt.plot(x_mask,RVT.gaussian(x_mask, p[0], p[1] ), label='Gaussian fit', c='r')
                 plt.legend(loc=0)        
 
                 if booSave==True: 
                     try:
-                        plotName = 'plots/'+str(cam+1)+'/CC_'+data[star,0]+'_'+str(epoch)+'_'+str(cam)
+                        plotName = 'plots/'+str(cam+1)+'/CC_'+data[star,0]+'_'+str(epoch)+'_'+str(cam+1)
                         print 'Attempting to save', plotName
                         plt.savefig(plotName)
 
@@ -797,4 +821,37 @@ def flux_and_CC(RVref=5000, booSave = False, booShow = True):
                 thisStar = None
                 filehandler.close()
                 print 
+
+# <codecell>
+
+def arcRVs(booSave = False, booShow = True, booFit = False):
+    arcRVs = np.load('npy/arcRVs.npy')
+    MJDs = np.load('npy/JDs.npy')
+    
+    colors = ['b','g','r','c']
+
+    for epoch,MJD in enumerate(MJDs):
+        for cam in range(4):
+            y = arcRVs[:,epoch,cam]
+            plt.plot(y,'.'+colors[cam])
+            if booFit==True:
+                x = np.arange(len(y))
+                p = np.polyfit(x[-np.isnan(y)],y[-np.isnan(y)],1)
+                plt.plot(x,x*p[0]+p[1])
+                
+        plt.title('MJD='+str(MJD))
+        if booSave==True: 
+            try:
+                plotName = 'plots/arcRVs_'+str(epoch)
+                print 'Attempting to save', plotName
+                plt.savefig(plotName)
+
+            except Exception,e: 
+                print str(e)
+                print 'FAILED'
+        if booShow==True: plt.show()
+        plt.close()        
+
+    
+    
 

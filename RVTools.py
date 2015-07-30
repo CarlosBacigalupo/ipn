@@ -4,11 +4,11 @@
 # <codecell>
 
 import numpy as np
-import pickle
 import pylab as plt
 from scipy import interpolate, signal, optimize, constants, stats
 import pyfits as pf
 import sys
+import os
 
 # <codecell>
 
@@ -16,7 +16,59 @@ import sys
 
 # <codecell>
 
-def clean_flux(wavelength, flux, thisCam, xDef = 1, medianRange = 0):
+def pivot2idx(pivot):
+    pivot = np.array(pivot)
+    
+    rev_num = [np.nan] + ((np.tile(np.arange(10,0,-1),40)+np.repeat(np.arange(0,40)*10,10))-1).tolist()
+    rev_num = np.array(rev_num)
+    
+    return rev_num[pivot]
+
+# <codecell>
+
+def idx2pivot(idx):
+
+    rev_num = [np.nan] + ((np.tile(np.arange(10,0,-1),40)+np.repeat(np.arange(0,40)*10,10))-1).tolist()
+    
+    if len(np.where(rev_num==idx))>0:
+        result = np.where(rev_num==idx)[0][0]
+    else:
+        result = np.nan
+
+    return result
+
+# <codecell>
+
+# cd ../HERMES/reductions/6.5/HD285507/obj/
+
+# <codecell>
+
+# import numpy as np
+# import pylab as plt
+# import pickle
+
+# filename = 'Giant35.obj'
+# # filename = 'Brght01.obj'
+# # filename = 'red_Giant01.obj'
+# # filename = 'Giant01.obj'
+# # filename = 'Field01.obj'
+# filehandler = open(filename, 'r')
+# thisStar = pickle.load(filehandler)
+
+# thisCam = thisStar.exposures.cameras[1]
+# wl = thisCam.wavelengths[0]
+# flux1 = thisCam.red_fluxes[0] 
+# flux1 = flux1[::-1]
+# # plt.plot(flux1)
+# # plt.plot(np.isnan(flux1).astype(int)*50)
+# # plt.show()
+# print sum(np.isnan(thisCam.red_fluxes[0]))
+# print sum(np.isnan(thisCam.red_fluxes[-1]))
+# clean_flux(wl,flux1)
+
+# <codecell>
+
+def clean_flux(wavelength, flux, thisCam = [], xDef = 1, medianRange = 0, flatten = True):
     '''Clean a 1D spectrum. 
     
     Parameters
@@ -28,20 +80,46 @@ def clean_flux(wavelength, flux, thisCam, xDef = 1, medianRange = 0):
         Number of pixels to median over. 0 will skip this step. Optional.
 
     '''
+    
+    #fix initial nans on edges
+    nanMap = np.isnan(flux)
+    leftEdgeIdx=0
+    rightEdgeIdx=len(flux)
+    
+#     nanMapIdx = np.where(nanMap==True) make the next lines faster by using this....
+    
+    for i,booI in enumerate(nanMap):
+        if booI==False:
+            leftEdgeIdx = i
+            break
+            
+    for j,rbooI in enumerate(nanMap[::-1]):
+        if rbooI==False:
+            rightEdgeIdx = len(nanMap)-j
+            break        
+
+    fluxMedian = stats.nanmedian(flux)
+    if leftEdgeIdx>0:
+        flux[:leftEdgeIdx] = np.linspace(fluxMedian, flux[leftEdgeIdx+1],leftEdgeIdx)
+    if rightEdgeIdx<len(flux):
+        flux[rightEdgeIdx:] = np.linspace(flux[rightEdgeIdx-1], fluxMedian, len(flux)-rightEdgeIdx)
+
+        
         
     #median outliers
     if medianRange>0:
         fluxMed = signal.medfilt(flux,medianRange)
-        w = np.where(abs((flux-fluxMed)/np.maximum(fluxMed,50)) > 0.4)
-        for ix in w[0]:
-            flux[ix] = fluxMed[ix]
+        fluxDiff = abs(flux-fluxMed)
+        fluxDiffStd = np.std(fluxDiff)
+        mask = fluxDiff> 2 * fluxDiffStd
+        flux[mask] = fluxMed[mask]
 
     if ((wavelength[-np.isnan(flux)].shape[0]>0) &  (flux[-np.isnan(flux)].shape[0]>0)):
         
-        #flatten curve by fitting a 3rd order poly
-        fFlux = optimize.curve_fit(cubic, wavelength[-np.isnan(flux)], flux[-np.isnan(flux)], p0 = [1,1,1,1])
-        fittedCurve = cubic(wavelength, fFlux[0][0], fFlux[0][1], fFlux[0][2], fFlux[0][3])
-        flux = flux/fittedCurve-1
+        if flatten==True:#flatten curve by fitting a 3rd order poly
+            fFlux = optimize.curve_fit(cubic, wavelength[-np.isnan(flux)], flux[-np.isnan(flux)], p0 = [1,1,1,1])
+            fittedCurve = cubic(wavelength, fFlux[0][0], fFlux[0][1], fFlux[0][2], fFlux[0][3])
+            flux = flux/fittedCurve-1
         
         #apply tukey
         flux = flux * tukey(0.1, len(flux))
@@ -240,6 +318,11 @@ def RVs_CC_t0(thisStar, starIdx,  xDef = 1, CCReferenceSet = 0, printDetails=Fal
 
 def comment(star, epoch, cam, comment):
     comments = []
+    try:
+        os.mkdir('npy')
+    except:
+        pass
+    
     try:
         comments = np.load('npy/comments.npy')
     except:

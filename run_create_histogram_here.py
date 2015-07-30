@@ -13,7 +13,7 @@ import pylab as plt
 
 booSave = True
 booShow = False
-booShowBary = True
+booShowBary = False
 
 
 if len(sys.argv)>1:

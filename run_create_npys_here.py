@@ -83,7 +83,7 @@ if len(fileList)>0:
     np.save('npy/JDs',JDs)
 
     print ''
-    print 'data',len(data)
+    print 'data',data.shape
     print 'RVs',RVs.shape
     print 'SNRs',SNRs.shape
     print 'sigmas',sigmas.shape

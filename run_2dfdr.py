@@ -10,10 +10,10 @@ import importlib
 
 
 #reduction flags
-ver = 'iraf'
+ver = '6.5'
 booLog = False
 useBias = False
-copyFiles = True
+copyFiles = False
 doReduce = True
 overwrite = False
 idxFile = 'no_flat_no_bias.idx'

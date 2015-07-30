@@ -27,17 +27,6 @@ a = pf.open('25aug10035.ms.fits')
 
 # <codecell>
 
-a[0].header.items()
-
-# <codecell>
-
-ax = extract_HERMES_wavelength(a[0].header)
-
-# <codecell>
-
-
-# <codecell>
-
 CRVAL1 = 4714.9999999
 CDELTA1 = .045177
 CRPIX1 = 1.
@@ -58,10 +47,6 @@ myfile = pf.open('21aug10036red.fits')
 # <codecell>
 
 extract_HERMES_wavelength(myfile[0].header)
-
-# <codecell>
-
-myfile[0].header.items()
 
 # <codecell>
 
@@ -89,26 +74,7 @@ import toolbox
 
 # <codecell>
 
-cd /Users/Carlos/Documents/HERMES/reductions/6.5/HD285507_1arc/obj
-
-# <codecell>
-
-filename = 'Giant01.obj'
-# filename = 'red_Giant01.obj'
-filehandler = open(filename, 'r')
-thisStar = pickle.load(filehandler)
-
-# <codecell>
-
-thisStar.
-
-# <codecell>
-
-toolbox.dec2sex(thisStar.RA/15)
-
-# <codecell>
-
-toolbox.dec2sex(thisStar.Dec)
+cd /Users/Carlos/Documents/HERMES/reductions/iraf/HD1581/obj/
 
 # <codecell>
 
@@ -122,62 +88,206 @@ import pylab as plt
 from scipy import interpolate, signal, optimize, constants
 import pyfits as pf
 import sys
+import RVTools as RVT
+reload(RVT)
+import time
 
-CCReferenceSet=1
+filename = 'HD1581.obj'
+# filename = 'Brght01.obj'
+# filename = 'red_Giant01.obj'
+# filename = 'Giant01.obj'
+# filename = 'Field01.obj'
+filehandler = open(filename, 'r')
+thisStar = pickle.load(filehandler)
+
+thisCam = thisStar.exposures.cameras[0]
+
+CCReferenceSet=0
 CCTHisSet = 2
-corrHWidth = 10
+corrHWidth = 3
+for CCTHisSet in range(15):
+    # lambda1, flux1 = thisCam.wavelengths[CCReferenceSet], thisCam.red_fluxes[CCReferenceSet]
+    # plt.plot(lambda1,flux1)
+    # lambda2, flux2 = thisCam.wavelengths[CCTHisSet], thisCam.red_fluxes[CCTHisSet]
+    # plt.plot(lambda2,flux2)
+    # plt.show()
 
+    lambda1, flux1 = RVT.clean_flux(thisCam.wavelengths[CCReferenceSet], thisCam.red_fluxes[CCReferenceSet], thisCam, medianRange = 5)
+    plt.plot(lambda1,flux1)
+    lambda2, flux2 = RVT.clean_flux(thisCam.wavelengths[CCTHisSet], thisCam.red_fluxes[CCTHisSet], thisCam, medianRange = 5)
+    plt.plot(lambda2,flux2)
+    # plt.show()
+
+    CCCurve = signal.fftconvolve(flux1, flux2[::-1], mode='same')
+    CCCurve2 = signal.fftconvolve(flux1[-np.isnan(flux1)], flux2[-np.isnan(flux2)][::-1], mode='same')
+    # print np.sum(-np.isnan(flux1)), len(flux1)
+    corrMax = np.where(CCCurve==max(CCCurve))[0][0]
+
+    p_guess = [corrMax,corrHWidth]
+    x_mask = np.arange(corrMax-corrHWidth, corrMax+corrHWidth+1)
+    p = RVT.fit_gaussian(p_guess, CCCurve[x_mask], np.arange(len(CCCurve))[x_mask])[0]
+
+    plt.plot(lambda1,CCCurve/np.max(CCCurve))
+    # plt.plot(CCCurve2)
+    # plt.plot(lambda2[x_mask],max(CCCurve)* gaussian(x_mask, p[0],p[1]))
+    plt.show()
+
+    if np.modf(CCCurve.shape[0]/2.0)[0]>1e-5:
+        pixelShift = (p[0]-(CCCurve.shape[0]-1)/2.) #odd number of elements
+    else:
+        pixelShift = (p[0]-(CCCurve.shape[0])/2.) #even number of elements
+
+
+    # # thisQ, thisdRV = QdRV(thisCam.wavelengths[i], thisCam.red_fluxes[i])
+
+    mid_px = thisCam.wavelengths.shape[1]/2
+    dWl = (thisCam.wavelengths[CCReferenceSet,mid_px+1]-thisCam.wavelengths[CCReferenceSet,mid_px]) / thisCam.wavelengths[CCReferenceSet,mid_px]
+    RV = dWl * pixelShift * constants.c 
+    print CCTHisSet,'RV',RV,
+    print
+
+    # #                 SNR = np.median(thisCam.red_fluxes[i])/np.std(thisCam.red_fluxes[i])
+
+# <codecell>
+
+
+# <codecell>
+
+import pickle
+filename = 'HD1581.obj'
+# filename = 'Brght01.obj'
+# filename = 'red_Giant01.obj'
+# filename = 'Giant01.obj'
+# filename = 'Field01.obj'
+filehandler = open(filename, 'r')
+thisStar = pickle.load(filehandler)
+
+thisCam = thisStar.exposures.cameras[0]
+CCReferenceSet=3
 lambda1, flux1 = thisCam.wavelengths[CCReferenceSet], thisCam.red_fluxes[CCReferenceSet]
-# plt.plot(lambda1,flux1)
-lambda2, flux2 = thisCam.wavelengths[CCTHisSet], thisCam.red_fluxes[CCTHisSet]
-# plt.plot(lambda2,flux2)
-# plt.show()
+plt.plot(lambda1,flux1)
 
-lambda1, flux1 = clean_flux(thisCam.wavelengths[CCReferenceSet], thisCam.red_fluxes[CCReferenceSet], thisCam)
-# plt.plot(lambda1,flux1)
-lambda2, flux2 = clean_flux(thisCam.wavelengths[CCTHisSet], thisCam.red_fluxes[CCTHisSet], thisCam)
-# plt.plot(lambda2,flux2)
-# plt.show()
-
-CCCurve = signal.fftconvolve(flux1, flux2[::-1], mode='same')
-CCCurve2 = signal.fftconvolve(flux1[-np.isnan(flux1)], flux2[-np.isnan(flux2)][::-1], mode='same')
-print np.sum(-np.isnan(flux1)), len(flux1)
-# corrMax = np.where(CCCurve==max(CCCurve))[0][0]
-
-# p_guess = [corrMax,corrHWidth]
-# x_mask = np.arange(corrMax-corrHWidth, corrMax+corrHWidth+1)
-# p = fit_gaussian(p_guess, CCCurve[x_mask], np.arange(len(CCCurve))[x_mask])[0]
-
-plt.plot(CCCurve)
-plt.plot(CCCurve2)
-# plt.plot(lambda2[x_mask],max(CCCurve)* gaussian(x_mask, p[0],p[1]))
+lambda2, flux2, fluxMed = clean_flux(thisCam.wavelengths[CCReferenceSet], thisCam.red_fluxes[CCReferenceSet], thisCam, medianRange = 5)
+plt.plot(lambda2,flux2)
+plt.plot(lambda2,fluxMed)
 plt.show()
 
-# if np.modf(CCCurve.shape[0]/2.0)[0]>1e-5:
-#     pixelShift = (p[0]-(CCCurve.shape[0]-1)/2.) #odd number of elements
-# else:
-#     pixelShift = (p[0]-(CCCurve.shape[0])/2.) #even number of elements
+# <codecell>
+
+def clean_flux(wavelength, flux, thisCam, xDef = 1, medianRange = 0):
+    '''Clean a 1D spectrum. 
+    
+    Parameters
+    ----
+    xDef : int or None, optional
+        Coeficient to resample. Final array will be flux.shape[0]*xDef long. 
+        
+    medianRange : int, optional
+        Number of pixels to median over. 0 will skip this step. Optional.
+
+    '''
+
+    #median outliers
+    if medianRange>0:
+        fluxMed = signal.medfilt(flux,medianRange)
+        fluxDiff = abs(flux-fluxMed)
+        fluxDiffStd = np.std(fluxDiff)
+        mask = fluxDiff> 2 * fluxDiffStd
+        flux[mask] = fluxMed[mask]
+
+
+    if ((wavelength[-np.isnan(flux)].shape[0]>0) &  (flux[-np.isnan(flux)].shape[0]>0)):
+        
+        #flatten curve by fitting a 3rd order poly
+        fFlux = optimize.curve_fit(cubic, wavelength[-np.isnan(flux)], flux[-np.isnan(flux)], p0 = [1,1,1,1])
+        fittedCurve = cubic(wavelength, fFlux[0][0], fFlux[0][1], fFlux[0][2], fFlux[0][3])
+        flux = flux/fittedCurve-1
+        
+        #apply tukey
+        flux = flux * tukey(0.1, len(flux))
+
+        #resample
+        if (xDef>1):
+            fFlux = interpolate.interp1d(wavelength, flux) 
+            wavelength = np.linspace(min(wavelength), max(wavelength),len(wavelength)*xDef)
+            flux = fFlux(wavelength)
+
+    else: #if not enough data return NaNs
+        if (xDef>1):
+            wavelength = np.linspace(min(wavelength), max(wavelength),len(wavelength)*xDef)
+            flux = np.ones(wavelength.shape[0])*np.nan
+        
+    return wavelength, flux, fluxMed
+
+
+# <codecell>
+
+def cubic(x,a,b,c,d):
+    '''
+    Cubic function
+    '''
+    return a*x**3+b*x**2+c*x+d
+
+# <codecell>
+
+def tukey(alpha, N):
+    '''Creates a tukey function
+    
+    
+    Parameters
+    ----
+    alpha : float
+        Fraction of the pixels to fade in/out.
+        i.e. alpha=0.1 will use 10% of the pixels to go from 0 to 1. 
+        
+    N : int
+        Totla number of pixels in the array.
+        
+        
+    Returns
+    ------
+
+    N-length array of floats from 0 to 1. 
+    '''
 
     
-# # thisQ, thisdRV = QdRV(thisCam.wavelengths[i], thisCam.red_fluxes[i])
-                
-# mid_px = thisCam.wavelengths.shape[1]/2
-# dWl = (thisCam.wavelengths[i,mid_px+1]-thisCam.wavelengths[i,mid_px]) / thisCam.wavelengths[i,mid_px]
-# RV = dWl * pixelShift * constants.c 
-# print 'RV',RV
-                
-# #                 SNR = np.median(thisCam.red_fluxes[i])/np.std(thisCam.red_fluxes[i])
+    tukey = np.zeros(N)
+    for i in range(int(alpha*(N-1)/2)):
+        tukey[i] = 0.5*(1+np.cos(np.pi*(2*i/alpha/(N-1)-1)))
+    for i in range(int(alpha*(N-1)/2),int((N-1)*(1-alpha/2))):
+        tukey[i] = 1
+    for i in range(int((N-1)*(1-alpha/2)),int((N-1))):
+        tukey[i] = 0.5*(1+np.cos(np.pi*(2*i/alpha/(N-1)-2/alpha+1)))
+    
+    return tukey
 
 # <codecell>
 
-validDates = np.nansum(thisCam.red_fluxes,1).astype(bool)
-print np.nansum(thisCam.wavelengths,1)
-
-# <codecell>
-
-print thisCam.RVs
+for i in thisCam.red_fluxes:
+    plt.plot(i)
+plt.show()
 # plt.plot(thisCam.RVs)
 # plt.show()
+
+# <codecell>
+
+for flux,mj in zip(thisCam.red_fluxes,thisStar.exposures.JDs):
+    plt.plot(flux+mj)
+plt.show()
+# plt.plot(thisCam.RVs)
+# plt.show()
+
+# <codecell>
+
+np.sum(thisCam.red_fluxes, axis=1)
+
+# <codecell>
+
+print thisStar.exposures.JDs
+
+# <codecell>
+
+ls
 
 # <codecell>
 
@@ -1432,6 +1542,274 @@ filename_prfx
 
 thisDataset.ix_array
 
+# <headingcell level=3>
+
+# CC arcs
+
 # <codecell>
 
+cd ~/Documents/HERMES/reductions/6.5/HD285507/
+
+# <codecell>
+
+import glob
+import os
+import importlib
+import numpy as np
+
+# <codecell>
+
+#Copy are files
+files = glob.glob('*')
+thisDataset = importlib.import_module('data_sets.HD1581')
+
+# for folderList in files:
+#     try:
+#     if int(folderList[:1]) in range(20):
+
+#compose file prefixes from date_list
+months = np.array(['', 'jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'])
+d = np.array([s[4:] for s in thisDataset.date_list])
+m = months[np.array([s[2:4] for s in thisDataset.date_list]).astype(int)]
+filename_prfx = np.core.defchararray.add(d, m)
+
+
+
+for i,folder in enumerate(thisDataset.date_list):
+    thisFile = "%04d" % thisDataset.ix_array[i][1]
+    for cam in range(1,5):
+        strCopy = 'cp ' + str(i) + '_' + filename_prfx[i] + '/' + str(cam) + '/' + filename_prfx[i] + str(cam) + thisFile + 'red.fits ' 
+#         strCopy = str(i) + '_' + filename_prfx[i] + '/' + str(cam) + '/' + filename_prfx[i] + str(cam) + thisFile + 'red.fits ' 
+#         strCopy += 'arc_cam'+ str(cam) + '/' + filename_prfx[i] + str(cam) + thisFile + 'red.fits ' 
+        strCopy += '.' 
+        print strCopy
+        
+        os.system(strCopy)
+
+            
+#     except:
+#         print 'error'
+
+# <codecell>
+
+import pyfits as pf
+import pylab as plt
+import numpy as np
+import RVTools as RVT
+from scipy import signal, optimize, constants
+import os
+import glob
+reload(RVT)
+
+os.chdir('/Users/Carlos/Documents/HERMES/reductions/6.5/HD1581/')
+
+corrHWidth = 5
+xDef = 1
+fibre = 30
+
+arcRVs = np.ones((400,5,4))*np.nan
+
+for cam in range(4):
+    for fibre in [175]: range(400):
+        print fibre
+        files = glob.glob('arc_cam'+str(cam+1)+'/*')
+        for i,thisFile in enumerate(files):
+            if i==0:
+                fits = pf.open(thisFile)
+                refWL = RVT.extract_HERMES_wavelength(thisFile)
+                refData = fits[0].data
+                fits.close()
+
+        #         print refWL.shape
+        #         print refData.shape
+        #         plt.plot(refWL, refData[101])
+        #         plt.show()
+
+
+            fits = pf.open(thisFile)
+            thisWL = RVT.extract_HERMES_wavelength(thisFile)
+            thisData = fits[0].data
+            fits.close()
+
+            lambda1, flux1 = RVT.clean_flux(refWL, refData[fibre], flatten = False)
+    #         plt.plot(lambda1,flux1)
+            lambda2, flux2 = RVT.clean_flux(thisWL, thisData[fibre], flatten = False)
+    #         plt.plot(lambda2,flux2)
+    #         plt.show()
+
+            try:
+                CCCurve = signal.fftconvolve(flux1[-np.isnan(flux1)], flux2[-np.isnan(flux2)][::-1], mode='same')
+                corrMax = np.where(CCCurve==max(CCCurve))[0][0]
+                p_guess = [corrMax,corrHWidth]
+                x_mask = np.arange(corrMax-corrHWidth, corrMax+corrHWidth+1)
+                if max(x_mask)<len(CCCurve):
+                    p = fit_gaussian(p_guess, CCCurve[x_mask], np.arange(len(CCCurve))[x_mask])[0]
+                    if np.modf(CCCurve.shape[0]/2.0)[0]>1e-5:
+                        pixelShift = (p[0]-(CCCurve.shape[0]-1)/2.) #odd number of elements
+                    else:
+                        pixelShift = (p[0]-(CCCurve.shape[0])/2.) #even number of elements
+
+
+                    mid_px = refData.shape[1]/2
+                    dWl = (refWL[mid_px+1]-refWL[mid_px]) / refWL[mid_px]/xDef
+                    RV = dWl * pixelShift * constants.c 
+    #                 print 'RV',fibre,i,RV
+                    arcRVs[fibre,i,cam] = RV
+            except:
+                pass
+
+# <codecell>
+
+cam =3
+filename = 'HD1581arc_IR'
+
+files = glob.glob('arc_cam'+str(cam+1)+'/*')
+for i,thisFile in enumerate(files):
+    fits = pf.open(thisFile)
+    refWL = RVT.extract_HERMES_wavelength(thisFile)
+    refData = fits[0].data
+    fits.close()
+    
+    file_object = open(filename+'_e'+str(i)+'.txt', 'w')
+    for wl,fl in zip(refWL,refData[175]):
+        file_object.write(str(wl)+' '+str(fl)+'\n')
+    file_object.close()
+
+# <codecell>
+
+import pickle
+filename = '../obj/HD1581.obj'
+# filename = 'Brght01.obj'
+# filename = 'red_Giant01.obj'
+# filename = 'Giant01.obj'
+# filename = 'Field01.obj'
+filehandler = open(filename, 'r')
+thisStar = pickle.load(filehandler)
+thisCam =  thisStar.exposures.cameras[0]
+
+thisStar.exposures.pivots
+
+# <codecell>
+
+RVs = np.nanmean(arcRVs,axis=0)
+
+# <codecell>
+
+X = JDs[np.array([0,1,4,7,12])]
+
+# <codecell>
+
+JDs = np.load('../npy/JDs.npy')
+plt.scatter(JDs,arcRVs[175])
+plt.show()
+
+# <codecell>
+
+np.save('npy/arcRVs',arcRVs)
+
+# <codecell>
+
+print arcRVs.shape
+arcRVs2 = np.ones((400,15,4))*np.nan
+arcRVs2[:,0,:] = arcRVs[:,0,:]
+arcRVs2[:,1,:] = arcRVs[:,1,:]
+arcRVs2[:,2,:] = arcRVs[:,1,:]
+arcRVs2[:,3,:] = arcRVs[:,1,:]
+arcRVs2[:,4,:] = arcRVs[:,2,:]
+arcRVs2[:,5,:] = arcRVs[:,2,:]
+arcRVs2[:,6,:] = arcRVs[:,2,:]
+arcRVs2[:,7,:] = arcRVs[:,3,:]
+arcRVs2[:,8,:] = arcRVs[:,3,:]
+arcRVs2[:,9,:] = arcRVs[:,3,:]
+arcRVs2[:,10,:] = arcRVs[:,3,:]
+arcRVs2[:,11,:] = arcRVs[:,3,:]
+arcRVs2[:,12,:] = arcRVs[:,4,:]
+arcRVs2[:,13,:] = arcRVs[:,4,:]
+arcRVs2[:,14,:] = arcRVs[:,4,:]
+arcRVs = arcRVs2
+print arcRVs.shape
+
+# <codecell>
+
+arcRVs.shape
+
+# <headingcell level=3>
+
+# fibre ID table
+
+# <codecell>
+
+import pandas as pd
+
+# <codecell>
+
+np.tile(np.arange(10,0,-1),40)+np.repeat(np.arange(0,40)*10,10)
+
+# <codecell>
+
+labels = ['2dfID', 'idxData']
+
+
+rev_num = np.tile(np.arange(10,0,-1),40)+np.repeat(np.arange(0,40)*10,10)
+
+data = np.zeros((400,2))
+# data[:] = ''
+data[:,0] = np.arange(1,401)
+data[:,1] = (rev_num-1)
+# print data
+# data[range(49,399,50),5] = 'Guiding fibre'
+a = pd.DataFrame(data)
+a.columns = labels
+
+pd.set_option('display.height', 500)
+pd.set_option('display.max_rows', 500)
+
+# <codecell>
+
+a.ix[np.hstack((range(60),range(350,400)))]
+a.ix[:20]
+
+# <codecell>
+
+file_object = open('a.txt', 'w')
+file_object.write(a.to_latex(index=False))
+file_object.close()
+
+# <codecell>
+
+a.to_latex(index=False)
+
+# <codecell>
+
+# ('NAME', 'S80'),
+# ('RA', '>f8'), 
+# ('DEC', '>f8'), 
+# ('X', '>i4'), 
+# ('Y', '>i4'), 
+# ('XERR', '>i2'), 
+# ('YERR', '>i2'), 
+# ('THETA', '>f8'), 
+# ('TYPE', 'S1'), 
+# ('PIVOT', '>i2'), 
+# ('MAGNITUDE', '>f8'), 
+# ('PID', '>i4'), 
+# ('COMMENT', 'S80'), 
+# ('RETRACTOR', 'S10'), 
+# ('WLEN', '>f8'), 
+# ('PMRA', '>f8'), 
+# ('PMDEC', '>f8')]
+
+# <codecell>
+
+('Giant01', 
+ 1.0778280795690982, 
+ 0.26764721042069262, 
+ -15, 
+ 3, 
+ 15, 
+ 1,
+ 3.4963547846475636, 
+ 'P', 
+ 223, 
+ 7.6699999999999999, 0, 'Kmag', '23', 0.0, 0.0, 0.0)
 

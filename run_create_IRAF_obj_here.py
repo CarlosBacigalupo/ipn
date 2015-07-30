@@ -11,10 +11,10 @@ import toolbox
 import importlib
 
 booHD1581 = False
-IRAFFiles = '/Users/Carlos/Documents/workspace/GAP/IrafReduction/results/'   #folder to IRAF reduced files
+IRAFFiles = '/Users/Carlos/Documents/HERMES/reductions/iraf/results/'   #folder to IRAF reduced files
 
 if len(sys.argv)>1:
-
+    
     try: 
         os.mkdir('cam1')
         os.mkdir('cam2')
@@ -25,6 +25,8 @@ if len(sys.argv)>1:
         pass
 
     dataset = sys.argv[1]
+    if dataset=='HD1581': booHD1581 = True
+
     try:
         thisDataset = importlib.import_module('data_sets.'+dataset)
     except:
@@ -42,7 +44,7 @@ if len(sys.argv)>1:
     for i,folder in enumerate(thisDataset.date_list):
         for files in thisDataset.ix_array[i][2:]:
             for cam in range(1,5):
-                strCopy = 'cp ' + IRAFFiles + folder + '/norm/' + filename_prfx[i] + str(cam) + "%04d" % (files,) + '.ms.fits ' 
+                strCopy = 'cp ' + IRAFFiles + folder + '/helio/' + filename_prfx[i] + str(cam) + "%04d" % (files,) + '.ms.fits ' 
                 strCopy += 'cam'+ str(cam) + '/' + filename_prfx[i] + str(cam) + "%04d" % (files,) + '.fits ' 
                 print strCopy
                 try:
@@ -51,37 +53,39 @@ if len(sys.argv)>1:
                     print 'no copy'
                 
 else:
-    print 'arguments missing'
+    print 'arguments missing - skipping copy'
     
                    
-sys.exit(0)
 
 #load all star names from 1st file
 fileList = glob.glob('cam1/*.fits')
 starNames = []
 if len(fileList)>0:
-    if len(sys.argv)>1:
-        starNames = [sys.argv[1]]
+    if len(sys.argv)>2:
+        starNames = [sys.argv[2]]
     else:
+        starNames = []
         for fitsname in fileList[:]:
             print "Starnames",starNames, 'file', fitsname
             fits = pf.open(fitsname)
-            a = fits['FIBRES'].data            
-            starNames = np.hstack((starNames,np.array(a.field('NAME')[a.field('TYPE').strip()=='P'])))
+            for fib in fits[0].header['APID*']:
+                if not (('PARKED' in fib.value) or ('Grid_Sky' in fib.value) or ('FIBRE ' in fib.value)): 
+                    starNames.append(fib.value.split(' ')[0])            
             fits.close()
-    
+        
+        starNames = np.array(starNames)
         starNames = np.unique(starNames)
     
     if booHD1581==True: starNames = ['Giant01']
     
     print 'Collecting data from ',len(starNames),'stars'
     print starNames
-    for i,star_name in enumerate(starNames):
+    for i,star_name in enumerate(starNames[43:]):
         print i,star_name
-        thisStar = cr_obj.star(star_name)
+        thisStar = cr_obj.star(star_name, mode='iraf')
           
         thisStar.exposures = cr_obj.exposures()
-        thisStar.exposures.load_exposures(thisStar.name)
+        thisStar.exposures.load_exposures_iraf(thisStar.name)
          
         if booHD1581==True: #to fix wrong values due to offset field
             thisStar.RA = 5.017749791666667   #from simbad

@@ -13,11 +13,12 @@ from scipy import signal, optimize, constants
 
 booCopy = False
 booPlot = False
+useRangeFilter = True
 medianRange = 5 
 corrHWidth = 5
 xDef = 1
-#     fibres = [75]
-#     fibres = [7]
+# fibres = [175]
+# fibres = [7]
 fibres = range(400)
 
 if len(sys.argv)>1:
@@ -31,7 +32,13 @@ if len(sys.argv)>1:
 
     #Copy all files
     if booCopy==True:
-            
+        try:
+            os.mkdir('arc_cam1')
+            os.mkdir('arc_cam2')
+            os.mkdir('arc_cam3')
+            os.mkdir('arc_cam4')
+        except:
+            pass
         #compose file prefixes from date_list
         months = np.array(['', 'jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'])
         d = np.array([s[4:] for s in thisDataset.date_list])
@@ -59,6 +66,7 @@ if len(sys.argv)>1:
         sys.exit()
         
     for cam in range(4):
+        print 'cam',cam
         for fibre in fibres: 
             files = glob.glob('arc_cam'+str(cam+1)+'/*')
             for i,thisFile in enumerate(files):
@@ -78,10 +86,26 @@ if len(sys.argv)>1:
                 thisWL = RVT.extract_HERMES_wavelength(thisFile)
                 thisData = fits[0].data
                 fits.close()
+
+                camFilter = []
+                if useRangeFilter==True:
+                    try:
+                        if cam==0:
+                            camFilter = np.load('npy/cam1Filter.npy')
+                        elif cam==1:
+                            camFilter = np.load('npy/cam2Filter.npy')
+                        elif cam==2:
+                            camFilter = np.load('npy/cam3Filter.npy')
+                        elif cam==3:
+                            camFilter = np.load('npy/cam4Filter.npy')
+                    except:
+                        print 'No camera filter found. Using full range.'
+                    
+                    print 'camFilter',camFilter
     
-                lambda1, flux1 = RVT.clean_flux(refWL, refData[fibre], flatten = False, medianRange = medianRange)
+                lambda1, flux1 = RVT.clean_flux(refWL, refData[fibre], flatten = False, medianRange = medianRange, useRange = camFilter)
                 if booPlot==True:plt.plot(lambda1,flux1)
-                lambda2, flux2 = RVT.clean_flux(thisWL, thisData[fibre], flatten = False, medianRange = medianRange)
+                lambda2, flux2 = RVT.clean_flux(thisWL, thisData[fibre], flatten = False, medianRange = medianRange, useRange = camFilter)
                 if booPlot==True:plt.plot(lambda2,flux2)
                 if booPlot==True:plt.title(str(i)+' '+thisFile)
     
@@ -113,7 +137,7 @@ if len(sys.argv)>1:
                     if booPlot==True:plt.show()
     
                 except Exception,e: 
-                    print str(e)
+#                     print str(e)
                     plt.close()
     
     #hack to fix epoch range 
@@ -158,7 +182,63 @@ if len(sys.argv)>1:
         arcRVs2[:,14,:] = arcRVs[:,4,:]
         arcRVs = arcRVs2
         print arcRVs.shape
+        
+    elif dataset=='rhoTuc':
+        print arcRVs.shape
+        arcRVs2 = np.ones((400,24,4))*np.nan
+        arcRVs2[:,0,:] = arcRVs[:,0,:]
+        arcRVs2[:,1,:] = arcRVs[:,0,:]
+        arcRVs2[:,2,:] = arcRVs[:,0,:]
+        arcRVs2[:,3,:] = arcRVs[:,0,:]
+        arcRVs2[:,4,:] = arcRVs[:,0,:]
+        arcRVs2[:,5,:] = arcRVs[:,0,:]
+        arcRVs2[:,6,:] = arcRVs[:,0,:]
+        arcRVs2[:,7,:] = arcRVs[:,0,:]
+        arcRVs2[:,8,:] = arcRVs[:,1,:]
+        arcRVs2[:,9,:] = arcRVs[:,1,:]
+        arcRVs2[:,10,:] = arcRVs[:,1,:]
+        arcRVs2[:,11,:] = arcRVs[:,1,:]
+        arcRVs2[:,12,:] = arcRVs[:,2,:]
+        arcRVs2[:,13,:] = arcRVs[:,2,:]
+        arcRVs2[:,14,:] = arcRVs[:,2,:]
+        arcRVs2[:,15,:] = arcRVs[:,2,:]
+        arcRVs2[:,16,:] = arcRVs[:,2,:]
+        arcRVs2[:,17,:] = arcRVs[:,3,:]
+        arcRVs2[:,18,:] = arcRVs[:,3,:]
+        arcRVs2[:,19,:] = arcRVs[:,3,:]
+        arcRVs2[:,20,:] = arcRVs[:,4,:]
+        arcRVs2[:,21,:] = arcRVs[:,4,:]
+        arcRVs2[:,22,:] = arcRVs[:,4,:]
+        arcRVs2[:,23,:] = arcRVs[:,4,:]
+        arcRVs = arcRVs2
+        print arcRVs.shape
+        
+    elif dataset=='47Tuc_core':
+        print arcRVs.shape
+        arcRVs2 = np.ones((400,16,4))*np.nan
+        arcRVs2[:,0,:] = arcRVs[:,0,:]
+        arcRVs2[:,1,:] = arcRVs[:,0,:]
+        arcRVs2[:,2,:] = arcRVs[:,0,:]
+        arcRVs2[:,3,:] = arcRVs[:,0,:]
+        arcRVs2[:,4,:] = arcRVs[:,1,:]
+        arcRVs2[:,5,:] = arcRVs[:,1,:]
+        arcRVs2[:,6,:] = arcRVs[:,1,:]
+        arcRVs2[:,7,:] = arcRVs[:,2,:]
+        arcRVs2[:,8,:] = arcRVs[:,2,:]
+        arcRVs2[:,9,:] = arcRVs[:,2,:]
+        arcRVs2[:,10,:] = arcRVs[:,3,:]
+        arcRVs2[:,11,:] = arcRVs[:,3,:]
+        arcRVs2[:,12,:] = arcRVs[:,3,:]
+        arcRVs2[:,13,:] = arcRVs[:,4,:]
+        arcRVs2[:,14,:] = arcRVs[:,4,:]
+        arcRVs2[:,15,:] = arcRVs[:,4,:]
+        arcRVs = arcRVs2
+        print arcRVs.shape
+
+        
     
-    if len(fibres)==400: np.save('npy/arcRVs',arcRVs)
+    if len(fibres)==400:
+        print 'Saving arcRVs.npy' 
+        np.save('npy/arcRVs',arcRVs)
 else:
     print 'no dataset specified'

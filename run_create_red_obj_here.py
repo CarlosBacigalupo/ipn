@@ -11,6 +11,8 @@ import sys
 
 CCReferenceSet = 0 
 medianRange = 5
+useRangeFilter = True
+
 
 if len(sys.argv)>1:
     CCReferenceSet = int(sys.argv[1])
@@ -29,7 +31,7 @@ if len(fileList)>0:
             thisStar = pickle.load(filehandler)
     #         try:
     #         RVT.find_max_wl_range(thisStar)
-            RVT.RVs_CC_t0(thisStar,i, CCReferenceSet=CCReferenceSet, medianRange=medianRange)
+            RVT.RVs_CC_t0(thisStar,i, CCReferenceSet=CCReferenceSet, medianRange=medianRange, useRangeFilter = useRangeFilter)
             i+=1
     
             file_pi = open('obj/red_'+thisStar.name+'.obj', 'w') 

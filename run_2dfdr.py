@@ -17,7 +17,7 @@ copyFiles = False
 doReduce = True
 overwrite = False
 idxFile = 'no_flat_no_bias.idx'
-startFrom = 4 #number of data set to begin with. 0 for beginning. Good for starting half way through if it cancelled
+startFrom = 0 #number of data set to begin with. 0 for beginning. Good for starting half way through if it cancelled
 dr_dir=''
 
 # Any observations

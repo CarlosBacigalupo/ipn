@@ -16,6 +16,17 @@ import os
 
 # <codecell>
 
+def check_equal_wl(wl1, wl2):
+    result = False
+    
+    diff = np.sum(wl1-wl2)
+    
+    if diff<1e-17:
+        result = True
+    return result
+
+# <codecell>
+
 def pivot2idx(pivot):
     pivot = np.array(pivot)
     
@@ -39,36 +50,7 @@ def idx2pivot(idx):
 
 # <codecell>
 
-# cd ../HERMES/reductions/6.5/HD285507/obj/
-
-# <codecell>
-
-# import numpy as np
-# import pylab as plt
-# import pickle
-
-# filename = 'Giant35.obj'
-# # filename = 'Brght01.obj'
-# # filename = 'red_Giant01.obj'
-# # filename = 'Giant01.obj'
-# # filename = 'Field01.obj'
-# filehandler = open(filename, 'r')
-# thisStar = pickle.load(filehandler)
-
-# thisCam = thisStar.exposures.cameras[1]
-# wl = thisCam.wavelengths[0]
-# flux1 = thisCam.red_fluxes[0] 
-# flux1 = flux1[::-1]
-# # plt.plot(flux1)
-# # plt.plot(np.isnan(flux1).astype(int)*50)
-# # plt.show()
-# print sum(np.isnan(thisCam.red_fluxes[0]))
-# print sum(np.isnan(thisCam.red_fluxes[-1]))
-# clean_flux(wl,flux1)
-
-# <codecell>
-
-def clean_flux(wavelength, flux, thisCam = [], xDef = 1, medianRange = 0, flatten = True):
+def clean_flux(wavelength, flux, thisCam = [], xDef = 1, medianRange = 0, flatten = True, useRange = []):
     '''Clean a 1D spectrum. 
     
     Parameters
@@ -134,6 +116,13 @@ def clean_flux(wavelength, flux, thisCam = [], xDef = 1, medianRange = 0, flatte
         if (xDef>1):
             wavelength = np.linspace(min(wavelength), max(wavelength),len(wavelength)*xDef)
             flux = np.ones(wavelength.shape[0])*np.nan
+    print 'range',len(useRange)
+    if ((useRange!=[]) and (len(useRange)==2)):
+        rangeFilter = (wavelength>=useRange[0]) & (wavelength<=useRange[1])
+        print 'Using range',useRange, np.sum(rangeFilter), 'pixels'
+        
+        wavelength = wavelength[rangeFilter]
+        flux = flux[rangeFilter]
         
     return wavelength, flux
 
@@ -200,7 +189,7 @@ def find_max_wl_range(thisStar):
 # <codecell>
 
 #Create cross correlation curves wrt epoch 0
-def RVs_CC_t0(thisStar, starIdx,  xDef = 1, CCReferenceSet = 0, printDetails=False, corrHWidth=10, medianRange = 0):
+def RVs_CC_t0(thisStar, starIdx,  xDef = 1, CCReferenceSet = 0, printDetails=False, corrHWidth=10, medianRange = 0, useRangeFilter = False):
 
 #     validDates = np.all([np.nansum(thisCam.red_fluxes,1).astype(bool) for thisCam in thisStar.exposures.cameras],0)
     print ''
@@ -214,72 +203,92 @@ def RVs_CC_t0(thisStar, starIdx,  xDef = 1, CCReferenceSet = 0, printDetails=Fal
         
         print 'Camera',cam
         
+        camFilter = []
+        if useRangeFilter==True:
+            try:
+                if cam==0:
+                    camFilter = np.load('npy/cam1Filter.npy')
+                elif cam==1:
+                    camFilter = np.load('npy/cam2Filter.npy')
+                elif cam==2:
+                    camFilter = np.load('npy/cam3Filter.npy')
+                elif cam==3:
+                    camFilter = np.load('npy/cam4Filter.npy')
+            except:
+                print 'No camera filter found. Using full range.'
+            
+            print 'camFilter',camFilter
         if len(np.arange(len(validDates))[validDates])>0:
             CCReferenceSet = np.arange(len(validDates))[validDates][0]
         else:
             CCReferenceSet = 0
             
             
-        lambda1, flux1 = clean_flux(thisCam.wavelengths[CCReferenceSet], thisCam.red_fluxes[CCReferenceSet], thisCam, medianRange=medianRange)
+        lambda1, flux1 = clean_flux(thisCam.wavelengths[CCReferenceSet], thisCam.red_fluxes[CCReferenceSet], thisCam, medianRange=medianRange, useRange = camFilter)
         
         plts = 0    
         for epoch, JD in enumerate(thisStar.exposures.JDs):
             print epoch,
-            lambda2, flux2 = clean_flux(thisCam.wavelengths[epoch], thisCam.red_fluxes[epoch], thisCam, medianRange=medianRange)
+            lambda2, flux2 = clean_flux(thisCam.wavelengths[epoch], thisCam.red_fluxes[epoch], thisCam, medianRange=medianRange, useRange = camFilter)
 
             if validDates[epoch]==True:
-#                 CCCurve = signal.fftconvolve(flux1, flux2[::-1], mode='same')
-#                 if epoch <5:
-#                     plt.plot(flux1)
-#                     plt.plot(flux2)
-#                     plt.plot(CCCurve)
-#                     plt.show()
-                try:
-#                     print 'max_idx, len(CCCurve) =',np.where(CCCurve==max(CCCurve)), CCCurve.shape
-                    CCCurve = []
-                    CCCurve = signal.fftconvolve(flux1[-np.isnan(flux1)], flux2[-np.isnan(flux2)][::-1], mode='same')
-                    corrMax = np.where(CCCurve==max(CCCurve))[0][0]
-                    p_guess = [corrMax,corrHWidth]
-                    x_mask = np.arange(corrMax-corrHWidth, corrMax+corrHWidth+1)
-                    if max(x_mask)<len(CCCurve):
-        #                 try:
-        #                 print '4 params',p_guess, x_mask, np.sum(x_mask), CCCurve.shape
-                        p = fit_gaussian(p_guess, CCCurve[x_mask], np.arange(len(CCCurve))[x_mask])[0]
-                        if np.modf(CCCurve.shape[0]/2.0)[0]>1e-5:
-                            pixelShift = (p[0]-(CCCurve.shape[0]-1)/2.) #odd number of elements
+                if check_equal_wl(lambda1, lambda2)==True:
+    #                 CCCurve = signal.fftconvolve(flux1, flux2[::-1], mode='same')
+    #                 if epoch <5:
+    #                     plt.plot(flux1)
+    #                     plt.plot(flux2)
+    #                     plt.plot(CCCurve)
+    #                     plt.show()
+                    try:
+    #                     print 'max_idx, len(CCCurve) =',np.where(CCCurve==max(CCCurve)), CCCurve.shape
+                        CCCurve = []
+                        CCCurve = signal.fftconvolve(flux1[-np.isnan(flux1)], flux2[-np.isnan(flux2)][::-1], mode='same')
+                        corrMax = np.where(CCCurve==max(CCCurve))[0][0]
+                        p_guess = [corrMax,corrHWidth]
+                        x_mask = np.arange(corrMax-corrHWidth, corrMax+corrHWidth+1)
+                        if max(x_mask)<len(CCCurve):
+            #                 try:
+            #                 print '4 params',p_guess, x_mask, np.sum(x_mask), CCCurve.shape
+                            p = fit_gaussian(p_guess, CCCurve[x_mask], np.arange(len(CCCurve))[x_mask])[0]
+                            if np.modf(CCCurve.shape[0]/2.0)[0]>1e-5:
+                                pixelShift = (p[0]-(CCCurve.shape[0]-1)/2.) #odd number of elements
+                            else:
+                                pixelShift = (p[0]-(CCCurve.shape[0])/2.) #even number of elements
+            #                 except:
+            #                     pixelShift = 0
+
+                            thisQ, thisdRV = QdRV(thisCam.wavelengths[epoch], thisCam.red_fluxes[epoch])
+
+                            mid_px = thisCam.wavelengths.shape[1]/2
+                            dWl = (thisCam.wavelengths[epoch,mid_px+1]-thisCam.wavelengths[epoch,mid_px]) / thisCam.wavelengths[epoch,mid_px]
+                            RV = dWl * pixelShift * constants.c 
+                            print 'RV',RV
+
                         else:
-                            pixelShift = (p[0]-(CCCurve.shape[0])/2.) #even number of elements
-        #                 except:
-        #                     pixelShift = 0
+                            R = 0
+                            thisQ = 0
+                            thisdRV = 0
+                            RV = 0
+                            print 'Invalid data point'
 
-                        thisQ, thisdRV = QdRV(thisCam.wavelengths[epoch], thisCam.red_fluxes[epoch])
-
-                        mid_px = thisCam.wavelengths.shape[1]/2
-                        dWl = (thisCam.wavelengths[epoch,mid_px+1]-thisCam.wavelengths[epoch,mid_px]) / thisCam.wavelengths[epoch,mid_px]
-                        RV = dWl * pixelShift * constants.c 
-                        print 'RV',RV
-
-                    else:
+                    except Exception,e: 
+                        print 'CC Error'
+                        print str(e)
                         R = 0
                         thisQ = 0
                         thisdRV = 0
                         RV = 0
-                        print 'Invalid data point'
-
-                except Exception,e: 
-                    print 'CC Error'
-                    print str(e)
-                    R = 0
+    #                     if plts<5:
+    #                         plts+=1
+    #                         plt.plot(flux1)
+    #                         plt.plot(flux2)
+    #                         plt.plot(CCCurve)
+    #                         plt.show()
+                else:
                     thisQ = 0
                     thisdRV = 0
                     RV = 0
-#                     if plts<5:
-#                         plts+=1
-#                         plt.plot(flux1)
-#                         plt.plot(flux2)
-#                         plt.plot(CCCurve)
-#                         plt.show()
-
+                    print 'Wavelength range not equal'
 
             else:
 #                 if i==CCReferenceSet:

@@ -10,6 +10,7 @@ import sys
 import toolbox
 
 booHD1581 = False
+if os.getcwd().split('/')[-1]=='HD1581': booHD1581 = True
 
 try: 
     os.mkdir('obj')

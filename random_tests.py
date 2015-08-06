@@ -74,11 +74,15 @@ import toolbox
 
 # <codecell>
 
-cd /Users/Carlos/Documents/HERMES/reductions/iraf/HD1581/obj/
+cd /Users/Carlos/Documents/HERMES/reductions/6.5/rhoTuc/obj/
 
 # <codecell>
 
-thisCam = thisStar.exposures.cameras[1]
+thisCam = thisStar.exposures.cameras[3]
+
+# <codecell>
+
+thisCam.RVs
 
 # <codecell>
 
@@ -92,10 +96,35 @@ import RVTools as RVT
 reload(RVT)
 import time
 
-filename = 'HD1581.obj'
+# filename = 'HD1581.obj'
 # filename = 'Brght01.obj'
 # filename = 'red_Giant01.obj'
 # filename = 'Giant01.obj'
+filename = 'red_Giant12.obj'
+# filename = 'Field01.obj'
+filehandler = open(filename, 'r')
+thisStar = pickle.load(filehandler)
+
+thisCam = thisStar.exposures.cameras[0]
+
+
+# <codecell>
+
+import numpy as np
+import pickle
+import pylab as plt
+from scipy import interpolate, signal, optimize, constants
+import pyfits as pf
+import sys
+import RVTools as RVT
+reload(RVT)
+import time
+
+# filename = 'HD1581.obj'
+# filename = 'Brght01.obj'
+# filename = 'red_Giant01.obj'
+# filename = 'Giant01.obj'
+filename = 'Giant12.obj'
 # filename = 'Field01.obj'
 filehandler = open(filename, 'r')
 thisStar = pickle.load(filehandler)
@@ -113,13 +142,14 @@ for CCTHisSet in range(15):
     # plt.show()
 
     lambda1, flux1 = RVT.clean_flux(thisCam.wavelengths[CCReferenceSet], thisCam.red_fluxes[CCReferenceSet], thisCam, medianRange = 5)
-    plt.plot(lambda1,flux1)
+    plt.plot(thisCam.red_fluxes[CCTHisSet])
+#     plt.plot(lambda1,flux1)
     lambda2, flux2 = RVT.clean_flux(thisCam.wavelengths[CCTHisSet], thisCam.red_fluxes[CCTHisSet], thisCam, medianRange = 5)
-    plt.plot(lambda2,flux2)
-    # plt.show()
+#     plt.plot(lambda2,flux2)
+    plt.show()
 
     CCCurve = signal.fftconvolve(flux1, flux2[::-1], mode='same')
-    CCCurve2 = signal.fftconvolve(flux1[-np.isnan(flux1)], flux2[-np.isnan(flux2)][::-1], mode='same')
+#     CCCurve2 = signal.fftconvolve(flux1[-np.isnan(flux1)], flux2[-np.isnan(flux2)][::-1], mode='same')
     # print np.sum(-np.isnan(flux1)), len(flux1)
     corrMax = np.where(CCCurve==max(CCCurve))[0][0]
 
@@ -127,7 +157,7 @@ for CCTHisSet in range(15):
     x_mask = np.arange(corrMax-corrHWidth, corrMax+corrHWidth+1)
     p = RVT.fit_gaussian(p_guess, CCCurve[x_mask], np.arange(len(CCCurve))[x_mask])[0]
 
-    plt.plot(lambda1,CCCurve/np.max(CCCurve))
+#     plt.plot(lambda1,CCCurve/np.max(CCCurve))
     # plt.plot(CCCurve2)
     # plt.plot(lambda2[x_mask],max(CCCurve)* gaussian(x_mask, p[0],p[1]))
     plt.show()
@@ -1812,4 +1842,133 @@ a.to_latex(index=False)
  'P', 
  223, 
  7.6699999999999999, 0, 'Kmag', '23', 0.0, 0.0, 0.0)
+
+# <codecell>
+
+cd '/Users/Carlos/Documents/HERMES/reductions/6.5/HD1581/'
+
+# <codecell>
+
+# arcRVs = np.load('npy/arcRVs.npy')
+JDs = np.load('npy/JDs.npy')
+
+
+# <codecell>
+
+JDs
+
+# <codecell>
+
+arcRVs2 = np.ones((400,16,4))*np.nan
+arcRVs2[:,0,:] = arcRVs[:,0,:]
+arcRVs2[:,1,:] = arcRVs[:,0,:]
+arcRVs2[:,2,:] = arcRVs[:,0,:]
+arcRVs2[:,3,:] = arcRVs[:,0,:]
+arcRVs2[:,4,:] = arcRVs[:,1,:]
+arcRVs2[:,5,:] = arcRVs[:,1,:]
+arcRVs2[:,6,:] = arcRVs[:,1,:]
+arcRVs2[:,7,:] = arcRVs[:,2,:]
+arcRVs2[:,8,:] = arcRVs[:,2,:]
+arcRVs2[:,9,:] = arcRVs[:,2,:]
+arcRVs2[:,10,:] = arcRVs[:,3,:]
+arcRVs2[:,11,:] = arcRVs[:,3,:]
+arcRVs2[:,12,:] = arcRVs[:,3,:]
+arcRVs2[:,13,:] = arcRVs[:,4,:]
+arcRVs2[:,14,:] = arcRVs[:,4,:]
+arcRVs2[:,15,:] = arcRVs[:,4,:]
+arcRVs = arcRVs2
+np.save('npy/arcRVs',arcRVs)
+
+# <codecell>
+
+bary = np.load('npy/baryVels.npy')
+
+# <codecell>
+
+
+# <codecell>
+
+bary.shape
+
+# <codecell>
+
+
+# <codecell>
+
+bary
+
+# <codecell>
+
+bary[:-1]-bary[1:]
+
+# <codecell>
+
+pwd
+
+# <codecell>
+
+a = np.array([4860,4865])
+np.save('npy/cam1Filter.npy',a)
+a = np.array([5751,5756])
+np.save('npy/cam2Filter.npy',a)
+a = np.array([6560,6565])
+np.save('npy/cam3Filter.npy',a)
+a = np.array([7710,7718])
+np.save('npy/cam4Filter.npy',a)
+
+# <codecell>
+
+1.400E7
+648.36
+818.28
+570.57
+142.85
+150.76
+150.88
+80.39
+84.36
+99.99
+105.94
+124.30
+122.21
+122.19
+121.61
+
+# <codecell>
+
+hbetaRVs = (np.loadtxt('out3_hbeta.txt', delimiter = ' ', dtype='str')[:,26]).astype(float)
+
+# <codecell>
+
+arcRVs = np.loadtxt('arc_hbeta.txt', delimiter = ' ', dtype='str', usecols = [40]).astype(float)
+
+# <codecell>
+
+bary = np.load('npy/baryVels.npy')
+JDs = np.load('npy/JDs.npy')
+
+# <codecell>
+
+JDs
+
+# <codecell>
+
+[0,1,4,7,12]
+
+# <codecell>
+
+plt.scatter(JDs,hbetaRVs-bary,color = 'k', s=100, marker='*', label = 'Stars')
+plt.scatter(JDs[np.array([0,1,4,7,12])],arcRVs,  marker = '+' , label = 'ARC RV', color = 'm', s=500)
+plt.show()
+
+# <codecell>
+
+arcRVs[0] = 1.4e-7
+
+# <codecell>
+
+bary
+
+# <codecell>
+
 

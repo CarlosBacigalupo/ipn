@@ -12,9 +12,6 @@ import RVTools as RVT
 
 # <codecell>
 
-
-# <codecell>
-
 def all_spec_overlap(thisStar, thisCamIdx = '', booShow = True, booSave = False):
     import gc
     '''
@@ -228,7 +225,11 @@ def RVs_all_stars_NPYs(booShowArcRVs = False, idStars = [], sigmaClip = -1, RVCl
     sigmas=np.load('npy/sigmas.npy')
     baryVels=np.load('npy/baryVels.npy')
     JDs=np.load('npy/JDs.npy')
-    arcRVS=np.load('npy/arcRVs.npy')
+    try:
+        arcRVS=np.load('npy/arcRVs.npy')
+    except:
+        print 'Not including arcRVs'
+        booShowArcRVs = False
     
 #     order = np.argsort(np.nanstd(RVs,axis=1),axis=0)
 #     np.save('npy/order.npy',order)

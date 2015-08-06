@@ -127,7 +127,7 @@ class exposures():
 #         self.UTstarts = []
 #         self.UTends = []
 #         self.lengths = []
-#         self.JDs = []
+        self.JDs = []
 #         self.HRs = []
 #         self.plates = []
 #         self.pivots = []

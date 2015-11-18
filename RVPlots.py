@@ -12,6 +12,160 @@ import RVTools as RVT
 
 # <codecell>
 
+labels = ['Blue','Green','Red','IR']
+
+colors = ['b','g','r','c']
+
+cnames = {
+'aliceblue':            '#F0F8FF',
+'antiquewhite':         '#FAEBD7',
+'aqua':                 '#00FFFF',
+'aquamarine':           '#7FFFD4',
+'azure':                '#F0FFFF',
+'beige':                '#F5F5DC',
+'bisque':               '#FFE4C4',
+'black':                '#000000',
+'blanchedalmond':       '#FFEBCD',
+'blue':                 '#0000FF',
+'blueviolet':           '#8A2BE2',
+'brown':                '#A52A2A',
+'burlywood':            '#DEB887',
+'cadetblue':            '#5F9EA0',
+'chartreuse':           '#7FFF00',
+'chocolate':            '#D2691E',
+'coral':                '#FF7F50',
+'cornflowerblue':       '#6495ED',
+'cornsilk':             '#FFF8DC',
+'crimson':              '#DC143C',
+'cyan':                 '#00FFFF',
+'darkblue':             '#00008B',
+'darkcyan':             '#008B8B',
+'darkgoldenrod':        '#B8860B',
+'darkgray':             '#A9A9A9',
+'darkgreen':            '#006400',
+'darkkhaki':            '#BDB76B',
+'darkmagenta':          '#8B008B',
+'darkolivegreen':       '#556B2F',
+'darkorange':           '#FF8C00',
+'darkorchid':           '#9932CC',
+'darkred':              '#8B0000',
+'darksalmon':           '#E9967A',
+'darkseagreen':         '#8FBC8F',
+'darkslateblue':        '#483D8B',
+'darkslategray':        '#2F4F4F',
+'darkturquoise':        '#00CED1',
+'darkviolet':           '#9400D3',
+'deeppink':             '#FF1493',
+'deepskyblue':          '#00BFFF',
+'dimgray':              '#696969',
+'dodgerblue':           '#1E90FF',
+'firebrick':            '#B22222',
+'floralwhite':          '#FFFAF0',
+'forestgreen':          '#228B22',
+'fuchsia':              '#FF00FF',
+'gainsboro':            '#DCDCDC',
+'ghostwhite':           '#F8F8FF',
+'gold':                 '#FFD700',
+'goldenrod':            '#DAA520',
+'gray':                 '#808080',
+'green':                '#008000',
+'greenyellow':          '#ADFF2F',
+'honeydew':             '#F0FFF0',
+'hotpink':              '#FF69B4',
+'indianred':            '#CD5C5C',
+'indigo':               '#4B0082',
+'ivory':                '#FFFFF0',
+'khaki':                '#F0E68C',
+'lavender':             '#E6E6FA',
+'lavenderblush':        '#FFF0F5',
+'lawngreen':            '#7CFC00',
+'lemonchiffon':         '#FFFACD',
+'lightblue':            '#ADD8E6',
+'lightcoral':           '#F08080',
+'lightcyan':            '#E0FFFF',
+'lightgoldenrodyellow': '#FAFAD2',
+'lightgreen':           '#90EE90',
+'lightgray':            '#D3D3D3',
+'lightpink':            '#FFB6C1',
+'lightsalmon':          '#FFA07A',
+'lightseagreen':        '#20B2AA',
+'lightskyblue':         '#87CEFA',
+'lightslategray':       '#778899',
+'lightsteelblue':       '#B0C4DE',
+'lightyellow':          '#FFFFE0',
+'lime':                 '#00FF00',
+'limegreen':            '#32CD32',
+'linen':                '#FAF0E6',
+'magenta':              '#FF00FF',
+'maroon':               '#800000',
+'mediumaquamarine':     '#66CDAA',
+'mediumblue':           '#0000CD',
+'mediumorchid':         '#BA55D3',
+'mediumpurple':         '#9370DB',
+'mediumseagreen':       '#3CB371',
+'mediumslateblue':      '#7B68EE',
+'mediumspringgreen':    '#00FA9A',
+'mediumturquoise':      '#48D1CC',
+'mediumvioletred':      '#C71585',
+'midnightblue':         '#191970',
+'mintcream':            '#F5FFFA',
+'mistyrose':            '#FFE4E1',
+'moccasin':             '#FFE4B5',
+'navajowhite':          '#FFDEAD',
+'navy':                 '#000080',
+'oldlace':              '#FDF5E6',
+'olive':                '#808000',
+'olivedrab':            '#6B8E23',
+'orange':               '#FFA500',
+'orangered':            '#FF4500',
+'orchid':               '#DA70D6',
+'palegoldenrod':        '#EEE8AA',
+'palegreen':            '#98FB98',
+'paleturquoise':        '#AFEEEE',
+'palevioletred':        '#DB7093',
+'papayawhip':           '#FFEFD5',
+'peachpuff':            '#FFDAB9',
+'peru':                 '#CD853F',
+'pink':                 '#FFC0CB',
+'plum':                 '#DDA0DD',
+'powderblue':           '#B0E0E6',
+'purple':               '#800080',
+'red':                  '#FF0000',
+'rosybrown':            '#BC8F8F',
+'royalblue':            '#4169E1',
+'saddlebrown':          '#8B4513',
+'salmon':               '#FA8072',
+'sandybrown':           '#FAA460',
+'seagreen':             '#2E8B57',
+'seashell':             '#FFF5EE',
+'sienna':               '#A0522D',
+'silver':               '#C0C0C0',
+'skyblue':              '#87CEEB',
+'slateblue':            '#6A5ACD',
+'slategray':            '#708090',
+'snow':                 '#FFFAFA',
+'springgreen':          '#00FF7F',
+'steelblue':            '#4682B4',
+'tan':                  '#D2B48C',
+'teal':                 '#008080',
+'thistle':              '#D8BFD8',
+'tomato':               '#FF6347',
+'turquoise':            '#40E0D0',
+'violet':               '#EE82EE',
+'wheat':                '#F5DEB3',
+'white':                '#FFFFFF',
+'whitesmoke':           '#F5F5F5',
+'yellow':               '#FFFF00',
+'yellowgreen':          '#9ACD32'}
+
+# <codecell>
+
+import numpy as np
+a = np.array([1,2,3,4,4,4,4,4,4])
+np.array(cnames.values())[a]
+
+# <codecell>
+
 def all_spec_overlap(thisStar, thisCamIdx = '', booShow = True, booSave = False):
     import gc
     '''
@@ -245,8 +399,8 @@ def RVs_all_stars_NPYs(booShowArcRVs = False, idStars = [], sigmaClip = -1, RVCl
     
     YERR = sigmas
     
-    colors = ['b','g','r','cyan']
-    labels = ['Blue','Green','Red','IR']
+
+
     
 #     try:
 #         order=np.load('order.npy')
@@ -359,83 +513,285 @@ def RVs_all_stars_NPYs(booShowArcRVs = False, idStars = [], sigmaClip = -1, RVCl
 
 # <codecell>
 
-def RVs_by_star_NPYs(sigmaClip = -1, RVClip = -1, booSave = False, booShow = True, booBaryPlot = False, booBaryCorrect = False, title = ''):
+def RV_Tree(zoom = 1, sigmaClip = -1, RVClip = -1, booSave = False, booShow = True, booBaryPlot = False, booBaryCorrect = False, title = ''):
+    
+    data=np.load('npy/data.npy')
+#     RVs=np.load('npy/RVs.npy')
+    baryRVs=np.load('npy/baryRVs.npy')
+#     sigmas=np.load('npy/sigmas.npy')
+#     baryVels=np.load('npy/baryVels.npy')
+#     JDs=np.load('npy/JDs.npy')
+#     baryVels3D = np.zeros(RVs.shape)
+#     baryVels3D[:,:,0] = np.tile(baryVels,[RVs.shape[0],1])
+#     baryVels3D[:,:,1] = np.tile(baryVels,[RVs.shape[0],1])
+#     baryVels3D[:,:,2] = np.tile(baryVels,[RVs.shape[0],1])
+#     baryVels3D[:,:,3] = np.tile(baryVels,[RVs.shape[0],1])
+    
+    
+    #Plots RVs, baryvels. all star, 4 cameras
+    print 'About to plot RVs from ',baryRVs.shape[0],'stars.'
+
+#     baryRVs = RVs - baryVels3D
+    
+#     if RVClip>-1:Y[np.abs(Y)>RVClip] = np.nan
+#     if sigmaClip>-1:
+#         stdY= np.std(Y)
+#         medY = np.median(Y)
+#         Y[(Y>=medY-sigmaClip*stdY) & (Y<=medY+sigmaClip*stdY)] = np.nan
+    
+#     YERR = sigmas
+
+    X = np.arange(data[:,0].shape[0])
+#     bcRVs = RVs-baryVels
+    
+#     Y = RVs
+#     Y[Y==0.]=np.nan
+#     order = np.argsort(np.nanstd(RVs,axis=1),axis=0)    
+#     order = np.argsort(np.ptp(np.nan_to_num(baryRVs),1),0)
+    order = np.argsort(np.nanmax(baryRVs,1)-np.nanmin(baryRVs,1),0)
+    
+    if zoom > 1 :
+        zoomList = [np.arange(len(X))]
+    
+    steps = np.zeros(zoom+1)
+    for i in range(zoom+1):
+        steps[i] = len(X)/zoom*i
+        
+    for i in range(zoom):
+        print 'i.zoom',i,zoom
+        if i<(zoom-1):
+            zoomList.append([np.arange(steps[i],steps[i+1]).astype(int)])
+        else:
+            print 'last zoom'
+            zoomList.append([np.arange(steps[i],len(X)).astype(int)])
+    
+    zoomList = np.array(zoomList)
+    
+    print 'steps,zoomList',steps,zoomList
+    for cam in range(4)[:]:
+        for i, thisXRange in enumerate(zoomList):
+            
+            print 'thisXRange',thisXRange
+            thisOrder = order[:,cam][thisXRange]
+            print 'thisOrder',thisOrder
+            
+            fig, ax = plt.subplots()
+            ax.set_xticklabels(data[:,0][thisOrder])
+            ax.set_xticks(X[range(len(thisOrder))])
+            plt.xticks(rotation=90)
+
+#             if booBaryPlot==True: plt.plot(X, baryVels, label = 'Barycentric Vel. ')
+
+
+            thisY = baryRVs[:,:,cam][thisOrder]
+            thisY[thisY==0.]=np.nan
+
+#             YERR[:,:,cam] = YERR[:,:,cam][order[:,cam]]
+
+            #median
+            plt.scatter(X[range(len(thisOrder))], stats.nanmedian(thisY , axis = 1), label = labels[cam], color = 'k')
+
+            #sigma
+            plt.scatter(X[range(len(thisOrder))], stats.nanmedian(thisY, axis = 1)+stats.nanstd(thisY, axis = 1), label = labels[cam], color = 'r')
+            plt.scatter(X[range(len(thisOrder))], stats.nanmedian(thisY, axis = 1)-stats.nanstd(thisY, axis = 1), label = labels[cam], color = 'r')
+
+
+            #min max
+            for star in range(thisY.shape[0]):
+                x = np.nanmax(thisY[star,:])
+                n = np.nanmin(thisY[star,:])
+                plt.plot([star,star],[x,n], color = 'g', lw=2)
+                print star, n, x, x-n
+
+            #zero
+            plt.plot(X[range(len(thisOrder))],np.zeros(len(thisOrder)), '--')
+
+            plt.grid(axis='x')
+            plt.xlabel('Stars')
+            plt.ylabel('RV [m/s]')
+        #     plt.legend(loc=0)
+
+            fig.tight_layout()
+            if booSave==True: 
+                try:
+                    plotName = 'plots/tree/'+str(cam+1)+'/Tree_'+str(i)+'_'+labels[cam]
+                    print 'Attempting to save', plotName
+                    plt.savefig(plotName)
+
+                except:
+                    print 'FAILED'
+            if booShow==True: plt.show()
+            plt.close()        
+        
+
+# <codecell>
+
+def RV_Tree2(zoom = 1, sigmaClip = -1, RVClip = -1, booSave = False, booShow = True, booBaryPlot = False, booBaryCorrect = False, title = ''):
     
     data=np.load('npy/data.npy')
     RVs=np.load('npy/RVs.npy')
-    sigmas=np.load('npy/sigmas.npy')
+#     sigmas=np.load('npy/sigmas.npy')
     baryVels=np.load('npy/baryVels.npy')
-    JDs=np.load('npy/JDs.npy')
-
-    X = range(data[:,0].shape[0])
-    Y = RVs
-    Y[Y==0.]=np.nan
+#     JDs=np.load('npy/JDs.npy')
+    baryVels3D = np.zeros(RVs.shape)
+    baryVels3D[:,:,0] = np.tile(baryVels,[RVs.shape[0],1])
+    baryVels3D[:,:,1] = np.tile(baryVels,[RVs.shape[0],1])
+    baryVels3D[:,:,2] = np.tile(baryVels,[RVs.shape[0],1])
+    baryVels3D[:,:,3] = np.tile(baryVels,[RVs.shape[0],1])
     
-    if RVClip>-1:Y[np.abs(Y)>RVClip] = np.nan
-    if sigmaClip>-1:
-        stdY= np.std(Y)
-        medY = np.median(Y)
-        Y[(Y>=medY-sigmaClip*stdY) & (Y<=medY+sigmaClip*stdY)] = np.nan
-    
-    YERR = sigmas
-
-    order = np.argsort(np.nanstd(RVs,axis=1),axis=0)
-    np.save('order.npy',order)
-    
-    
-    colors = ['b','g','r','cyan']
-    labels = ['Blue','Green','Red','IR']
     
     #Plots RVs, baryvels. all star, 4 cameras
     print 'About to plot RVs from ',RVs.shape[0],'stars.'
+
+    baryRVs = RVs - baryVels3D
     
-    for cam in range(4)[:]:
-        fig, ax = plt.subplots()
+#     if RVClip>-1:Y[np.abs(Y)>RVClip] = np.nan
+#     if sigmaClip>-1:
+#         stdY= np.std(Y)
+#         medY = np.median(Y)
+#         Y[(Y>=medY-sigmaClip*stdY) & (Y<=medY+sigmaClip*stdY)] = np.nan
+    
+#     YERR = sigmas
 
-        ax.set_xticklabels(data[:,0])
-        ax.set_xticks(X)
-        plt.xticks(rotation=70)
-
-        if booBaryPlot==True: plt.plot(X, baryVels, label = 'Barycentric Vel. ')
-
-        if title=='':
-            plt.title('RVs per star - '+labels[cam]+' camera')
+    X = np.arange(data[:,0].shape[0])
+#     bcRVs = RVs-baryVels
+    
+#     Y = RVs
+#     Y[Y==0.]=np.nan
+#     order = np.argsort(np.nanstd(RVs,axis=1),axis=0)    
+    order = np.argsort(np.ptp(baryVels3D,1),0)
+    
+    if zoom > 1 :
+        zoomList = [np.arange(len(X))]
+    
+    steps = np.zeros(zoom+1)
+    for i in range(zoom+1):
+        steps[i] = len(X)/zoom*i
+        
+    for i in range(zoom):
+        print 'i.zoom',i,zoom
+        if i<(zoom-1):
+            zoomList.append([np.arange(steps[i],steps[i+1]).astype(int)])
         else:
-            plt.title(title)
+            print 'last zoom'
+            zoomList.append([np.arange(steps[i],len(X)).astype(int)])
+    
+    zoomList = np.array(zoomList)
+    
+    print 'steps,zoomList',steps,zoomList
+    for cam in range(4)[:1]:
+        for i, thisXRange in enumerate(zoomList):
+            
+            print 'thisXRange',thisXRange
+            thisOrder = order[:,cam][thisXRange]
+            print 'thisOrder',thisOrder
+            
+            fig, ax = plt.subplots()
+            ax.set_xticklabels(data[:,0][thisOrder])
+            ax.set_xticks(X[range(len(thisOrder))])
+            plt.xticks(rotation=90)
 
-        Y[:,:,cam] = Y[:,:,cam][order[:,cam]]
-        YERR[:,:,cam] = YERR[:,:,cam][order[:,cam]]
-        
-        #median
-        plt.scatter(X, stats.nanmedian(Y[:,:,cam], axis = 1), label = labels[cam], color = 'k')
-        
-        #sigma
-        plt.scatter(X, stats.nanmedian(Y[:,:,cam], axis = 1)+stats.nanstd(Y[:,:,cam], axis = 1), label = labels[cam], color = 'r')
-        plt.scatter(X, stats.nanmedian(Y[:,:,cam], axis = 1)-stats.nanstd(Y[:,:,cam], axis = 1), label = labels[cam], color = 'r')
-        
-        
-        #min max
-        for star in range(Y.shape[0]):
-            x = np.nanmax(Y[star,:,cam])
-            n = np.nanmin(Y[star,:,cam])
-            plt.plot([star,star],[x,n], color = 'g', lw=2)
-            print star, n, x
-        
-        plt.xlabel('MJD')
-        plt.ylabel('RV [m/s]')
-    #     plt.legend(loc=0)
+#             if booBaryPlot==True: plt.plot(X, baryVels, label = 'Barycentric Vel. ')
 
-        if booSave==True: 
-            try:
-                plotName = 'plots/All_RVs_'+labels[cam]
-                print 'Attempting to save', plotName
-                plt.savefig(plotName)
 
-            except:
-                print 'FAILED'
-        if booShow==True: plt.show()
-        plt.close()        
+            thisY = baryRVs[:,:,cam][thisOrder]
+            thisY[thisY==0.]=np.nan
+
+#             YERR[:,:,cam] = YERR[:,:,cam][order[:,cam]]
+
+            #median
+            plt.scatter(X[range(len(thisOrder))], stats.nanmedian(thisY , axis = 1), label = labels[cam], color = 'k')
+
+            #sigma
+            plt.scatter(X[range(len(thisOrder))], stats.nanmedian(thisY, axis = 1)+stats.nanstd(thisY, axis = 1), label = labels[cam], color = 'r')
+            plt.scatter(X[range(len(thisOrder))], stats.nanmedian(thisY, axis = 1)-stats.nanstd(thisY, axis = 1), label = labels[cam], color = 'r')
+
+
+            #min max
+            for star in range(thisY.shape[0]):
+                x = np.nanmax(thisY[star,:])
+                n = np.nanmin(thisY[star,:])
+                plt.plot([star,star],[x,n], color = 'g', lw=2)
+                print star, n, x, x-n
+
+            #zero
+            plt.plot(X[range(len(thisOrder))],np.zeros(len(thisOrder)), '--')
+
+            plt.grid(axis='x')
+            plt.xlabel('Stars')
+            plt.ylabel('RV [m/s]')
+        #     plt.legend(loc=0)
+
+            fig.tight_layout()
+            if booSave==True: 
+                try:
+                    plotName = 'plots/Tree_'+str(i)+'_'+labels[cam]
+                    print 'Attempting to save', plotName
+                    plt.savefig(plotName)
+
+                except:
+                    print 'FAILED'
+            if booShow==True: plt.show()
+            plt.close()        
         
+
+# <codecell>
+
+def sineFit(booSave = False, booShow = True, starIdx=-1, booShowAvg = True):
+
+    data = np.load('npy/data.npy')
+    sineFit = np.load('npy/sineFit.npy')
+    baryRVs = np.load('npy/baryRVs.npy')
+    MJDs = np.load('npy/MJDs.npy')
+    avgSineFit = np.load('npy/avgSineFit.npy')
+    avgBaryRVs = np.load('npy/avgBaryRVs.npy')
+    avgMJDs = np.load('npy/avgMJDs.npy')
+
+
+    for cam in range(4):
+        for i,thisSineFit in enumerate(sineFit[:,:,cam]):
+            if ((starIdx==-1) or (starIdx==i)):
+                thisBaryRVs = baryRVs[i,:,cam]
+                thisMJDs = np.linspace(np.min(MJDs),np.max(MJDs), num=100)
+
+                sineCurve = thisSineFit[0]*np.sin(2*np.pi/thisSineFit[2]*(thisMJDs+thisSineFit[1]))
+
+                plt.plot(MJDs,thisBaryRVs, '.')
+                thisLabel = 'All'+' RV:'+str("%.2f" % thisSineFit[0])
+#                 thisLabel += ' ph:'+str("%.2f" % thisSineFit[1])
+                thisLabel += ' P:'+str("%.2f" % thisSineFit[2])
+                thisLabel += ' std:'+str("%.2f" % thisSineFit[3])
+                plt.plot(thisMJDs,sineCurve, label = thisLabel)
+                
+                if booShowAvg==True:
+                    thisAvgBaryRVs = avgBaryRVs[i,:,cam]
+#                     thisMJDs = np.linspace(np.min(MJDs),np.max(MJDs))
+
+                    avgSineCurve = avgSineFit[i,0,cam]*np.sin(2*np.pi/avgSineFit[i,2,cam]*(thisMJDs+avgSineFit[i,1,cam]))
+
+                    plt.plot(avgMJDs,thisAvgBaryRVs, '.')
+                    thisLabel = 'Avg'+' RV:'+str("%.2f" % avgSineFit[i,0,cam])
+#                     thisLabel += ' ph:'+str("%.2f" % avgSineFit[i,1,cam])
+                    thisLabel += ' P:'+str("%.2f" % avgSineFit[i,2,cam])
+                    thisLabel += ' std:'+str("%.2f" % avgSineFit[i,3,cam])                    
+                    plt.plot(thisMJDs,avgSineCurve, label = thisLabel)
+                    
+                    
+                    
+                plt.title(data[i,0])
+                plt.legend(loc=0,prop={'size':6})
+
+                if booSave==True: 
+    #                 try:
+                    name = data[i,0].replace('.','_')
+                    plotName = 'plots/sine/'+str(cam+1)+'/Sine_'+name+'_'+labels[cam]
+                    print 'Attempting to save', plotName
+                    plt.savefig(plotName)
+
+    #                 except:
+    #                     print 'FAILED'
+                if booShow==True: plt.show()
+                plt.close()        
 
 # <codecell>
 
@@ -493,9 +849,7 @@ def RVCorr_RV(thisStarName = 'Giant01', RVClip = -1, booSave = False, booShow = 
     cRVs_PMDM=np.load('npy/cRVs_PMDM.npy')
 
     idx = np.where(data[:,0]==thisStarName)[0][0]
-   
-    colors = ['b','g','r','cyan']
-    labels = ['Blue','Green','Red','IR']
+    
     methods = ['PM', 'DM', 'PMDM']
     
     for i,RVCorr in enumerate([RVCorr_PM, RVCorr_DM,'']):
@@ -555,8 +909,6 @@ def RVCorr_Slit(thisStarName = 'Giant01', RVClip = -1, booSave = False, booShow 
     
     idx = np.where(data[:,0]==thisStarName)[0][0]
    
-    colors = ['b','g','r','cyan']
-    labels = ['Blue','Green','Red','IR']
     methods = ['PM', 'DM', 'PMDM']
     i=0
 #     for i,RVCorr in enumerate([RVCorr_PM, RVCorr_DM,'']):
@@ -609,7 +961,6 @@ def SNR_RV_vs_fibre(RVClip = -1, booSave = False, booShow = True, title = ''):
 
     X = data[:,2].astype(float)
 
-    labels = ['Blue','Green','Red','IR']
     
     #Plots RVs, baryvels. all star, 4 cameras
     print 'About to plot RVs and from ',X.shape[0],'fibres.'
@@ -672,7 +1023,6 @@ def RV_vs_fibre(RVClip = -1, booSave = False, booShow = True, title = ''):
 
     X = data[:,2].astype(float)
 
-    labels = ['Blue','Green','Red','IR']
     
     #Plots RVs, baryvels. all star, 4 cameras
     print 'About to plot RVs and from ',X.shape[0],'fibres.'
@@ -727,7 +1077,6 @@ def SNR_vs_fibre(RVClip = -1, booSave = False, booShow = True, title = ''):
 
     X = data[:,2].astype(float)
 
-    labels = ['Blue','Green','Red','IR']
     
     #Plots RVs, baryvels. all star, 4 cameras
     print 'About to plot RVs and from ',X.shape[0],'fibres.'
@@ -773,7 +1122,6 @@ def SNR_vs_fibre(RVClip = -1, booSave = False, booShow = True, title = ''):
 def flux_and_CC(RVref=5000, booSave = False, booShow = True):
     #Creates plots of 2fluxes and the corresponding CC for RVs >RVref
 
-    labels = ['Blue','Green','Red','IR']
     
     data=np.load('npy/data.npy')
     RVs=np.load('npy/RVs.npy')
@@ -828,8 +1176,6 @@ def flux_and_CC(RVref=5000, booSave = False, booShow = True):
 def arcRVs(booSave = False, booShow = True, booFit = False):
     arcRVs = np.load('npy/arcRVs.npy')
     MJDs = np.load('npy/JDs.npy')
-    
-    colors = ['b','g','r','c']
 
     for epoch,MJD in enumerate(MJDs):
         for cam in range(4):
@@ -855,4 +1201,29 @@ def arcRVs(booSave = False, booShow = True, booFit = False):
 
     
     
+
+# <codecell>
+
+def RVAvgGroups(booSave = False, booShow = True):
+    baryRVs = np.load('npy/baryRVs.npy')
+    MJDs = np.load('npy/MJDs.npy')
+    avgIdxGroups = np.load('npy/avgIdxGroups.npy')
+
+    c = np.array(colors)[avgIdxGroups.astype(int) % len(colors)]
+
+    for cam in range(4):    
+        plt.scatter(MJDs, baryRVs[1,:,cam], c = c)
+                
+        plt.title('Average Groups')
+        if booSave==True: 
+            try:
+                plotName = 'plots/RVAvgGroups/RVAvgGroups_'+labels[cam]
+                print 'Attempting to save', plotName
+                plt.savefig(plotName)
+
+            except Exception,e: 
+                print str(e)
+                print 'FAILED'
+        if booShow==True: plt.show()
+        plt.close()        
 

@@ -11,18 +11,21 @@ import RVPlots as RVP
 
 
 
-booSave = True     
+booSave = True      
 booShow = False
 booBaryPlot = False
 thisCamIdx = -1
-RVClip = 2000
+RVClip = 5e4
 topStars = -1 #how many stars to read. -1 for all.
 booBaryCorrect = True
-idStars = ['Giant01'] #name of stars to id in RV plot
-idStars = ['HD1581'] #name of stars to id in RV plot
+# idStars = ['Giant01'] #name of stars to id in RV plot
+# idStars = ['HD1581'] #name of stars to id in RV plot
 booShowArcRVs = True
 booFit = True
-
+zoom = 4
+starIdx = -1
+booShowAvg = True   #show sine curve derived from avg
+ 
 if len(sys.argv)>1:
     fileList = [sys.argv[1]]
 
@@ -42,14 +45,37 @@ try:
 except:
     pass
 
+try:
+    os.makedirs('plots/tree')
+    os.makedirs('plots/tree/1')
+    os.makedirs('plots/tree/2')
+    os.makedirs('plots/tree/3')
+    os.makedirs('plots/tree/4')
+except:
+    pass
+
+try:
+    os.makedirs('plots/sine')
+    os.makedirs('plots/sine/1')
+    os.makedirs('plots/sine/2')
+    os.makedirs('plots/sine/3')
+    os.makedirs('plots/sine/4')
+except:
+    pass
+
+try:
+    os.makedirs('plots/RVAvgGroups')
+except:
+    pass
+
 #Plot
 # RVP.RVs_all_stars()
 
 #Plot
-RVP.RVs_all_stars_NPYs(booShowArcRVs = booShowArcRVs, idStars= idStars, sigmaClip = -1,RVClip = RVClip, topStars=topStars, booSave = booSave,booShow = booShow  , booBaryPlot=booBaryPlot, booBaryCorrect = booBaryCorrect)
+# RVP.RVs_all_stars_NPYs(booShowArcRVs = booShowArcRVs, idStars= idStars, sigmaClip = -1,RVClip = RVClip, topStars=topStars, booSave = booSave,booShow = booShow  , booBaryPlot=booBaryPlot, booBaryCorrect = booBaryCorrect)
 
 #Plot
-# RVP.RVs_by_star_NPYs(RVClip = RVClip, booSave = booSave,booShow = booShow )
+# RVP.RV_Tree(zoom = zoom, RVClip = RVClip, booSave = booSave,booShow = booShow )
 
 #Plot
 # RVP.SNR_RV_vs_fibre(RVClip = RVClip, booSave = booSave,booShow = booShow)
@@ -69,7 +95,13 @@ RVP.RVs_all_stars_NPYs(booShowArcRVs = booShowArcRVs, idStars= idStars, sigmaCli
 #Plot
 # RVP.arcRVs(booSave = booSave, booShow = booShow, booFit = booFit)
 
+#Plot
+RVP.sineFit(booSave = booSave, booShow = booShow, starIdx=starIdx, booShowAvg = booShowAvg)
 
+#Plot
+# RVP.RVAvgGroups(booSave = booSave, booShow = booShow)
+
+    
   
 
 # if len(fileList)>0:

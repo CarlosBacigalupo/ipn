@@ -10,9 +10,9 @@ import RVTools as RVT
 import sys
 
 CCReferenceSet = 0 
-medianRange = 5
-useRangeFilter = True
-
+medianRange = 0
+useRangeFilter = False
+minMJD = 0
 
 if len(sys.argv)>1:
     CCReferenceSet = int(sys.argv[1])
@@ -24,14 +24,20 @@ else:
 
 if len(fileList)>0:
     i=0
-    for filename in fileList    :
+    for filename in fileList[:]:
         if 'red' not in filename:
             print filename
             filehandler = open(filename, 'r')
             thisStar = pickle.load(filehandler)
     #         try:
     #         RVT.find_max_wl_range(thisStar)
-            RVT.RVs_CC_t0(thisStar,i, CCReferenceSet=CCReferenceSet, medianRange=medianRange, useRangeFilter = useRangeFilter)
+            if thisStar.type=='arc':
+                print 'Arc'
+                RVT.RVs_CC_t0_arc(thisStar, corrHWidth = 5)
+                
+            elif thisStar.type=='star':
+                print 'Star'
+                RVT.RVs_CC_t0(thisStar,i, minMJD=minMJD, CCReferenceSet=CCReferenceSet, medianRange=medianRange, useRangeFilter = useRangeFilter)
             i+=1
     
             file_pi = open('obj/red_'+thisStar.name+'.obj', 'w') 

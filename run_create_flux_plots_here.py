@@ -1,3 +1,4 @@
+#!/opt/local/bin/python
 
 import os
 import pickle
@@ -45,6 +46,8 @@ if len(fileList)>0:
 #                     plt.show()    
                     plt.close()
             print ''
+            thisStar = None
+            filehandler.close()
 else:
     print 'No *.obj files here. (red_files.obj are ignored)'
     

@@ -1,20 +1,177 @@
-# -*- coding: utf-8 -*-
-# <nbformat>3.0</nbformat>
 
-# <codecell>
+# coding: utf-8
+
+# In[5]:
 
 import numpy as np
 import pylab as plt
 from scipy import interpolate, signal, optimize, constants, stats
+from scipy.optimize import leastsq
 import pyfits as pf
 import sys
 import os
+from lmfit import minimize, Parameters
 
-# <codecell>
+
+# In[ ]:
 
 # sys.path = ['', '/disks/ceres/makemake/aphot/kalumbe/reductions/NGC2477_1arc_6.2','/usr/local/yt-hg', '/home/science/staff/kalumbe/my-astro-lib', '/usr/lib/python2.7', '/usr/lib/python2.7/plat-x86_64-linux-gnu', '/usr/lib/python2.7/lib-tk', '/usr/lib/python2.7/lib-old', '/usr/lib/python2.7/lib-dynload', '/usr/lib/python2.7/dist-packages', '/usr/lib/python2.7/dist-packages/PILcompat', '/usr/lib/python2.7/dist-packages/gtk-2.0', '/usr/lib/pymodules/python2.7', '/usr/lib/python2.7/dist-packages/ubuntu-sso-client', '/usr/lib/python2.7/dist-packages/ubuntuone-client', '/usr/lib/python2.7/dist-packages/ubuntuone-couch', '/usr/lib/python2.7/dist-packages/ubuntuone-storage-protocol', '/usr/lib/python2.7/dist-packages/wx-2.8-gtk2-unicode']
 
-# <codecell>
+
+# In[7]:
+
+def fit_sine_RVs(baryRVs, MJDs,data, RVClip = 1e6, starIdx = -1, cam = -1, npyName = 'sineFit.npy'):
+
+    sine_fit = np.ones((baryRVs.shape[0],4,4))*np.nan
+    try: 
+        sine_fit = np.load('npy/'+npyName)
+        print 'Found previous',npyName,'array. Using it for update'
+    except:
+        pass
+    
+    for cam in range(4):
+        for i,thisRVs in enumerate(baryRVs[:,:,cam]):
+            if ((starIdx==-1) or(starIdx==i)): 
+                thisRVs[np.abs(np.nan_to_num(thisRVs))>RVClip]=np.nan
+                thisBaryRVs = thisRVs[-np.isnan(thisRVs)]
+                thisMJDs = MJDs[-np.isnan(thisRVs)]
+                
+                print 'This target:', data[i,0], '- Camera ',str(cam+1)
+                print 'Calculating RV fit for', thisBaryRVs.shape[0], 'data points.',np.sum(np.isnan(thisRVs)),'NaNs'
+                if thisMJDs.shape[0]>3:                
+                    minIdx = np.where(thisBaryRVs==np.min(thisBaryRVs))[0][0]
+                    maxIdx = np.where(thisBaryRVs==np.max(thisBaryRVs))[0][0]
+                    guess_P = np.abs(thisMJDs[minIdx] - thisMJDs[maxIdx])*2
+
+                    params = Parameters()
+                    params.add('amp', value=np.abs((np.max(thisBaryRVs)-np.min(thisBaryRVs))/2.), min=0)
+                    params.add('phase', value = 0, max = guess_P/2., min = -guess_P/2. )
+                    params.add('period', value=guess_P, min = 0 )
+
+                    print 'Guess A,ph,P',params.values()
+
+                    output = minimize(optimise_sine, params, args=(thisMJDs, thisBaryRVs))
+                    
+                    print 'std err',output.chisqr, output.redchi , np.std(output.residual)
+
+                    sine_fit[i,0,cam]=output.params.valuesdict()['amp']
+                    sine_fit[i,1,cam]=output.params.valuesdict()['phase']
+                    sine_fit[i,2,cam]=output.params.valuesdict()['period']
+                    sine_fit[i,3,cam]=np.std(output.residual)
+
+                    print 'Guess A,ph,P', sine_fit[i,:3,cam]
+
+                else: 
+                    print 'Result','NOT ENOUGH DATAPOINTS'
+
+    #                 est_std, est_phase, est_P =ouput[0]
+
+                    sine_fit[i,:,cam]=[0,0,0,0]
+                print 
+            
+    np.save('npy/'+npyName,sine_fit)
+    print 'Fine'
+
+
+# In[3]:
+
+def avg_MJDs_groups(MJDs, gapMins = 40):
+    
+    mins2Days = 1/24./60
+    gap2Days = mins2Days * gapMins # diff in days between exposures to be considered different exposures
+    
+    diffArray = MJDs.copy()
+    diffArray[0] = 0
+    diffArray[1:] = MJDs[1:]-MJDs[:-1]
+    
+    avgIdxGroups = diffArray.copy()
+    
+    avgIdx = 0
+    for i,diff in enumerate(diffArray):
+        if diff>gap2Days: avgIdx+=1
+        avgIdxGroups[i] = avgIdx
+        
+    np.save('npy/avgIdxGroups.npy',avgIdxGroups.astype(int))
+
+
+# In[ ]:
+
+def avg_MJDs_data():
+
+    avgIdxGroups = np.load('npy/avgIdxGroups.npy')
+    baryRVs = np.load('npy/baryRVs.npy')
+    MJDs = np.load('npy/MJDs.npy')
+    
+    ttlGroups = np.max(avgIdxGroups)+1
+    avgBaryRVs = np.zeros((baryRVs.shape[0],ttlGroups,4))
+    avgMJDs = np.zeros(ttlGroups)
+    
+    for i in range(ttlGroups):
+        print i,np.nanmean(baryRVs[:,avgIdxGroups==i,:],axis=1)
+        avgBaryRVs[:,i,:] = np.nanmean(baryRVs[:,avgIdxGroups==i,:],axis=1)
+        avgMJDs[i] = np.nanmean(MJDs[avgIdxGroups==i])
+            
+    np.save('npy/avgBaryRVs.npy',avgBaryRVs)
+    np.save('npy/avgMJDs.npy',avgMJDs)
+    print 'Fine'
+
+
+# In[ ]:
+
+def optimise_sine(x, MJDs, thisBaryRVs):
+    
+#     print 'x',x
+    
+    amp = x['amp'].value
+    ph = x['phase'].value
+    period = x['period'].value
+
+#     print 'MJDs',MJDs
+#     print 'thisBaryRVs',thisBaryRVs.shape
+#     if x[2]==0: x[2]=1e-17
+#     result = x[0]*(np.sin(np.pi*2./x[2]*(MJDs+x[1]))-np.sin(np.pi*2./x[2]*(MJDs[0]+x[1]))) - thisBaryRVs
+#     if x[2]==0: x[2]=1e-17
+    #subtracts epoch 0
+#     result = amp*(np.sin(np.pi*2./period*(MJDs+ph))- np.sin(np.pi*2./period*(MJDs[0]+ph))) - thisBaryRVs
+
+    #direct fit
+    result = amp*(np.sin(np.pi*2./period*(MJDs+ph))) - thisBaryRVs
+#     print 'result',result
+#     print result - thisBaryRVs
+    
+    return result 
+
+
+
+# In[ ]:
+
+def fit_results(data, sineFit, avgSineFit, baryRVs, avgBaryRVs):
+
+    Range = np.ptp(np.nan_to_num(baryRVs),axis=1)
+    order = np.argsort(Range[:,0])[::-1]    
+    fittedRangeResults = Range[order]
+
+    ratios = sineFit[:,0,:]/sineFit[:,3,:]
+    fittedResults = ratios[order]
+    
+    
+    avgRatios = avgSineFit[:,0,:]/avgSineFit[:,3,:]
+    fittedAvgResults = avgRatios[order]
+    
+    AvgRange = np.ptp(np.nan_to_num(avgBaryRVs),axis=1)
+    fittedAvgRangeResults = AvgRange[order]
+    
+    fittedData = data[:,0][order]
+    
+    np.save('npy/fittedResults.npy',fittedResults)
+    np.save('npy/fittedRangeResults.npy',fittedRangeResults)
+    np.save('npy/fittedAvgResults.npy',fittedAvgResults)
+    np.save('npy/fittedAvgRangeResults.npy',fittedAvgRangeResults)
+    np.save('npy/fittedData.npy',fittedData)
+    print 'Fine'
+
+
+# In[1]:
 
 def check_equal_wl(wl1, wl2):
     result = False
@@ -25,7 +182,8 @@ def check_equal_wl(wl1, wl2):
         result = True
     return result
 
-# <codecell>
+
+# In[1]:
 
 def pivot2idx(pivot):
     pivot = np.array(pivot)
@@ -35,7 +193,8 @@ def pivot2idx(pivot):
     
     return rev_num[pivot]
 
-# <codecell>
+
+# In[ ]:
 
 def idx2pivot(idx):
 
@@ -48,18 +207,110 @@ def idx2pivot(idx):
 
     return result
 
-# <codecell>
 
-def clean_flux(wavelength, flux, thisCam = [], xDef = 1, medianRange = 0, flatten = True, useRange = []):
-    '''Clean a 1D spectrum. 
+# In[2]:
+
+def resample_sp(wavelength, flux, minWL, maxWL, xStep):
+    '''
+    Rebins the flux into xSteps in log_e space
     
     Parameters
     ----
-    xDef : int or None, optional
+    wavelength : 1-D array
+            Wavelength values 
+            
+    flux : 1-D array
+        Flux values 
+        
+    xStep : float
+        Increase step between pixels in log_e(wl)
+        
+        
+    Returns
+    ------
+    new_wavelength: 
+        log_e(wl) in xStep steps
+    
+    new_flux: 
+        rebinned flux
+
+    '''
+    
+    lnWavelength = np.log(wavelength)
+    fFlux = interpolate.splrep(lnWavelength, flux) 
+    new_wavelength = np.arange(np.log(minWL), np.log(maxWL),xStep)
+    new_flux = interpolate.splev(new_wavelength, fFlux, der=0)
+    
+#     plt.plot(np.log(wavelength),flux)
+#     plt.plot(new_wavelength,new_flux)
+#     plt.show()
+    
+    return new_wavelength, new_flux
+
+
+# In[20]:
+
+def cubic(x,a,b,c,d):
+    '''
+    Cubic function
+    '''
+    return a*x**3+b*x**2+c*x+d
+
+
+# In[1]:
+
+#Find the common range of wl for all cameras
+def find_max_wl_range(thisCam):
+    '''
+    Checks the range of valid wavelength for all exposures in given camera.
+    '''
+    if len(thisCam.wavelengths)>0:
+        minWL = np.max(np.min(thisCam.wavelengths, axis=1))
+        maxWl = np.min(np.max(thisCam.wavelengths, axis=1))
+
+    else:
+        minWL, maxWl = 0,0
+        
+    return minWL, maxWl
+
+
+# In[ ]:
+
+def clean_arc(wavelength, flux, minWL=0, maxWL=0, xStep = 5*10**-6):
+    '''
+    Clean a 1D spectrum. 
+    
+    Parameters
+    ----
+    wavelength : int or None, optional
+        Array of wavelengths 
+        
+    flux : int or None, optional
+        Array of fluxes 
+        
+    minWL : int, optional
+        Minimum walength value to return 
+        
+    maxWL : int, optional
+        Maximum wavelength value to return 
+        
+    xStep : float, optional
         Coeficient to resample. Final array will be flux.shape[0]*xDef long. 
         
     medianRange : int, optional
         Number of pixels to median over. 0 will skip this step. Optional.
+
+    flatten : boolean, optional
+        Divides flux by a fitted 3rd ord polynomial if True. Optional.
+        
+    Returns
+    ----
+    wavelength : numpy, floats
+        Array of wavelengths 
+        
+    flux : numpy, floats
+        Array of fluxes 
+        
 
     '''
     
@@ -68,8 +319,88 @@ def clean_flux(wavelength, flux, thisCam = [], xDef = 1, medianRange = 0, flatte
     leftEdgeIdx=0
     rightEdgeIdx=len(flux)
     
-#     nanMapIdx = np.where(nanMap==True) make the next lines faster by using this....
+#     nanMapIdx = np.where(nanMap==True) <<<<<make the next lines faster by using this
+    if np.sum(nanMap)>0:
+        print 'Found NaNs in flux array'
     
+    for i,booI in enumerate(nanMap):
+        if booI==False:
+            leftEdgeIdx = i
+            break
+            
+    for j,rbooI in enumerate(nanMap[::-1]):
+        if rbooI==False:
+            rightEdgeIdx = len(nanMap)-j
+            break        
+
+    fluxMedian = stats.nanmedian(flux)
+    if leftEdgeIdx>0:
+        flux[:leftEdgeIdx] = np.linspace(0, flux[leftEdgeIdx+1],leftEdgeIdx)
+    if rightEdgeIdx<len(flux):
+        flux[rightEdgeIdx:] = np.linspace(flux[rightEdgeIdx-1], 0, len(flux)-rightEdgeIdx)
+
+        
+    if ((wavelength[-np.isnan(flux)].shape[0]>0) &  (flux[-np.isnan(flux)].shape[0]>0)):
+        #resample
+        wavelength,flux = resample_sp(wavelength, flux, minWL, maxWL, xStep)
+        
+    else: #if not enough data return NaNs
+        wavelength = np.ones(4096)*np.nan
+        flux = np.ones(4096)*np.nan
+        
+    return wavelength, flux
+
+
+
+# In[63]:
+
+def clean_flux(wavelength, flux, minWL=0, maxWL=0, xStep = 10**-5, medianRange = 0, flatten = True):
+    '''
+    Clean a 1D spectrum. 
+    
+    Parameters
+    ----
+    wavelength : int or None, optional
+        Array of wavelengths 
+        
+    flux : int or None, optional
+        Array of fluxes 
+        
+    minWL : int, optional
+        Minimum walength value to return 
+        
+    maxWL : int, optional
+        Maximum wavelength value to return 
+        
+    xStep : float, optional
+        Coeficient to resample. Final array will be flux.shape[0]*xDef long. 
+        
+    medianRange : int, optional
+        Number of pixels to median over. 0 will skip this step. Optional.
+
+    flatten : boolean, optional
+        Divides flux by a fitted 3rd ord polynomial if True. Optional.
+        
+    Returns
+    ----
+    wavelength : numpy, floats
+        Array of wavelengths 
+        
+    flux : numpy, floats
+        Array of fluxes 
+        
+
+    '''
+    
+    #fix initial nans on edges
+    nanMap = np.isnan(flux)
+    leftEdgeIdx=0
+    rightEdgeIdx=len(flux)
+    
+#     nanMapIdx = np.where(nanMap==True) <<<<<make the next lines faster by using this
+    if np.sum(nanMap)>0:
+        print 'Found NaNs in flux array'
+        
     for i,booI in enumerate(nanMap):
         if booI==False:
             leftEdgeIdx = i
@@ -92,9 +423,11 @@ def clean_flux(wavelength, flux, thisCam = [], xDef = 1, medianRange = 0, flatte
     if medianRange>0:
         fluxMed = signal.medfilt(flux,medianRange)
         fluxDiff = abs(flux-fluxMed)
+#         fluxDiff = flux-fluxMed
         fluxDiffStd = np.std(fluxDiff)
-        mask = fluxDiff> 2 * fluxDiffStd
+        mask = fluxDiff> 3 * fluxDiffStd
         flux[mask] = fluxMed[mask]
+
 
     if ((wavelength[-np.isnan(flux)].shape[0]>0) &  (flux[-np.isnan(flux)].shape[0]>0)):
         
@@ -102,98 +435,50 @@ def clean_flux(wavelength, flux, thisCam = [], xDef = 1, medianRange = 0, flatte
             fFlux = optimize.curve_fit(cubic, wavelength[-np.isnan(flux)], flux[-np.isnan(flux)], p0 = [1,1,1,1])
             fittedCurve = cubic(wavelength, fFlux[0][0], fFlux[0][1], fFlux[0][2], fFlux[0][3])
             flux = flux/fittedCurve-1
-        
+        else:
+            flux = flux/fluxMedian-1
+            
         #apply tukey
-        flux = flux * tukey(0.1, len(flux))
+        flux = flux * signal.tukey(len(flux), 0.2)
 
         #resample
-        if (xDef>1):
-            fFlux = interpolate.interp1d(wavelength, flux) 
-            wavelength = np.linspace(min(wavelength), max(wavelength),len(wavelength)*xDef)
-            flux = fFlux(wavelength)
-
-    else: #if not enough data return NaNs
-        if (xDef>1):
-            wavelength = np.linspace(min(wavelength), max(wavelength),len(wavelength)*xDef)
-            flux = np.ones(wavelength.shape[0])*np.nan
-    print 'range',len(useRange)
-    if ((useRange!=[]) and (len(useRange)==2)):
-        rangeFilter = (wavelength>=useRange[0]) & (wavelength<=useRange[1])
-        print 'Using range',useRange, np.sum(rangeFilter), 'pixels'
+        wavelength,flux = resample_sp(wavelength, flux, minWL, maxWL, xStep)
         
-        wavelength = wavelength[rangeFilter]
-        flux = flux[rangeFilter]
+    else: #if not enough data return NaNs
+        wavelength = np.ones(4096)*np.nan
+        flux = np.ones(4096)*np.nan
         
     return wavelength, flux
 
 
-# <codecell>
 
-def cubic(x,a,b,c,d):
+# In[ ]:
+
+#Create cross correlation curves wrt epoch 0
+def RVs_CC_t0_arc(thisStar, CCReferenceSet = 0, corrHWidth=10):
     '''
-    Cubic function
-    '''
-    return a*x**3+b*x**2+c*x+d
-
-# <codecell>
-
-def tukey(alpha, N):
-    '''Creates a tukey function
+    Cross-correlates all epochs wrt t0. Writes the results to thisStar.cameras[].RVs
     
     
     Parameters
     ----
-    alpha : float
-        Fraction of the pixels to fade in/out.
-        i.e. alpha=0.1 will use 10% of the pixels to go from 0 to 1. 
+    thisStar : obj
+        Object holding the star that holds the fluxes to be cross-correlated
         
-    N : int
-        Totla number of pixels in the array.
+    starIdx : int
+        Index of the star in to be linked in the comments. Not very useful. 
         
         
     Returns
     ------
-
-    N-length array of floats from 0 to 1. 
+    Nottin.
+    
     '''
-
     
-    tukey = np.zeros(N)
-    for i in range(int(alpha*(N-1)/2)):
-        tukey[i] = 0.5*(1+np.cos(np.pi*(2*i/alpha/(N-1)-1)))
-    for i in range(int(alpha*(N-1)/2),int((N-1)*(1-alpha/2))):
-        tukey[i] = 1
-    for i in range(int((N-1)*(1-alpha/2)),int((N-1))):
-        tukey[i] = 0.5*(1+np.cos(np.pi*(2*i/alpha/(N-1)-2/alpha+1)))
-    
-    return tukey
-
-# <codecell>
-
-#Find the common range of wl for all cameras
-def find_max_wl_range(thisStar):
-    for thisCam in thisStar.exposures.cameras:
-        if np.nansum(thisCam.wavelengths - thisCam.wavelengths[0,:])==0:
-            print 'WL aligned'
-        else:
-            print 'WL NOT aligned'
-
-        mask = np.isnan(thisCam.red_fluxes)
-        collapsed_mask = np.sum(mask, axis=0)==0
-        single_wl =  thisCam.wavelengths[0][collapsed_mask]
-        thisCam.wavelengths = np.reshape(np.tile(single_wl, thisCam.wavelengths.shape[0]), 
-                         ((thisCam.wavelengths.shape[0], single_wl.shape[0])))
-        full_mask =  np.reshape(np.tile(collapsed_mask, thisCam.wavelengths.shape[0]), thisCam.red_fluxes.shape)
-        thisCam.red_fluxes =  np.reshape(thisCam.red_fluxes[full_mask], (thisCam.red_fluxes.shape[0], np.sum(collapsed_mask)))
-
-# <codecell>
-
-#Create cross correlation curves wrt epoch 0
-def RVs_CC_t0(thisStar, starIdx,  xDef = 1, CCReferenceSet = 0, printDetails=False, corrHWidth=10, medianRange = 0, useRangeFilter = False):
 
 #     validDates = np.all([np.nansum(thisCam.red_fluxes,1).astype(bool) for thisCam in thisStar.exposures.cameras],0)
     print ''
-    for cam,thisCam in enumerate(thisStar.exposures.cameras):
+    for cam,thisCam in enumerate(thisStar.exposures.cameras[:1]):
         RVs = []
         sigmas = [] 
         Qs = []
@@ -203,127 +488,205 @@ def RVs_CC_t0(thisStar, starIdx,  xDef = 1, CCReferenceSet = 0, printDetails=Fal
         
         print 'Camera',cam
         
-        camFilter = []
-        if useRangeFilter==True:
-            try:
-                if cam==0:
-                    camFilter = np.load('npy/cam1Filter.npy')
-                elif cam==1:
-                    camFilter = np.load('npy/cam2Filter.npy')
-                elif cam==2:
-                    camFilter = np.load('npy/cam3Filter.npy')
-                elif cam==3:
-                    camFilter = np.load('npy/cam4Filter.npy')
-            except:
-                print 'No camera filter found. Using full range.'
-            
-            print 'camFilter',camFilter
-        if len(np.arange(len(validDates))[validDates])>0:
-            CCReferenceSet = np.arange(len(validDates))[validDates][0]
-        else:
-            CCReferenceSet = 0
+        minWL, maxWL = find_max_wl_range(thisCam)
+        
+        #Filters exposures to a minimum MJD
+#         if minMJD>0:
+#             print 'Reducing MJD to >=',minMJD
+#             validDates = thisStar.exposures.MJDs>=minMJD
             
             
-        lambda1, flux1 = clean_flux(thisCam.wavelengths[CCReferenceSet], thisCam.red_fluxes[CCReferenceSet], thisCam, medianRange=medianRange, useRange = camFilter)
+#         if len(np.arange(len(validDates))[validDates])>0:
+#             CCReferenceSet = np.arange(len(validDates))[validDates][0]
+#         else:
+#             CCReferenceSet = 0
+            
+#         print 'Refernce set =',CCReferenceSet
+        
+        lambda1, flux1 = clean_arc(thisCam.wavelengths[CCReferenceSet], thisCam.red_fluxes[CCReferenceSet], minWL, maxWL)
         
         plts = 0    
-        for epoch, JD in enumerate(thisStar.exposures.JDs):
+        for epoch, MJD in enumerate(thisStar.exposures.MJDs):
             print epoch,
-            lambda2, flux2 = clean_flux(thisCam.wavelengths[epoch], thisCam.red_fluxes[epoch], thisCam, medianRange=medianRange, useRange = camFilter)
+            lambda2, flux2 = clean_arc(thisCam.wavelengths[epoch], thisCam.red_fluxes[epoch], minWL, maxWL)
 
-            if validDates[epoch]==True:
-                if check_equal_wl(lambda1, lambda2)==True:
-    #                 CCCurve = signal.fftconvolve(flux1, flux2[::-1], mode='same')
-    #                 if epoch <5:
-    #                     plt.plot(flux1)
-    #                     plt.plot(flux2)
-    #                     plt.plot(CCCurve)
-    #                     plt.show()
-                    try:
-    #                     print 'max_idx, len(CCCurve) =',np.where(CCCurve==max(CCCurve)), CCCurve.shape
-                        CCCurve = []
-                        CCCurve = signal.fftconvolve(flux1[-np.isnan(flux1)], flux2[-np.isnan(flux2)][::-1], mode='same')
-                        corrMax = np.where(CCCurve==max(CCCurve))[0][0]
-                        p_guess = [corrMax,corrHWidth]
-                        x_mask = np.arange(corrMax-corrHWidth, corrMax+corrHWidth+1)
-                        if max(x_mask)<len(CCCurve):
-            #                 try:
-            #                 print '4 params',p_guess, x_mask, np.sum(x_mask), CCCurve.shape
-                            p = fit_gaussian(p_guess, CCCurve[x_mask], np.arange(len(CCCurve))[x_mask])[0]
-                            if np.modf(CCCurve.shape[0]/2.0)[0]>1e-5:
-                                pixelShift = (p[0]-(CCCurve.shape[0]-1)/2.) #odd number of elements
-                            else:
-                                pixelShift = (p[0]-(CCCurve.shape[0])/2.) #even number of elements
-            #                 except:
-            #                     pixelShift = 0
+            try:
+                
+                #Duncan's approach to CC. 
+                CCCurve = np.correlate(flux1, flux2, mode='full')
 
-                            thisQ, thisdRV = QdRV(thisCam.wavelengths[epoch], thisCam.red_fluxes[epoch])
+                y = CCCurve[int(CCCurve.shape[0]/2.)-corrHWidth:int(CCCurve.shape[0]/2.)+1+corrHWidth].copy()
+                y /=np.max(y)
+                x = np.arange(-corrHWidth,corrHWidth+1)
+                p,_ = fit_flexi_gaussian([1,3.,2.,1.,0],y,x )
+                shift = p[0]
+                
+#                 thisQ, thisdRV = QdRV(thisCam.wavelengths[epoch], thisCam.red_fluxes[epoch])
 
-                            mid_px = thisCam.wavelengths.shape[1]/2
-                            dWl = (thisCam.wavelengths[epoch,mid_px+1]-thisCam.wavelengths[epoch,mid_px]) / thisCam.wavelengths[epoch,mid_px]
-                            RV = dWl * pixelShift * constants.c 
-                            print 'RV',RV
+                px = 1000
+                RV = (np.exp(lambda1[px+1]-lambda1[px]) -1) * constants.c * shift
+                print 'RV',RV                
 
-                        else:
-                            R = 0
-                            thisQ = 0
-                            thisdRV = 0
-                            RV = 0
-                            print 'Invalid data point'
-
-                    except Exception,e: 
-                        print 'CC Error'
-                        print str(e)
-                        R = 0
-                        thisQ = 0
-                        thisdRV = 0
-                        RV = 0
-    #                     if plts<5:
-    #                         plts+=1
-    #                         plt.plot(flux1)
-    #                         plt.plot(flux2)
-    #                         plt.plot(CCCurve)
-    #                         plt.show()
-                else:
-                    thisQ = 0
-                    thisdRV = 0
-                    RV = 0
-                    print 'Wavelength range not equal'
-
-            else:
-#                 if i==CCReferenceSet:
-#                     print 'The CC reference set is not present. Can\'t continue. Launch again with different reference set.'
-#                     sys.exit()
+            except Exception,e: 
+                print 'CC Error'
+                print str(e)
+                R = 0
                 thisQ = 0
                 thisdRV = 0
                 RV = 0
-                print 'Invalid data point'
 
             SNR = np.sqrt(stats.nanmedian(thisCam.red_fluxes[epoch]))
-            
-            if np.isnan(SNR)==True: 
-                msg = 'NaN in SNR calculation sqrt(median(flux)).'
-                msg += str(np.sum(np.isnan(thisCam.red_fluxes[epoch])))
-                msg += '/'+str(thisCam.red_fluxes[epoch].shape[0])+' NaNs in flux.'
-                msg += ' Median_flux='+str(stats.nanmedian(thisCam.red_fluxes[epoch]))
-                print msg
-                comment(starIdx,epoch,cam,msg )
-                print 'SNR NaN',
-            print SNR
+
 
             SNRs.append(SNR)
-            Qs.append(thisQ)
-            sigmas.append(thisdRV)
+    #         Qs.append(thisQ)
+    #         sigmas.append(thisdRV)
             RVs.append(RV)
 
 
-                
-        thisCam.sigmas = np.array(sigmas)
-        thisCam.Qs = np.array(Qs)
-        thisCam.RVs = np.array(RVs)
-        thisCam.SNRs = np.array(SNRs)
 
-# <codecell>
+#     thisCam.sigmas = np.array(sigmas)
+#     thisCam.Qs = np.array(Qs)
+    thisCam.RVs = np.array(RVs)
+    thisCam.SNRs = np.array(SNRs)
+
+
+# In[ ]:
+
+def gaussian(x, mu, sig, ):
+    x = np.array(x)
+    return np.exp(-np.power(x - mu, 2.) / 2 / np.power(sig, 2.))
+
+
+def flexi_gaussian(x, mu, sig, power, a, d ):
+    x = np.array(x)
+    return a* np.exp(-np.power(np.abs((x - mu) * np.sqrt(2*np.log(2))/sig),power))+d
+
+def fit_gaussian(p, flux, x_range):
+    a = optimize.leastsq(diff_gaussian, p, args= [flux, x_range])
+    return a
+
+def fit_flexi_gaussian(p, flux, x_range):
+    a = optimize.leastsq(diff_flexi_gaussian, p, args= [flux, x_range])
+    return a
+
+def diff_gaussian(p, args):
+    
+    flux = args[0]
+    x_range = args[1]
+
+    diff = gaussian(x_range, p[0],p[1]) - flux
+    return diff
+
+def diff_flexi_gaussian(p, args):
+    
+    flux = args[0]
+    x_range = args[1]
+    weights = np.abs(np.gradient(flux)) * (flux+np.max(flux)*.1)
+    diff = (flexi_gaussian(x_range, p[0], p[1], p[2], p[3], p[4]) - flux)# *weights
+    return diff
+
+
+# In[2]:
+
+#Create cross correlation curves wrt epoch 0
+def RVs_CC_t0(thisStar, starIdx, minMJD=0 ,  xDef = 1, CCReferenceSet = 0, printDetails=False, corrHWidth=10, medianRange = 0, useRangeFilter = False):
+    '''
+    Cross-correlates all epochs wrt t0. Writes the results to thisStar.cameras[].RVs
+    
+    
+    Parameters
+    ----
+    thisStar : obj
+        Object holding the star that holds the fluxes to be cross-correlated
+        
+    starIdx : int
+        Index of the star in to be linked in the comments. Not very useful. 
+        
+        
+    Returns
+    ------
+    Nottin.
+    
+    '''
+    
+
+#     validDates = np.all([np.nansum(thisCam.red_fluxes,1).astype(bool) for thisCam in thisStar.exposures.cameras],0)
+    print ''
+    for cam,thisCam in enumerate(thisStar.exposures.cameras[:1]):
+        RVs = []
+        sigmas = [] 
+        Qs = []
+        SNRs = []
+
+        validDates = np.nansum(thisCam.red_fluxes,1).astype(bool)
+        
+        print 'Camera',cam
+        
+        minWL, maxWL = find_max_wl_range(thisCam)
+        
+        #Filters exposures to a minimum MJD
+#         if minMJD>0:
+#             print 'Reducing MJD to >=',minMJD
+#             validDates = thisStar.exposures.MJDs>=minMJD
+            
+            
+#         if len(np.arange(len(validDates))[validDates])>0:
+#             CCReferenceSet = np.arange(len(validDates))[validDates][0]
+#         else:
+#             CCReferenceSet = 0
+            
+#         print 'Refernce set =',CCReferenceSet
+        
+        lambda1, flux1 = clean_flux(thisCam.wavelengths[CCReferenceSet], thisCam.red_fluxes[CCReferenceSet], minWL, maxWL, medianRange=medianRange)
+        
+        plts = 0    
+        for epoch, MJD in enumerate(thisStar.exposures.MJDs):
+            print epoch,
+            lambda2, flux2 = clean_flux(thisCam.wavelengths[epoch], thisCam.red_fluxes[epoch], minWL, maxWL, medianRange=medianRange)
+
+            try:
+                
+                #Duncan's approach to CC. 
+                CCCurve = np.correlate(flux1, flux2, mode='full')
+
+                y = CCCurve[int(CCCurve.shape[0]/2.)+1-5:int(CCCurve.shape[0]/2.)+1+4].copy()
+                y /=np.max(y)
+                x = np.arange(-4,5)
+                p,_ = fit_gaussian([1,3.],y,x )
+                shift = p[0]
+                
+#                 thisQ, thisdRV = QdRV(thisCam.wavelengths[epoch], thisCam.red_fluxes[epoch])
+
+                px = 1000
+                RV = (np.exp(lambda1[px+1]-lambda1[px]) -1) * constants.c * shift
+                print 'RV',RV                
+
+            except Exception,e: 
+                print 'CC Error'
+                print str(e)
+                R = 0
+                thisQ = 0
+                thisdRV = 0
+                RV = 0
+
+            SNR = np.sqrt(stats.nanmedian(thisCam.red_fluxes[epoch]))
+
+
+            SNRs.append(SNR)
+    #         Qs.append(thisQ)
+    #         sigmas.append(thisdRV)
+            RVs.append(RV)
+
+
+
+#     thisCam.sigmas = np.array(sigmas)
+#     thisCam.Qs = np.array(Qs)
+    thisCam.RVs = np.array(RVs)
+    thisCam.SNRs = np.array(SNRs)
+
+
+# In[24]:
 
 def comment(star, epoch, cam, comment):
     comments = []
@@ -348,7 +711,8 @@ def comment(star, epoch, cam, comment):
     np.save('npy/comments.npy',comments)
         
 
-# <codecell>
+
+# In[25]:
 
 #Create cross correlation curves wrt epoch 0
 def single_RVs_CC_t0(thisStar, cam = 0, t = 0, corrHWidth =10, xDef = 1):
@@ -385,7 +749,8 @@ def single_RVs_CC_t0(thisStar, cam = 0, t = 0, corrHWidth =10, xDef = 1):
         return lambda1,flux1, lambda2,flux2, CCCurve, p, x_mask, RV 
         
 
-# <codecell>
+
+# In[26]:
 
 #Bouchy functions
 def QdRV(Lambda, A0):
@@ -470,7 +835,8 @@ def W(Lambda, A0):
 	
 	return W
 
-# <codecell>
+
+# In[27]:
 
 #Fit gaussian in CCCurves
 def gaussian(x, mu, sig, ):
@@ -495,18 +861,51 @@ def get_wavelength(wavelengths, pixel):
 
 def extract_HERMES_wavelength(fileName):
 
-	a = pf.open(fileName)
+    a = pf.open(fileName)
 
-	CRVAL1 = a[0].header['CRVAL1'] # / Co-ordinate value of axis 1                    
-	CDELT1 = a[0].header['CDELT1'] #  / Co-ordinate increment along axis 1             
-	CRPIX1 = a[0].header['CRPIX1'] #  / Reference pixel along axis 1                   
-	
-	#Creates an array of offset wavelength from the referece px/wavelength
-	Lambda = CRVAL1 - (CRPIX1 - (np.arange(int(CRPIX1)*2)) -1)* CDELT1
+    CRVAL1 = a[0].header['CRVAL1'] # / Co-ordinate value of axis 1                    
+    CDELT1 = a[0].header['CDELT1'] #  / Co-ordinate increment along axis 1             
+    CRPIX1 = a[0].header['CRPIX1'] #  / Reference pixel along axis 1                   
 
-	return Lambda
+    #Creates an array of offset wavelength from the referece px/wavelength
+    Lambda = CRVAL1 - (CRPIX1 - (np.arange(int(CRPIX1)*2)))* CDELT1
 
-# <codecell>
+    return Lambda
+
+
+# In[ ]:
+
+def extract_iraf_wavelength(header, app):
+    WS = 'WS_'+str(app)
+    WD = 'WD_'+str(app)
+
+    first_px = float(header[WS])
+    disp = float(header[WD])
+    length = header['NAXIS1']
+    wl = np.arange(length)*disp
+    wl += first_px
+    
+    return wl
+
+
+# In[ ]:
+
+def extract_pyhermes_wavelength(fileName):
+
+    thisFile = pf.open(fileName)
+
+    CRVAL1 = thisFile[0].header['CRVAL1'] # / Co-ordinate value of axis 1                    
+    CDELT1 = thisFile[0].header['CDELT1'] #  / Co-ordinate increment along axis 1             
+    CRPIX1 = thisFile[0].header['CRPIX1'] #  / Reference pixel along axis 1                   
+    NAXIS1 = thisFile[0].header['NAXIS1'] #  / length of the array     
+
+    #Creates an array of offset wavelength from the referece px/wavelength
+    Lambda = (np.arange(int(NAXIS1)))* CDELT1 + CRVAL1
+    
+    return Lambda
+
+
+# In[28]:
 
 def pivot_to_y(ref_file):
      
@@ -514,7 +913,8 @@ def pivot_to_y(ref_file):
     
     return a[:,200]
 
-# <codecell>
+
+# In[29]:
 
 
 def calibrator_weights(deltay, sigma):
@@ -546,7 +946,8 @@ def calibrator_weights(deltay, sigma):
     #The first N elements of x contain the weights.
     return x[0:N]
 
-# <codecell>
+
+# In[30]:
 
 def calibrator_weights2(deltay,SNR):
 
@@ -555,7 +956,8 @@ def calibrator_weights2(deltay,SNR):
     c /=np.sum(c)
     return c
 
-# <codecell>
+
+# In[31]:
 
 def calibrator_weights3(deltay,SNR):
 #nope
@@ -564,7 +966,8 @@ def calibrator_weights3(deltay,SNR):
     c /=np.sum(c)
     return c
 
-# <codecell>
+
+# In[32]:
 
 def create_allW(data = [], SNRs = [], starSet=[], RVCorrMethod = 'PM', refEpoch = 0):
 
@@ -617,7 +1020,8 @@ def create_allW(data = [], SNRs = [], starSet=[], RVCorrMethod = 'PM', refEpoch 
 
     return allW
 
-# <codecell>
+
+# In[33]:
 
 def create_RVCorr_PM(RVs, allW, RVClip = 1e17,starSet=[]):
     RVCorr = np.zeros(RVs.shape)
@@ -631,7 +1035,8 @@ def create_RVCorr_PM(RVs, allW, RVClip = 1e17,starSet=[]):
 
     return RVCorr
 
-# <codecell>
+
+# In[34]:
 
 def create_RVCorr_DM(RVs, allW, RVClip = 1e17,starSet=[]):
     RVCorr = np.zeros(RVs.shape)
@@ -646,7 +1051,8 @@ def create_RVCorr_DM(RVs, allW, RVClip = 1e17,starSet=[]):
 
     return RVCorr
 
-# <codecell>
+
+# In[35]:
 
 def quad(x,a,b,c):
     curve  = a*x**2+b*x+c
@@ -662,11 +1068,46 @@ def diff_quad(p, args):
     diff = quad(quadX, p[0],p[1], p[2]) - quadY
     return diff
 
-# <codecell>
 
-def fit_continuum(disp, flux, knot_spacing=200, sigma_clip=(1.0, 0.2), \
-      max_iterations=3, order=3, exclude=None, include=None, \
-      additional_points=None, function='spline', scale=1.0, **kwargs):
+# In[21]:
+
+def tukey(alpha, N):
+    '''
+    Deprecated, use scipy.signal.tukey
+    Creates a tukey function
+    
+    
+    Parameters
+    ----
+    alpha : float
+        Fraction of the pixels to fade in/out.
+        i.e. alpha=0.1 will use 10% of the pixels to go from 0 to 1. 
+        
+    N : int
+        Totla number of pixels in the array.
+        
+        
+    Returns
+    ------
+
+    N-length array of floats from 0 to 1. 
+    '''
+
+    
+    tukey = np.zeros(N)
+    for i in range(int(alpha*(N-1)/2)):
+        tukey[i] = 0.5*(1+np.cos(np.pi*(2*i/alpha/(N-1)-1)))
+    for i in range(int(alpha*(N-1)/2),int((N-1)*(1-alpha/2))):
+        tukey[i] = 1
+    for i in range(int((N-1)*(1-alpha/2)),int((N-1))):
+        tukey[i] = 0.5*(1+np.cos(np.pi*(2*i/alpha/(N-1)-2/alpha+1)))
+    
+    return tukey
+
+
+# In[36]:
+
+def fit_continuum(disp, flux, knot_spacing=200, sigma_clip=(1.0, 0.2),       max_iterations=3, order=3, exclude=None, include=None,       additional_points=None, function='spline', scale=1.0, **kwargs):
     """Fits the continuum for a given `Spectrum1D` spectrum.
     
     Parameters

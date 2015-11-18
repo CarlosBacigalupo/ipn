@@ -1,7 +1,7 @@
-# -*- coding: utf-8 -*-
-# <nbformat>3.0</nbformat>
 
-# <codecell>
+# coding: utf-8
+
+# In[ ]:
 
 def extract_HERMES_wavelength(header):
     
@@ -16,44 +16,53 @@ def extract_HERMES_wavelength(header):
 
     return Lambda
 
-# <codecell>
+
+# In[ ]:
 
 import pylab as plt
 import pyfits as pf
 
-# <codecell>
+
+# In[ ]:
 
 a = pf.open('25aug10035.ms.fits')
 
-# <codecell>
+
+# In[ ]:
 
 CRVAL1 = 4714.9999999
 CDELTA1 = .045177
 CRPIX1 = 1.
 data_len = 4096
 
-# <codecell>
+
+# In[ ]:
 
 wl = np.arange(data_len)*CDELTA1+CRVAL1
 
-# <codecell>
+
+# In[ ]:
 
 wl
 
-# <codecell>
+
+# In[ ]:
 
 myfile = pf.open('21aug10036red.fits')
 
-# <codecell>
+
+# In[ ]:
 
 extract_HERMES_wavelength(myfile[0].header)
 
-# <codecell>
+
+# In[ ]:
 
 flux1 = myfile[0].data[5]
 flux2 = myfile[0].data[20]
 
-# <codecell>
+
+# In[ ]:
 
 plt.plot(flux1)
 plt.plot(flux2)
@@ -62,29 +71,35 @@ plt.show()
 
     
 
-# <codecell>
+
+# In[ ]:
 
 plt.plot(np.correlate(flux1, flux2, 'same'))
 plt.show()
 
-# <codecell>
+
+# In[ ]:
 
 import pickle
 import toolbox
 
-# <codecell>
+
+# In[ ]:
 
 cd /Users/Carlos/Documents/HERMES/reductions/6.5/rhoTuc/obj/
 
-# <codecell>
+
+# In[ ]:
 
 thisCam = thisStar.exposures.cameras[3]
 
-# <codecell>
+
+# In[ ]:
 
 thisCam.RVs
 
-# <codecell>
+
+# In[ ]:
 
 import numpy as np
 import pickle
@@ -108,7 +123,8 @@ thisStar = pickle.load(filehandler)
 thisCam = thisStar.exposures.cameras[0]
 
 
-# <codecell>
+
+# In[ ]:
 
 import numpy as np
 import pickle
@@ -178,15 +194,13 @@ for CCTHisSet in range(15):
 
     # #                 SNR = np.median(thisCam.red_fluxes[i])/np.std(thisCam.red_fluxes[i])
 
-# <codecell>
 
-
-# <codecell>
+# In[ ]:
 
 import pickle
 filename = 'HD1581.obj'
 # filename = 'Brght01.obj'
-# filename = 'red_Giant01.obj'
+.# filename = 'red_Giant01.obj'
 # filename = 'Giant01.obj'
 # filename = 'Field01.obj'
 filehandler = open(filename, 'r')
@@ -202,7 +216,8 @@ plt.plot(lambda2,flux2)
 plt.plot(lambda2,fluxMed)
 plt.show()
 
-# <codecell>
+
+# In[ ]:
 
 def clean_flux(wavelength, flux, thisCam, xDef = 1, medianRange = 0):
     '''Clean a 1D spectrum. 
@@ -250,7 +265,8 @@ def clean_flux(wavelength, flux, thisCam, xDef = 1, medianRange = 0):
     return wavelength, flux, fluxMed
 
 
-# <codecell>
+
+# In[ ]:
 
 def cubic(x,a,b,c,d):
     '''
@@ -258,7 +274,8 @@ def cubic(x,a,b,c,d):
     '''
     return a*x**3+b*x**2+c*x+d
 
-# <codecell>
+
+# In[ ]:
 
 def tukey(alpha, N):
     '''Creates a tukey function
@@ -291,7 +308,8 @@ def tukey(alpha, N):
     
     return tukey
 
-# <codecell>
+
+# In[ ]:
 
 for i in thisCam.red_fluxes:
     plt.plot(i)
@@ -299,7 +317,8 @@ plt.show()
 # plt.plot(thisCam.RVs)
 # plt.show()
 
-# <codecell>
+
+# In[ ]:
 
 for flux,mj in zip(thisCam.red_fluxes,thisStar.exposures.JDs):
     plt.plot(flux+mj)
@@ -307,19 +326,23 @@ plt.show()
 # plt.plot(thisCam.RVs)
 # plt.show()
 
-# <codecell>
+
+# In[ ]:
 
 np.sum(thisCam.red_fluxes, axis=1)
 
-# <codecell>
+
+# In[ ]:
 
 print thisStar.exposures.JDs
 
-# <codecell>
+
+# In[ ]:
 
 ls
 
-# <codecell>
+
+# In[ ]:
 
 i=0
 for x,y,label in zip(thisCam.wavelengths, thisCam.red_fluxes, thisCam.fileNames):
@@ -329,13 +352,15 @@ plt.title(thisStar.name)
 # plt.legend(loc = 0)
 plt.show()
 
-# <codecell>
+
+# In[ ]:
 
 for i in a.sigmas[:]:
     plt.plot(i)
 plt.show()
 
-# <codecell>
+
+# In[ ]:
 
 #Fit gaussian in CCCurves
 def gaussian(x, mu, sig, ):
@@ -371,19 +396,22 @@ def extract_HERMES_wavelength(fileName):
 
 	return Lambda
 
-# <codecell>
+
+# In[ ]:
 
 np.sum(thisCam.wavelengths,1)
 np.sum(np.isnan(thisCam.wavelengths))
 
-# <codecell>
+
+# In[ ]:
 
 mid_px = thisCam.wavelengths.shape[1]/2
 dWl = (thisCam.wavelengths[0,mid_px+1]-thisCam.wavelengths[0,mid_px]) / thisCam.wavelengths[0,mid_px]
 RV = dWl * 0.5 * 3e8
 print 'RV',RV, mid_px, thisCam.wavelengths[0,mid_px+1], thisCam.wavelengths[0,mid_px]
 
-# <codecell>
+
+# In[ ]:
 
 def clean_flux(wavelength, flux, thisCam, xDef = 1, medianRange = 0):
     '''Clean a 1D spectrum. 
@@ -430,7 +458,8 @@ def clean_flux(wavelength, flux, thisCam, xDef = 1, medianRange = 0):
     
     return wavelength, flux
 
-# <codecell>
+
+# In[ ]:
 
 def cubic(x,a,b,c,d):
     '''
@@ -438,7 +467,8 @@ def cubic(x,a,b,c,d):
     '''
     return a*x**3+b*x**2+c*x+d
 
-# <codecell>
+
+# In[ ]:
 
 def tukey(alpha, N):
     '''Creates a tukey function
@@ -471,90 +501,109 @@ def tukey(alpha, N):
     
     return tukey
 
-# <codecell>
+
+# In[ ]:
 
 a
 
-# <codecell>
+
+# In[ ]:
 
 thisStar.exposures.cameras[3].sigmas
 
-# <codecell>
+
+# In[ ]:
 
 
 print thisCam.fileNames.shape
 
 print thisCam.wavelengths.shape
 
-# <codecell>
+
+# In[ ]:
 
 print thisCam.RVs
 plt.plot(thisCam.RVs,'.')
 plt.show()
 
-# <codecell>
+
+# In[ ]:
 
 import pickle
 import pylab as plt
 import numpy as np
 
-# <codecell>
+
+# In[ ]:
 
 cd ~/Documents/HERMES/reductions/47Tuc_core_6.2/
 
-# <codecell>
+
+# In[ ]:
 
 print np.all([np.nansum(thisCam.red_fluxes,1).astype(bool) for thisCam in thisStar.exposures.cameras],0)
 
-# <codecell>
+
+# In[ ]:
 
 plt.plot(thisCam.red_fluxes[0])
 plt.show()
 
-# <codecell>
+
+# In[ ]:
 
 print thisCam.SNRs
 print np.nansum(thisCam.red_fluxes,1)
 print thisCam.fileNames
 
-# <codecell>
+
+# In[ ]:
 
 thisStar.exposures.JDs.shape[0]
 
-# <codecell>
+
+# In[ ]:
 
 thisStar.exposures.JDs.shape
 
-# <codecell>
+
+# In[ ]:
 
 import scipy as sp
 
-# <codecell>
+
+# In[ ]:
 
 from scipy import optimize
 
-# <codecell>
+
+# In[ ]:
 
 thisStar.exposures.abs_baryVels
 
-# <codecell>
+
+# In[ ]:
 
 pwd
 
-# <codecell>
+
+# In[ ]:
 
 print RVs[0].shape
 
-# <codecell>
+
+# In[ ]:
 
 cd '/Users/Carlos/Documents/HERMES/reductions/47Tuc_core_6.2'
 
-# <codecell>
+
+# In[ ]:
 
 RVs = np.load('RVs.npy')
 SNRs = np.load('SNRs.npy')
 
-# <codecell>
+
+# In[ ]:
 
 for epoch in range(RVs.shape[1]):
     cam = 0
@@ -565,54 +614,64 @@ for epoch in range(RVs.shape[1]):
     plt.plot(R,S,'.', c='r')
     plt.show()
 
-# <codecell>
+
+# In[ ]:
 
 a = np.histogram(R)
 # plt.plot(a[1][:-1],a[0],'.')
 plt.bar(a[1][:-1],a[0], width = (a[1][-2]-a[1][-1])*0.7)
 plt.show()
 
-# <codecell>
+
+# In[ ]:
 
 a = np.histogram(R)
 plt.plot(R,S,'.', c='r')
 # plt.bar(a[1][:-1],a[0], width = (a[1][-2]-a[1][-1])*0.7)
 plt.show()
 
-# <codecell>
+
+# In[ ]:
 
 R = RVs[:,15,0]
 S = SNRs[:,15,0]
 
-# <codecell>
+
+# In[ ]:
 
 a = np.histogram(R)
 # plt.plot(a[1][:-1],a[0],'.')
 plt.bar(a[1][:-1],a[0], width = (a[1][-2]-a[1][-1])*0.7)
 plt.show()
 
-# <codecell>
+
+# In[ ]:
 
 import os
 
-# <codecell>
+
+# In[ ]:
 
 os.curdir
 
-# <codecell>
+
+# In[ ]:
 
 pwd
 
-# <codecell>
+
+# In[ ]:
 
 os.getcwd().split('/')[-1]
 
-# <codecell>
+
+# In[ ]:
 
 plt.plot(thisCam.red_fluxes)
 plt.show()
 
-# <codecell>
+
+# In[ ]:
 
 i=6
 np.nanmean(thisCam.red_fluxes[i])/np.std(thisCam.red_fluxes[i])
@@ -620,64 +679,43 @@ print np.sqrt(np.nanmean(thisCam.red_fluxes[i]))
 print np.nansum(thisCam.red_fluxes[i])
 print stats.nanmedian(thisCam.red_fluxes[i])/stats.nanstd(thisCam.red_fluxes[i])
 
-# <codecell>
+
+# In[ ]:
 
 PyAstronomy
 
-# <codecell>
+
+# In[ ]:
 
 import PyAstronomy
 
-# <codecell>
 
-cd ~/Documents/HERMES/reductions/HD1581_1arc_6.2/obj/
+# In[ ]:
 
-# <codecell>
+cd ~/Documents/HERMES/reductions/6.5/HD1581/
+
+
+# In[ ]:
 
 import pickle
 # filename = 'HD1581.obj'
 # filename = 'Brght01.obj'
 # filename = 'red_Giant01.obj'
 # filename = 'Giant01.obj'
-filename = 'Field01.obj'
+filename = 'obj/HD1581.obj'
 filehandler = open(filename, 'r')
 thisStar = pickle.load(filehandler)
-thisCam = thisStar.exposures.cameras[3]
+thisCam = thisStar.exposures.cameras[0]
 
-# <codecell>
+
+# In[ ]:
 
 import pylab as plt
 plt.plot(thisCam.red_fluxes[0])
 plt.show()
 
-# <codecell>
 
-from PyAstronomy import pyasl
-
-def baryTest(thisStar):
-
-    for i,jd in enumerate((thisStar.exposures.JDs+2400000.5)[:]):
-        heli, bary = pyasl.baryvel(jd, deq=2000.0)
-#         print "Earth's velocity at JD: ", jd
-#         print "Heliocentric velocity [km/s]: ", heli
-#         print "Barycentric velocity [km/s] : ", bary
-
-        # Coordinates of Sirius
-        ra  = 101.28715535
-        dec = -16.71611587
-        
-        #thisStar coords
-        ra  = np.rad2deg(thisStar.RA_dec)
-        dec = np.rad2deg(thisStar.Dec_dec)
-        print np.rad2deg(thisStar.RA_dec), np.rad2deg(thisStar.Dec_dec), thisStar.name, thisStar.exposures.abs_baryVels[i]
-
-        
-        vh, vb = pyasl.baryCorr(jd, ra, dec, deq=2000.0)
-        print "Barycentric velocity of Earth toward",thisStar.name,'[m/s]', vb*1000
-        print vb*1000-thisStar.exposures.abs_baryVels[i]
-        print ''
-
-# <codecell>
+# In[ ]:
 
 from PyAstronomy import pyasl
 
@@ -694,9 +732,9 @@ def baryTest2(baryVels, JDs):
         dec = -16.71611587
         
         #thisStar coords
-        ra  = np.rad2deg(thisStar.RA_dec)
-        dec = np.rad2deg(thisStar.Dec_dec)
-        print np.rad2deg(thisStar.RA_dec), np.rad2deg(thisStar.Dec_dec), thisStar.name, thisStar.exposures.abs_baryVels[i]
+        ra  = np.rad2deg(thisStar.RA)
+        dec = np.rad2deg(thisStar.Dec)
+        print np.rad2deg(thisStar.RA), np.rad2deg(thisStar.Dec), thisStar.name, thisStar.exposures.abs_baryVels[i]
 
         
         vh, vb = pyasl.baryCorr(jd, ra, dec, deq=2000.0)
@@ -704,50 +742,106 @@ def baryTest2(baryVels, JDs):
         print vb*1000-thisStar.exposures.abs_baryVels[i]
         print ''
 
-# <codecell>
+
+# In[ ]:
+
+bary = np.load('npy/baryVels.npy')
+print bary, thisStar.exposures.abs_baryVels`
+
+
+# In[ ]:
+
+from PyAstronomy import pyasl
+
+def baryTest(thisStar):
+
+    for i,jd in enumerate((thisStar.exposures.JDs+2400000.5)[:]):
+        heli, bary = pyasl.baryvel(jd, deq=0)
+#         print "Earth's velocity at JD: ", jd
+#         print "Heliocentric velocity [km/s]: ", heli
+#         print "Barycentric velocity [km/s] : ", bary
+
+        # Coordinates of Sirius
+        ra  = 101.28715535
+        dec = -16.71611587
+        
+        #thisStar coords
+        ra  = thisStar.RA
+        dec = thisStar.Dec
+        print thisStar.RA/15, thisStar.Dec, thisStar.name, thisStar.exposures.abs_baryVels[i]
+
+        
+        vh, vb = pyasl.baryCorr(jd, ra, dec, deq=0)
+        print "Barycentric velocity of Earth toward",thisStar.name,'[m/s]', vb*1000
+        print vb*1000-thisStar.exposures.abs_baryVels[i]
+        print ''
+
+
+# In[ ]:
+
+from iraf import pyraf
+
+
+# In[ ]:
 
 import numpy as np
 baryTest(thisStar)
 
-# <codecell>
 
+# In[ ]:
+
+barys = np.load('npy/baryVels.npy')
+
+
+# In[ ]:
+
+HD1581 coords
 Right ascension	00h 20m 04.25995s
 Declination	−64° 52′ 29.2549″
 
-# <codecell>
+
+# In[ ]:
 
 print thisStar.RA_dec, thisStar.Dec_dec#, thisStar.RA_h, thisStar.RA_min , thisStar.RA_sec
 
-# <codecell>
+
+# In[ ]:
 
 import toolbox
 toolbox.dec2sex(thisStar.RA_dec)
 
-# <codecell>
+
+# In[ ]:
 
 import numpy as np
 
-# <codecell>
+
+# In[ ]:
 
 thisStar.RA_dec, toolbox.dec2sex(np.rad2deg(thisStar.RA_dec)/15)
 
-# <codecell>
+
+# In[ ]:
 
 00 20 06.49 -64 52 06.6
 
-# <codecell>
+
+# In[ ]:
 
 np.deg2rad(toolbox.sex2dec(0,20,06.49)*15)
 
-# <codecell>
+
+# In[ ]:
 
 np.deg2rad(-toolbox.sex2dec(64,52,6.6))
 
-# <codecell>
+
+# In[ ]:
 
 -toolbox.sex2dec(64,52,6.6)
 
-# <codecell>
+
+# In[ ]:
 
 RVs = np.random.random(100)
 stdRV= np.std(RVs)
@@ -756,22 +850,26 @@ sigmaClip = 0.1
 print RVs,stdRV,medRV
 print RVs[(RVs>=medRV-sigmaClip*stdRV) & (RVs<=medRV+sigmaClip*stdRV)]
 
-# <codecell>
+
+# In[ ]:
 
 import pylab as plt
 
-# <codecell>
+
+# In[ ]:
 
 g = plt.gca()
 g.xaxis.majorTic
 plt.show()
 
-# <codecell>
+
+# In[ ]:
 
 import matplotlib.pyplot as plt
 
 
-# <codecell>
+
+# In[ ]:
 
 fig = plt.figure()
 # plt.title(title)
@@ -787,23 +885,28 @@ ax = fig.add_subplot(111)
 # ax2.scatter(R,S, c='r', s=100)
 ax.bar(0,1 , width = (1), color='k')
 
-# <codecell>
+
+# In[ ]:
 
 plt.show()
 
-# <codecell>
+
+# In[ ]:
 
 pwd
 
-# <codecell>
+
+# In[ ]:
 
 cd 47Tuc_core_6.2/
 
-# <codecell>
+
+# In[ ]:
 
 cd obj
 
-# <codecell>
+
+# In[ ]:
 
 import pickle
 # filename = 'HD1581.obj'
@@ -815,69 +918,81 @@ filehandler = open(filename, 'r')
 thisStar = pickle.load(filehandler)
 thisCam = thisStar.exposures.cameras[3]
 
-# <codecell>
+
+# In[ ]:
 
 print thisStar.exposures
 thisCam.fileNames
 
-# <codecell>
+
+# In[ ]:
 
 thisCam.red_fluxes
 
-# <codecell>
+
+# In[ ]:
 
 float(np.sum(np.isnan(SNRs)))/(SNRs.shape[0]*SNRs.shape[1]*SNRs.shape[2])*100
 
-# <codecell>
+
+# In[ ]:
 
 import pylab as plt
 plt.plot(RVs[:,:,0])
 plt.show()
 
-# <codecell>
 
-    data=np.load('npy/data.npy')
-    RVs=np.load('npy/RVs.npy')
+# In[ ]:
+
+data=np.load('npy/data.npy')
+RVs=np.load('npy/RVs.npy')
 #     sigmas=np.load('npy/sigmas.npy')
 #     baryVels=np.load('npy/baryVels.npy')
 #     JDs=np.load('npy/JDs.npy')
-    SNRs = np.load('npy/SNRs.npy')
+SNRs = np.load('npy/SNRs.npy')
 
-# <codecell>
+
+# In[ ]:
 
 pwd
 
-# <codecell>
+
+# In[ ]:
 
 
 filehandler = open('obj/red_N104-S1084.obj', 'r')
 thisStar = pickle.load(filehandler)
 
-# <codecell>
+
+# In[ ]:
 
 thisCam = thisStar.exposures.cameras[0]
 
-# <headingcell level=1>
 
-# Bary tests
+# # Bary tests
 
-# <codecell>
+# In[ ]:
 
 import toolbox as tb
 from PyAstronomy import pyasl
 
 
-# <codecell>
+
+# In[ ]:
 
 MJD = 57131.84792 
-RA = tb.deg2rad(tb.sex2dec(0,24,05.67)*15) #47tuc in rad
-Dec = tb.deg2rad(-tb.sex2dec(72,4,52.6)) #47Tuc in rad
+# RA = tb.deg2rad(tb.sex2dec(0,24,05.67)*15) #47tuc in rad
+# Dec = tb.deg2rad(-tb.sex2dec(72,4,52.6)) #47Tuc in rad
+RA = tb.deg2rad(tb.sex2dec(0,20,06.49)*15) #HD1581 in rad
+Dec = tb.deg2rad(-tb.sex2dec(64,52,06.6)) #HD1581 in rad
 
-# <codecell>
 
-RA, Dec
+# In[ ]:
 
-# <codecell>
+00 20 06.49 -64 52 06.6
+
+
+# In[ ]:
 
 MJDs = []
 RVs = []
@@ -898,7 +1013,8 @@ RVs = np.array(RVs)
 RV2s = np.array(RV2s)
 RV3s = np.array(RV3s)
 
-# <codecell>
+
+# In[ ]:
 
 plt.plot(MJDs, RVs)
 plt.plot(MJDs, RV2s)
@@ -911,11 +1027,10 @@ plt.legend(loc=0)
 plt.show()
 
 
-# <headingcell level=1>
 
-# plot app
+# # plot app
 
-# <codecell>
+# In[ ]:
 
 import numpy as np
 import pylab as plt
@@ -935,28 +1050,37 @@ def onpick2():
     a=2
     print a
 
-# <codecell>
+
+# In[ ]:
 
 def aaa():
     xxx = 'sdd'
     print 'asdasd'
     return xxx
 
-# <codecell>
+
+# In[ ]:
 
 def test():
     print 'adasd'
 
-# <codecell>
+
+# In[ ]:
 
 
-# <codecell>
 
 
-# <codecell>
+# In[ ]:
 
 
-# <codecell>
+
+
+# In[ ]:
+
+
+
+
+# In[ ]:
 
 import glob
 import numpy as np
@@ -970,19 +1094,23 @@ for i in a:
         b = np.load(i+'/npy/data.npy')
         print b.shape[0]
 
-# <codecell>
+
+# In[ ]:
 
 data
 
-# <codecell>
+
+# In[ ]:
 
 cd HD285507_1arc_6.2/
 
-# <codecell>
+
+# In[ ]:
 
 cd HERMES/reductions/HD285507_1arc_6.2/
 
-# <codecell>
+
+# In[ ]:
 
 import glob
 import numpy as np
@@ -991,7 +1119,8 @@ data=np.load('npy/data.npy')
 RVs=np.load('npy/RVs.npy')
 SNRs=np.load('npy/SNRs.npy')
 
-# <codecell>
+
+# In[ ]:
 
 RVs.shape
 W = np.zeros(np.hstack((RVs.shape, RVs.shape[0])))
@@ -1001,45 +1130,53 @@ for thisStarIdx in range(RVs.shape[0]):
     W[:,:,:,thisStarIdx]=W1
     
 
-# <codecell>
+
+# In[ ]:
 
 data[thisStarIdx,2].astype(float).astype(int)
 
-# <codecell>
+
+# In[ ]:
 
 import RVTools as RVT
 reload(RVT)
 import pylab as plt
 import pandas as pd
 
-# <codecell>
+
+# In[ ]:
 
 data=np.load('npy/data.npy')
 RVs=np.load('npy/RVs.npy')
 SNRs=np.load('npy/SNRs.npy')
 
-# <codecell>
+
+# In[ ]:
 
 # SNRs[:,:,0][SNRs[:,:,0]<1]
 SNRs[np.isnan(SNRs)]=0
 SNRs+=1e-17
 create_allW(data,SNRs)
 
-# <codecell>
+
+# In[ ]:
 
 import numpy as np
 import pylab as plt
 
-# <codecell>
+
+# In[ ]:
 
 cd /Users/Carlos/Documents/HERMES/reductions/6.2/HD285507_1arc_6.2/
 
-# <codecell>
+
+# In[ ]:
 
 allW = np.load('npy/allW_DM.npy')
 allW[0,:,0][0]
 
-# <codecell>
+
+# In[ ]:
 
 
 # deltay = np.linspace(0, 4000)
@@ -1072,11 +1209,13 @@ for cam in range(4):
     plt.savefig(('PM_'+str(cam)))
     plt.show()
 
-# <codecell>
+
+# In[ ]:
 
 import numpy as np
 
-# <codecell>
+
+# In[ ]:
 
 def create_allW(data = [], SNRs = []):
 
@@ -1121,7 +1260,8 @@ def create_allW(data = [], SNRs = []):
 
     return allW
 
-# <codecell>
+
+# In[ ]:
 
 def create_RVCorr(RVs, allW, RVClip = 1e17):
     RVCorr = np.zeros(RVs.shape)
@@ -1132,7 +1272,8 @@ def create_RVCorr(RVs, allW, RVClip = 1e17):
                 RVCorr[thisStarIdx,epoch,cam] = np.nansum(allW[:,cam,thisStarIdx]*RVs[:,epoch,cam])
     return RVCorr
 
-# <codecell>
+
+# In[ ]:
 
 # for i in range(40):
 i=37
@@ -1142,16 +1283,19 @@ plt.plot(RVs[i,:,0]-RV_corr[i,:,0], label = 'Result', marker = 'o')
 plt.legend(loc=0)
 plt.show()
 
-# <codecell>
+
+# In[ ]:
 
 np.where(data[:,0]=='Giant01')
 
-# <codecell>
+
+# In[ ]:
 
 for epoch in range(RVs.shape[1]):
     print np.sum(RVs[:,epoch,1])/RVs.shape[1]
 
-# <codecell>
+
+# In[ ]:
 
 def create_corrRVs(RVs,W):
 #Creates corrRVs with RV corrections for each RV. 
@@ -1176,11 +1320,10 @@ def create_corrRVs(RVs,W):
         
     return corrRVs
 
-# <headingcell level=3>
 
-# Solar Spectrum
+# ### Solar Spectrum
 
-# <codecell>
+# In[ ]:
 
 import pyfits as pf
 import pylab as plt
@@ -1208,18 +1351,18 @@ plt.show()
 #         b+=a
 
 
-# <headingcell level=3>
 
-# SNR 3d plots
+# ### SNR 3d plots
 
-# <codecell>
+# In[ ]:
 
 SNRs=np.load('npy/SNRs.npy')
 Data=np.load('npy/Data.npy')
 
 labels = Data[:,0]
 
-# <codecell>
+
+# In[ ]:
 
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib import cm
@@ -1251,11 +1394,10 @@ ax.set_yticks(np.arange(0,SNRs.shape[0],5))
 plt.show()
 
 
-# <headingcell level=3>
 
-# Comments array
+# ### Comments array
 
-# <codecell>
+# In[ ]:
 
 def comment(star, epoch, cam, comment):
     comments = []
@@ -1276,64 +1418,75 @@ def comment(star, epoch, cam, comment):
     np.save('npy/comments.npy',comments)
         
 
-# <codecell>
+
+# In[ ]:
 
 comment(0,0,0,'test')
 
-# <codecell>
 
-c = np.load('npy/comments.npy')
+# In[ ]:
+
+c = np.load('npy/comments.npy') 
 d = np.load('npy/data.npy')
 
-# <codecell>
+
+# In[ ]:
 
 d[1]
 
-# <codecell>
+
+# In[ ]:
 
 filename = 'obj/Field03.obj'
 # filename = 'red_Giant01.obj'
 filehandler = open(filename, 'r')
 thisStar = pickle.load(filehandler)
 
-# <codecell>
+
+# In[ ]:
 
 from scipy import stats
 
-# <codecell>
+
+# In[ ]:
 
 thisCam = thisStar.exposures.cameras[0]
 
-# <codecell>
+
+# In[ ]:
 
 stats.nanmedian(thisCam.red_fluxes[13])
 
-# <codecell>
+
+# In[ ]:
 
 c
 
-# <codecell>
+
+# In[ ]:
 
 [np.asarray(a), np.asarray(a)]
 
-# <codecell>
+
+# In[ ]:
 
 x = np.zeros((2,),dtype=('i4,i4,i4,a10'))
 x[:] = [(1,2,3,'Hello'),(2,3,4,"World")]
 
-# <codecell>
+
+# In[ ]:
 
 np.append(x,x)
 
-# <codecell>
+
+# In[ ]:
 
 np.vstack((x,(1,2,3,'Hello')))
 
-# <headingcell level=3>
 
-# Check RVCorr
+# ### Check RVCorr
 
-# <codecell>
+# In[ ]:
 
 data=np.load('npy/data.npy')
 RVs=np.load('npy/RVs.npy')
@@ -1346,11 +1499,13 @@ JDs=np.load('npy/JDs.npy')
 # cRVs_DM=np.load('npy/cRVs_DM.npy')
 # cRVs_PMDM=np.load('npy/cRVs_PMDM.npy')
 
-# <codecell>
+
+# In[ ]:
 
 idx = np.where(data[:,0]=='Giant01')[0][0]
 
-# <codecell>
+
+# In[ ]:
 
 starIdx = idx
 cam = 0
@@ -1358,7 +1513,8 @@ cam = 0
 RVs[RVs>5000]=np.nan
 RVs[RVs<-5000]=np.nan
 
-# <codecell>
+
+# In[ ]:
 
 plt.plot(RVs[starIdx,:,cam])
 # plt.plot(RVCorr_DM[starIdx,:,cam])
@@ -1367,27 +1523,32 @@ plt.plot(RVCorr_PM[starIdx,:,cam])
 plt.plot(RVs[starIdx,:,cam]-RVCorr_PM[starIdx,:,cam])
 plt.show()
 
-# <codecell>
+
+# In[ ]:
 
 reload(RVT)
 
-# <codecell>
+
+# In[ ]:
 
 allW_PM = RVT.create_allW(data, SNRs, starSet = [], RVCorrMethod = 'PM', refEpoch = 0) 
 # RVCorr_PM = RVT.create_RVCorr_PM(RVs, allW_PM, RVClip = 2000, starSet = [])
 
-# <codecell>
+
+# In[ ]:
 
 plt.plot(allW_PM[:,0,starIdx])
 plt.plot(SNRs[:,0,starIdx])
 plt.plot(W)
 plt.show()
 
-# <codecell>
+
+# In[ ]:
 
 data[starIdx]
 
-# <codecell>
+
+# In[ ]:
 
 p2y = RVT.pivot_to_y('/Users/Carlos/Documents/HERMES/reductions/6.2/rhoTuc_6.2/0_20aug/1/20aug10042tlm.fits') 
 datay = p2y[data[:,2].astype(float).astype(int)]
@@ -1397,115 +1558,140 @@ thisSigma = 1./SNRs[:,0,0].copy()
 thisSigma[np.isnan(thisSigma)]=1e+17  #sets NaNs into SNR=1e-17
 W = RVT.calibrator_weights(deltay,thisSigma)
 
-# <codecell>
+
+# In[ ]:
 
 W
 
-# <codecell>
+
+# In[ ]:
 
 import psycopg2 as mdb
 con = mdb.connect("dbname=hermes_master user=Carlos")
 cur = con.cursor()
 cur.execute("CREATE TABLE fields(id int)")
 
-# <codecell>
+
+# In[ ]:
 
 con.rollback()
 
-# <codecell>
+
+# In[ ]:
 
 con.commit()
 
-# <codecell>
+
+# In[ ]:
 
 con.close()
 
-# <codecell>
+
+# In[ ]:
 
 import psycopg2 as mdb
 con=mdb.connect("host=/tmp/ dbname=hermes_master user=Carlos");
 
-# <codecell>
+
+# In[ ]:
 
 con=mdb.connect("dbname=hermes_master user=Carlos");
 
-# <codecell>
+
+# In[ ]:
 
 
 con=mdb.connect("host=/usr/local/var dbname=hermes_master user=Carlos");
 
-# <codecell>
+
+# In[ ]:
 
 cur = con.cursor()
 
-# <codecell>
+
+# In[ ]:
 
 cur.execute("SELECT spec_path,name from fields where ymd=140825 and ccd='ccd_1' and obstype='BIAS'")
 
-# <codecell>
+
+# In[ ]:
 
 objs=cur.fetchall()
 
-# <codecell>
+
+# In[ ]:
 
 from pyraf import iraf
 
-# <codecell>
+
+# In[ ]:
 
 iraf.noao(_doprint=0,Stdout="/dev/null")
 iraf.imred(_doprint=0,Stdout="/dev/null")
 iraf.ccdred(_doprint=0,Stdout="/dev/null")
 
-# <codecell>
+
+# In[ ]:
 
 iraf.ccdproc(images='tmp/flats/25aug10034.fits', ccdtype='', fixpix='no', oversca='no', trim='no', zerocor='yes', darkcor='no', flatcor='no', zero='tmp/masterbias',Stdout="/dev/null")
 
-# <codecell>
+
+# In[ ]:
 
 pwd
 
-# <codecell>
+
+# In[ ]:
 
 cd ~/Documents/workspace/GAP/IrafReduction/140825/ccd11/
 
-# <codecell>
+
+# In[ ]:
 
 import pyfits as pf
 
-# <codecell>
+
+# In[ ]:
 
 pf.open('tmp/masterbias.fits')
 
-# <codecell>
+
+# In[ ]:
 
 import cosmics
 
-# <codecell>
+
+# In[ ]:
 
 import numpy as np
 import pylab as plt
 
-# <codecell>
+
+# In[ ]:
 
 a = np.arange(5)
 b = np.array([1,5,3,2,5])
 c = np.arange(0.5,4.5)
 
-# <codecell>
+
+# In[ ]:
 
 d = np.interp(c,a,b)
 
-# <codecell>
+
+# In[ ]:
 
 b
 
-# <codecell>
+
+# In[ ]:
 
 plt.plot(a,b,marker='+')
 plt.scatter(c,d, marker = '+', s=200, c='r')
 plt.show()
 
-# <codecell>
+
+# In[ ]:
 
 import os
 import create_obj as cr_obj
@@ -1517,13 +1703,15 @@ import sys
 import toolbox
 import importlib
 
-# <codecell>
+
+# In[ ]:
 
 booHD1581 = False
 IRAFFiles = '/Users/Carlos/Documents/workspace/GAP/IrafReduction/results/'   #folder to IRAF reduced files
 dataset = 'HD285507'
 
-# <codecell>
+
+# In[ ]:
 
 os.mkdir('cam1')
 os.mkdir('cam2')
@@ -1531,20 +1719,23 @@ os.mkdir('cam3')
 os.mkdir('cam4')
 os.mkdir('obj')
 
-# <codecell>
+
+# In[ ]:
 
 thisDataset = importlib.import_module('data_sets.'+dataset)
 
     
 
-# <codecell>
+
+# In[ ]:
 
 months = np.array(['', 'jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'])
 d = np.array([s[4:] for s in thisDataset.date_list])
 m = months[np.array([s[2:4] for s in thisDataset.date_list]).astype(int)]
 filename_prfx = np.core.defchararray.add(d, m)
 
-# <codecell>
+
+# In[ ]:
 
 for i,folder in enumerate(thisDataset.date_list):
     for files in thisDataset.ix_array[i][2:]:
@@ -1557,37 +1748,43 @@ for i,folder in enumerate(thisDataset.date_list):
             except:
                 print 'no copy'
 
-# <codecell>
+
+# In[ ]:
 
 thisDataset.ix_array[1][2:]
 
-# <codecell>
+
+# In[ ]:
 
 
-# <codecell>
+
+
+# In[ ]:
 
 filename_prfx
 
-# <codecell>
+
+# In[ ]:
 
 thisDataset.ix_array
 
-# <headingcell level=3>
 
-# CC arcs
+# ### CC arcs
 
-# <codecell>
+# In[ ]:
 
 cd ~/Documents/HERMES/reductions/6.5/HD285507/
 
-# <codecell>
+
+# In[ ]:
 
 import glob
 import os
 import importlib
 import numpy as np
 
-# <codecell>
+
+# In[ ]:
 
 #Copy are files
 files = glob.glob('*')
@@ -1620,7 +1817,8 @@ for i,folder in enumerate(thisDataset.date_list):
 #     except:
 #         print 'error'
 
-# <codecell>
+
+# In[ ]:
 
 import pyfits as pf
 import pylab as plt
@@ -1688,7 +1886,8 @@ for cam in range(4):
             except:
                 pass
 
-# <codecell>
+
+# In[ ]:
 
 cam =3
 filename = 'HD1581arc_IR'
@@ -1705,7 +1904,8 @@ for i,thisFile in enumerate(files):
         file_object.write(str(wl)+' '+str(fl)+'\n')
     file_object.close()
 
-# <codecell>
+
+# In[ ]:
 
 import pickle
 filename = '../obj/HD1581.obj'
@@ -1719,25 +1919,30 @@ thisCam =  thisStar.exposures.cameras[0]
 
 thisStar.exposures.pivots
 
-# <codecell>
+
+# In[ ]:
 
 RVs = np.nanmean(arcRVs,axis=0)
 
-# <codecell>
+
+# In[ ]:
 
 X = JDs[np.array([0,1,4,7,12])]
 
-# <codecell>
+
+# In[ ]:
 
 JDs = np.load('../npy/JDs.npy')
 plt.scatter(JDs,arcRVs[175])
 plt.show()
 
-# <codecell>
+
+# In[ ]:
 
 np.save('npy/arcRVs',arcRVs)
 
-# <codecell>
+
+# In[ ]:
 
 print arcRVs.shape
 arcRVs2 = np.ones((400,15,4))*np.nan
@@ -1759,105 +1964,30 @@ arcRVs2[:,14,:] = arcRVs[:,4,:]
 arcRVs = arcRVs2
 print arcRVs.shape
 
-# <codecell>
+
+# In[ ]:
 
 arcRVs.shape
 
-# <headingcell level=3>
 
-# fibre ID table
-
-# <codecell>
-
-import pandas as pd
-
-# <codecell>
-
-np.tile(np.arange(10,0,-1),40)+np.repeat(np.arange(0,40)*10,10)
-
-# <codecell>
-
-labels = ['2dfID', 'idxData']
-
-
-rev_num = np.tile(np.arange(10,0,-1),40)+np.repeat(np.arange(0,40)*10,10)
-
-data = np.zeros((400,2))
-# data[:] = ''
-data[:,0] = np.arange(1,401)
-data[:,1] = (rev_num-1)
-# print data
-# data[range(49,399,50),5] = 'Guiding fibre'
-a = pd.DataFrame(data)
-a.columns = labels
-
-pd.set_option('display.height', 500)
-pd.set_option('display.max_rows', 500)
-
-# <codecell>
-
-a.ix[np.hstack((range(60),range(350,400)))]
-a.ix[:20]
-
-# <codecell>
-
-file_object = open('a.txt', 'w')
-file_object.write(a.to_latex(index=False))
-file_object.close()
-
-# <codecell>
-
-a.to_latex(index=False)
-
-# <codecell>
-
-# ('NAME', 'S80'),
-# ('RA', '>f8'), 
-# ('DEC', '>f8'), 
-# ('X', '>i4'), 
-# ('Y', '>i4'), 
-# ('XERR', '>i2'), 
-# ('YERR', '>i2'), 
-# ('THETA', '>f8'), 
-# ('TYPE', 'S1'), 
-# ('PIVOT', '>i2'), 
-# ('MAGNITUDE', '>f8'), 
-# ('PID', '>i4'), 
-# ('COMMENT', 'S80'), 
-# ('RETRACTOR', 'S10'), 
-# ('WLEN', '>f8'), 
-# ('PMRA', '>f8'), 
-# ('PMDEC', '>f8')]
-
-# <codecell>
-
-('Giant01', 
- 1.0778280795690982, 
- 0.26764721042069262, 
- -15, 
- 3, 
- 15, 
- 1,
- 3.4963547846475636, 
- 'P', 
- 223, 
- 7.6699999999999999, 0, 'Kmag', '23', 0.0, 0.0, 0.0)
-
-# <codecell>
+# In[ ]:
 
 cd '/Users/Carlos/Documents/HERMES/reductions/6.5/HD1581/'
 
-# <codecell>
+
+# In[ ]:
 
 # arcRVs = np.load('npy/arcRVs.npy')
 JDs = np.load('npy/JDs.npy')
 
 
-# <codecell>
+
+# In[ ]:
 
 JDs
 
-# <codecell>
+
+# In[ ]:
 
 arcRVs2 = np.ones((400,16,4))*np.nan
 arcRVs2[:,0,:] = arcRVs[:,0,:]
@@ -1879,33 +2009,43 @@ arcRVs2[:,15,:] = arcRVs[:,4,:]
 arcRVs = arcRVs2
 np.save('npy/arcRVs',arcRVs)
 
-# <codecell>
+
+# In[ ]:
 
 bary = np.load('npy/baryVels.npy')
 
-# <codecell>
+
+# In[ ]:
 
 
-# <codecell>
+
+
+# In[ ]:
 
 bary.shape
 
-# <codecell>
+
+# In[ ]:
 
 
-# <codecell>
+
+
+# In[ ]:
 
 bary
 
-# <codecell>
+
+# In[ ]:
 
 bary[:-1]-bary[1:]
 
-# <codecell>
+
+# In[ ]:
 
 pwd
 
-# <codecell>
+
+# In[ ]:
 
 a = np.array([4860,4865])
 np.save('npy/cam1Filter.npy',a)
@@ -1916,7 +2056,8 @@ np.save('npy/cam3Filter.npy',a)
 a = np.array([7710,7718])
 np.save('npy/cam4Filter.npy',a)
 
-# <codecell>
+
+# In[ ]:
 
 1.400E7
 648.36
@@ -1934,41 +2075,899 @@ np.save('npy/cam4Filter.npy',a)
 122.19
 121.61
 
-# <codecell>
 
-hbetaRVs = (np.loadtxt('out3_hbeta.txt', delimiter = ' ', dtype='str')[:,26]).astype(float)
+# In[ ]:
 
-# <codecell>
+hbetaRVs = (np.loadtxt('out3_hbeta.txt', delimiter = ' ', dtype='str')[:,32]).astype(float)*1000
 
-arcRVs = np.loadtxt('arc_hbeta.txt', delimiter = ' ', dtype='str', usecols = [40]).astype(float)
 
-# <codecell>
+# In[ ]:
+
+arcRVs = np.loadtxt('arc_hbeta.txt', delimiter = ' ', dtype='str', usecols = [46]).astype(float)*1000
+
+
+# In[ ]:
 
 bary = np.load('npy/baryVels.npy')
 JDs = np.load('npy/JDs.npy')
 
-# <codecell>
 
-JDs
+# In[ ]:
 
-# <codecell>
+np.loadtxt('arc_hbeta.txt', delimiter = ' ', dtype='str', usecols = [46])
+
+
+# In[ ]:
 
 [0,1,4,7,12]
 
-# <codecell>
 
-plt.scatter(JDs,hbetaRVs-bary,color = 'k', s=100, marker='*', label = 'Stars')
+# In[ ]:
+
+plt.scatter(JDs,hbetaRVs,color = 'k', s=100, marker='*', label = 'Stars')
 plt.scatter(JDs[np.array([0,1,4,7,12])],arcRVs,  marker = '+' , label = 'ARC RV', color = 'm', s=500)
 plt.show()
 
-# <codecell>
+
+# In[ ]:
 
 arcRVs[0] = 1.4e-7
 
-# <codecell>
+
+# In[ ]:
 
 bary
 
-# <codecell>
+
+# ### sine wave
+
+# In[ ]:
+
+cd /Users/Carlos/Documents/HERMES/reductions/6.5/rhoTuc/
+
+
+# In[ ]:
+
+import numpy as np
+import pylab as plt
+from scipy.optimize import leastsq
+
+
+# In[ ]:
+
+RVs = np.load('npy/RVs.npy')
+baryVels = np.load('npy/baryVels.npy')
+MJDs = np.load('npy/MJDs.npy')
+data = np.load('npy/data.npy')
+
+
+# In[ ]:
+
+np.where(data[:,0]=='Giant01')
+print data[15]
+
+
+# In[ ]:
+
+starIdx = 15
+thisBaryRVs = (RVs[starIdx,:,0] - baryVels)[-np.isnan(RVs[starIdx,:,0])]
+thisMJDs = MJDs[-np.isnan(RVs[starIdx,:,0])]
+
+
+print 'Calculating RV fit for', thisBaryRVs.shape[0], 'data points'
+
+
+
+# In[ ]:
+
+def optimise_sine(x):
+    
+#     print 'x',x
+    result = x[0]*(np.sin(np.pi*2./x[2]*(MJDs+x[1]))-np.sin(np.pi*2./x[2]*(MJDs[0]+x[1]))) - thisBaryRVs
+    
+    
+    return result 
+
+
+# In[ ]:
+
+# data = 3.0*np.sin(t+0.001) + 0.5 + np.random.randn(N) # create artificial data with noise
+
+# guess_mean = np.mean(thisBaryRVs)
+guess_std = 3*np.std(thisBaryRVs)/(2**0.5)
+guess_std = 40000
+guess_A = np.abs((np.max(thisBaryRVs)-np.min(thisBaryRVs))/2.)
+guess_phase = 0.
+guess_P = 5.
+
+print 'Initial x',guess_A,guess_phase,guess_P
+
+# we'll use this to plot our first estimate. This might already be good enough for you
+data_first_guess = guess_A*np.sin(2*np.pi/guess_P*(MJDs+guess_phase))
+
+# plt.scatter(MJDs, thisBaryRVs)
+# plt.plot(MJDs, data_first_guess)
+# plt.title('First Guess')
+# plt.show()
+
+# Define the function to optimize, in this case, we want to minimize the difference
+# between the actual data and our "guessed" parameters
+# optimize_func = lambda x: (x[0]*np.sin(MJDs+x[1])-x[0]*np.sin(MJDs+x[1])[0]) - data
+
+
+ouput = leastsq(optimise_sine, [guess_A, guess_phase, guess_P], full_output = True, diag = [1,100,100])
+print np.std(ouput[2]['fvec'])
+
+# est_std, est_phase, est_P =ouput[0]
+
+# # recreate the fitted curve using the optimized parameters
+# data_fit = est_std*np.sin(2*np.pi/est_P*(MJDs+est_phase))
+
+# plt.plot(MJDs,thisBaryRVs, '.')
+# plt.plot(MJDs,data_fit-data_fit[0], label='after fitting')
+# # plt.plot(MJDs,data_first_guess, label='first guess')
+# plt.title(('RV:'+str(est_std)+' ph:'+str(est_phase)+' P:'+str(est_P)))
+# plt.legend()
+# plt.show()
+
+
+# In[ ]:
+
+
+x[0]*(np.sin(np.pi*2./p*MJDs+X[1])-np.sin(np.pi*2./p*MJDs[0]+X[1])) - thisBaryRVs
+
+
+# In[ ]:
+
+data_first_guess
+
+
+# In[ ]:
+
+a = np.arange(4*np.pi+1)
+p=np.pi
+b = np.sin(np.pi*2./p*a)
+
+plt.plot(a,b)
+plt.show()
+
+
+# ### tree plot
+
+# In[ ]:
+
+cd HERMES/reductions/6.5/47Tuc_core/
+
+
+# In[ ]:
+
+import pylab as plt
+import numpy as np
+
+zoom = 1
+sigmaClip = -1
+RVClip = -1
+booSave = False
+booShow = True
+booBaryPlot = False
+booBaryCorrect = False
+title = ''
+colors = ['b','g','r','cyan']
+labels = ['Blue','Green','Red','IR']
+
+    
+data=np.load('npy/data.npy')
+RVs=np.load('npy/RVs.npy')
+#     sigmas=np.load('npy/sigmas.npy')
+baryVels=np.load('npy/baryVels.npy')
+#     JDs=np.load('npy/JDs.npy')
+baryVels3D = np.zeros(RVs.shape)
+baryVels3D[:,:,0] = np.tile(baryVels,[RVs.shape[0],1])
+baryVels3D[:,:,1] = np.tile(baryVels,[RVs.shape[0],1])
+baryVels3D[:,:,2] = np.tile(baryVels,[RVs.shape[0],1])
+baryVels3D[:,:,3] = np.tile(baryVels,[RVs.shape[0],1])
+baryRVs = RVs - baryVels3D
+
+
+order = np.argsort(np.ptp(baryRVs,1),0)
+print 'order',order
+print 'barys',np.ptp(baryRVs,1)
+# print '1',baryRVs[:,:,0]
+# print '2',baryRVs[:,:,0][order[:,0]]
+
+for i,line in enumerate(baryRVs[:,:,0]):
+    print i, line, np.ptp(line)
+    
+    
+    
+plt.boxplot((baryRVs[:,:,0][order[:,0]]).transpose())
+plt.show()
+    
+# #     if RVClip>-1:Y[np.abs(Y)>RVClip] = np.nan
+# #     if sigmaClip>-1:
+# #         stdY= np.std(Y)
+# #         medY = np.median(Y)
+# #         Y[(Y>=medY-sigmaClip*stdY) & (Y<=medY+sigmaClip*stdY)] = np.nan
+    
+# #     YERR = sigmas
+
+#     X = np.arange(data[:,0].shape[0])
+# #     bcRVs = RVs-baryVels
+    
+# #     Y = RVs
+# #     Y[Y==0.]=np.nan
+# #     order = np.argsort(np.nanstd(RVs,axis=1),axis=0)    
+#     order = np.argsort(np.ptp(baryVels3D,1),0)
+    
+#     if zoom > 1 :
+#         zoomList = [np.arange(len(X))]
+    
+#     steps = np.zeros(zoom+1)
+#     for i in range(zoom+1):
+#         steps[i] = len(X)/zoom*i
+        
+#     for i in range(zoom):
+#         print 'i.zoom',i,zoom
+#         if i<(zoom-1):
+#             zoomList.append([np.arange(steps[i],steps[i+1]).astype(int)])
+#         else:
+#             print 'last zoom'
+#             zoomList.append([np.arange(steps[i],len(X)).astype(int)])
+    
+#     zoomList = np.array(zoomList)
+    
+#     print 'steps,zoomList',steps,zoomList
+#     for cam in range(4)[:1]:
+#         for i, thisXRange in enumerate(zoomList):
+            
+#             print 'thisXRange',thisXRange
+#             thisOrder = order[:,cam][thisXRange]
+#             print 'thisOrder',thisOrder
+            
+#             fig, ax = plt.subplots()
+#             ax.set_xticklabels(data[:,0][thisOrder])
+#             ax.set_xticks(X[range(len(thisOrder))])
+#             plt.xticks(rotation=90)
+
+# #             if booBaryPlot==True: plt.plot(X, baryVels, label = 'Barycentric Vel. ')
+
+
+#             thisY = baryRVs[:,:,cam][thisOrder]
+#             thisY[thisY==0.]=np.nan
+
+# #             YERR[:,:,cam] = YERR[:,:,cam][order[:,cam]]
+
+#             #median
+#             plt.scatter(X[range(len(thisOrder))], stats.nanmedian(thisY , axis = 1), label = labels[cam], color = 'k')
+
+#             #sigma
+#             plt.scatter(X[range(len(thisOrder))], stats.nanmedian(thisY, axis = 1)+stats.nanstd(thisY, axis = 1), label = labels[cam], color = 'r')
+#             plt.scatter(X[range(len(thisOrder))], stats.nanmedian(thisY, axis = 1)-stats.nanstd(thisY, axis = 1), label = labels[cam], color = 'r')
+
+
+#             #min max
+#             for star in range(thisY.shape[0]):
+#                 x = np.nanmax(thisY[star,:])
+#                 n = np.nanmin(thisY[star,:])
+#                 plt.plot([star,star],[x,n], color = 'g', lw=2)
+#                 print star, n, x, x-n
+
+#             #zero
+#             plt.plot(X[range(len(thisOrder))],np.zeros(len(thisOrder)), '--')
+
+#             plt.grid(axis='x')
+#             plt.xlabel('Stars')
+#             plt.ylabel('RV [m/s]')
+#         #     plt.legend(loc=0)
+
+#             fig.tight_layout()
+#             if booSave==True: 
+#                 try:
+#                     plotName = 'plots/Tree_'+str(i)+'_'+labels[cam]
+#                     print 'Attempting to save', plotName
+#                     plt.savefig(plotName)
+
+#                 except:
+#                     print 'FAILED'
+#             if booShow==True: plt.show()
+#             plt.close()        
+        
+
+
+# In[ ]:
+
+a = 432.4323423534235345
+
+
+# In[ ]:
+
+"%.2f" % a
+
+
+# ### log resample tests
+
+# In[ ]:
+
+cd ~/Documents/HERMES/reductions/6.5/m67_lr/obj/
+
+
+# In[ ]:
+
+import pickle
+import pylab as plt
+import RVTools as RVT
+import numpy as np
+from scipy import optimize
+filename = 'red_Giant01.obj'
+filename = 'M67-590_10_0_56643.6659144.obj'
+
+# filename = 'Field01.obj'
+filehandler = open(filename, 'r')
+thisStar = pickle.load(filehandler)
+
+thisCam = thisStar.exposures.cameras[0]
+
+
+# In[ ]:
+
+
+for i,thisCam in enumerate(thisStar.exposures.cameras):
+        print i, thisCam.wavelengths
+        print i, thisCam.red_fluxes
+        
+
+
+# ### HERPY RVS test1
+
+# In[8]:
+
+cd ~/Documents/HERMES/reductions/myherpy/HD1581/
+
+
+# In[9]:
+
+import pickle
+filename = 'obj/red_Giant01.obj'
+filename2 = 'obj/red_ThXe.obj'
+filehandler = open(filename, 'r')
+filehandler2 = open(filename2, 'r')
+thisStar = pickle.load(filehandler)
+thisStar2 = pickle.load(filehandler2)
+
+thisCam = thisStar.exposures.cameras[0]
+thisCam2 = thisStar2.exposures.cameras[0]
+
+
+# In[10]:
+
+thisCam.RVs -  thisCam2.RVs+ thisStar.exposures.rel_baryVels
+
+
+# In[ ]:
+
+import pylab as plt
+
+plt.plot(thisStar.exposures.MJDs, thisCam.RVs,'.', label = 'Star')
+plt.plot(thisStar.exposures.MJDs, thisStar.exposures.rel_baryVels, label = 'bary_star')
+plt.plot(thisStar2.exposures.MJDs, thisCam2.RVs,'.', label = 'ThXe')
+plt.plot(thisStar2.exposures.MJDs, thisStar2.exposures.rel_baryVels, '.',label = 'bary_ThXe')
+plt.legend(loc=0)
+plt.show()
+
+
+# In[11]:
+
+a = np.loadtxt('ThXe_prepared.txt')
+wl = a[:,0]
+Th = a[:,1:]
+
+
+# In[74]:
+
+b = np.loadtxt('Spec_prepared.txt')
+wl_sp = b[:,0]
+fl_sp = b[:,1:]
+
+
+
+# In[162]:
+
+c = np.loadtxt('MJD_RVcorr.txt')
+MJD = c[:,0]-2400000.50
+rel_bary = c[:,1]
+print thisStar.exposures.MJDs- MJD
+good_bary = (rel_bary-rel_bary[0])*1000
+
+
+# In[23]:
+
+def gaussian(x, mu, sig, ):
+    x = np.array(x)
+    return np.exp(-np.power(x - mu, 2.) / 2 / np.power(sig, 2.))
+
+
+def flexi_gaussian(x, mu, sig, power, a, d ):
+    x = np.array(x)
+    return a* np.exp(-np.power(np.abs((x - mu) * np.sqrt(2*np.log(2))/sig),power))+d
+
+def fit_gaussian(p, flux, x_range):
+    a = optimize.leastsq(diff_gaussian, p, args= [flux, x_range])
+    return a
+
+def fit_flexi_gaussian(p, flux, x_range):
+    a = optimize.leastsq(diff_flexi_gaussian, p, args= [flux, x_range])
+    return a
+
+def diff_gaussian(p, args):
+    
+    flux = args[0]
+    x_range = args[1]
+
+    diff = gaussian(x_range, p[0],p[1]) - flux
+    return diff
+
+def diff_flexi_gaussian(p, args):
+    
+    flux = args[0]
+    x_range = args[1]
+    weights = np.abs(np.gradient(flux)) * (flux+np.max(flux)*.1)
+    diff = (flexi_gaussian(x_range, p[0], p[1], p[2], p[3], p[4]) - flux)# *weights
+    return diff
+
+
+# In[142]:
+
+from scipy import stats, constants, optimize, signal
+import RVTools as RVT
+reload(RVT)
+import numpy as np
+import pylab as plt
+
+RV1= []
+def clean_flux(wavelength, flux, minWL=0, maxWL=0, xStep = 5*10**-6, medianRange = 5, flatten = False):
+    
+    #fix initial nans on edges
+    nanMap = np.isnan(flux)
+    leftEdgeIdx=0
+    rightEdgeIdx=len(flux)
+    
+#     nanMapIdx = np.where(nanMap==True) <<<<<make the next lines faster by using this
+    if np.sum(nanMap)>0:
+        print 'Found NaNs in flux array'
+        
+    for i,booI in enumerate(nanMap):
+        if booI==False:
+            leftEdgeIdx = i
+            break
+            
+    for j,rbooI in enumerate(nanMap[::-1]):
+        if rbooI==False:
+            rightEdgeIdx = len(nanMap)-j
+            break        
+
+    fluxMedian = stats.nanmedian(flux)
+    if leftEdgeIdx>0:
+        flux[:leftEdgeIdx] = np.linspace(fluxMedian, flux[leftEdgeIdx+1],leftEdgeIdx)
+    if rightEdgeIdx<len(flux):
+        flux[rightEdgeIdx:] = np.linspace(flux[rightEdgeIdx-1], fluxMedian, len(flux)-rightEdgeIdx)
+
+        
+        
+    #median outliers
+    if medianRange>0:
+        fluxMed = signal.medfilt(flux,medianRange)
+#         fluxDiff = abs(flux-fluxMed)
+        fluxDiff = flux-fluxMed
+        fluxDiffStd = np.std(fluxDiff)
+        mask = fluxDiff> 3 * fluxDiffStd
+        flux[mask] = fluxMed[mask]
+
+
+    if ((wavelength[-np.isnan(flux)].shape[0]>0) &  (flux[-np.isnan(flux)].shape[0]>0)):
+        
+#         if flatten==True:#flatten curve by fitting a 3rd order poly
+#             fFlux = optimize.curve_fit(cubic, wavelength[-np.isnan(flux)], flux[-np.isnan(flux)], p0 = [1,1,1,1])
+#             fittedCurve = cubic(wavelength, fFlux[0][0], fFlux[0][1], fFlux[0][2], fFlux[0][3])
+#             flux = flux/fittedCurve-1
+#         else:
+#             flux = flux/fluxMedian-1
+            
+        #apply tukey
+        flux = flux * signal.tukey(len(flux), 0.1)
+
+        #resample
+#         print wavelength, flux, minWL, maxWL, xStep
+        wavelength,flux = RVT.resample_sp(wavelength, flux, minWL, maxWL, xStep)
+        
+    else: #if not enough data return NaNs
+        wavelength = np.ones(4096)*np.nan
+        flux = np.ones(4096)*np.nan
+        
+    return wavelength, flux
+
+
+#Create cross correlation curves wrt epoch 0
+
+minWL, maxWL = np.min(wl_sp), np.max(wl_sp)
+
+lambda1, flux1 = clean_flux(wl_sp, fl_sp[:,0], minWL, maxWL)
+
+for i in range(15):
+
+    lambda2, flux2 = clean_flux(wl_sp, fl_sp[:,i], minWL, maxWL)
+
+    #Duncan's approach to CC. 
+    CCCurve = np.correlate(flux1, flux2, mode='full')
+    
+    width = 15
+    y = CCCurve[int(CCCurve.shape[0]/2.)-width:int(CCCurve.shape[0]/2.)+1+width].copy()
+    y /=np.max(y)
+    x = np.arange(-width,width+1)
+    p,_ = fit_flexi_gaussian([1,3.,2.,1.,0],y,x )
+#     x, mu, sig, power, a, d 
+    plt.plot(x,y)
+    x_dense = np.linspace(min(x),max(x))
+    plt.plot(x_dense,flexi_gaussian(x_dense,p[0],p[1],p[2],p[3],p[4]), label='gaussian')
+    plt.legend(loc=0)
+    plt.show()
+    shift = p[0]
+    print p[0], 
+#                 thisQ, thisdRV = QdRV(thisCam.wavelengths[epoch], thisCam.red_fluxes[epoch])
+
+    px = 1000
+    RV = (np.exp(lambda1[px+1]-lambda1[px]) -1) * constants.c * shift
+    print 'RV',RV                
+    RV1.append(RV)
+    
+# -2.93349067446e-07 RV -0.000439720289189
+# -0.038707960129 RV -58.0219176085
+# -0.178451980065 RV -267.493457415
+# 0.315953211917 RV 473.603134055
+# -0.65680488406 RV -984.528214371
+
+
+# In[172]:
+
+a = np.array(RV1)-np.array(RV2)[np.array([0,1,1,1,1,1,1,3,3,3,3,3,4,4,4])]-good_bary
+
+print a.astype(int)
+print good_bary
+
+
+# In[131]:
+
+RV2
+
+
+# In[70]:
+
+from scipy import stats, constants, optimize, interpolate
+import RVTools as RVT
+reload(RVT)
+import numpy as np
+import pylab as plt
+
+RV2 =[]
+def clean_arc(wavelength, flux, minWL=0, maxWL=0, xStep = 5 *10**-6, medianRange = 0, flatten = True):
+    wavelength,flux = RVT.resample_sp(wavelength, flux, minWL, maxWL, xStep)
+        
+        
+    return wavelength, flux
+
+
+
+minWL, maxWL = np.min(wl), np.max(wl)
+
+lambda1, flux1 = clean_arc(wl, Th[:,0], minWL, maxWL)
+
+for i in range(5):
+
+    lambda2, flux2 = clean_arc(wl, Th[:,i], minWL, maxWL)
+
+    #Duncan's approach to CC. 
+    CCCurve = np.correlate(flux1, flux2, mode='full')
+    
+    width = 15
+    y = CCCurve[int(CCCurve.shape[0]/2.)-width:int(CCCurve.shape[0]/2.)+1+width].copy()
+    y /=np.max(y)
+    x = np.arange(-width,width+1)
+    p,_ = fit_flexi_gaussian([1,3.,2.,1.,0],y,x )
+#     x, mu, sig, power, a, d 
+#     plt.plot(x,y)
+#     x_dense = np.linspace(min(x),max(x))
+#     plt.plot(x_dense,flexi_gaussian(x_dense,p[0],p[1],p[2],p[3],p[4]), label='gaussian')
+#     plt.legend(loc=0)
+#     plt.show()
+    shift = p[0]
+    print p[0], 
+#                 thisQ, thisdRV = QdRV(thisCam.wavelengths[epoch], thisCam.red_fluxes[epoch])
+
+    px = 1000
+    RV = (np.exp(lambda1[px+1]-lambda1[px]) -1) * constants.c * shift
+    print 'RV',RV                
+    RV2.append(RV)
+
+
+# In[42]:
+
+print wl, 
+print Th[:,0]
+lnWavelength = np.log(wl)
+print lnWavelength
+fFlux = interpolate.splrep(lnWavelength, Th[:,0]) 
+wavelength = np.arange(np.log(minWL), np.log(maxWL),5*10**-6)
+print wavelength
+flux = interpolate.splev(wavelength, fFlux)
+plt.plot(np.log(wl),Th[:,0])
+plt.plot(wavelength,flux)
+plt.show()
+
+
+# In[ ]:
+
+duncan = [0, -58, -268, 474, -985]
+
+
+# In[ ]:
+
+print thisCam2.RVs
+
+
+# In[ ]:
+
+reload(RVT)
+# for i in range(10):
+i=0
+wavelength = thisCam.wavelengths[i].copy()
+flux = thisCam.red_fluxes[i].copy()
+# wavelength2, flux2 = RVT.resample_sp(wavelength, flux)
+wavelength3, flux3 = RVT.clean_flux(wavelength, flux, flatten = False, medianRange=9)
+
+# wavelength3, flux3 = RVT.resample_sp(wavelength, flux, 10)
+# print wavelength.shape, wavelength2.shape
+
+# plt.plot(wavelength,flux)
+# plt.plot(np.exp(wavelength2),flux2)
+plt.plot(np.exp(wavelength3),flux3)
+# plt.plot(flux)
+# plt.plot(flux2)`
+plt.show()
+
+
+
+# In[ ]:
+
+wavelength = thisCam.wavelengths[0].copy()
+flux = thisCam.red_fluxes[0].copy()
+wavelength1, flux1 = RVT.clean_flux(wavelength, flux, flatten = False, medianRange=9)
+for i in range(15):
+#     i=5
+    wavelength = thisCam.wavelengths[i].copy()
+    flux = thisCam.red_fluxes[i].copy()
+    wavelength2, flux2 = RVT.clean_flux(wavelength, flux, flatten = False, medianRange=9)
+
+    CCCurve = np.correlate(flux1, flux2, mode='full')
+
+    y = CCCurve[int(CCCurve.shape[0]/2.)+1-5:int(CCCurve.shape[0]/2.)+1+4].copy()
+    y /=np.max(y)
+    x = np.arange(-4,5)
+    p,_ = fit_gaussian([1,3.], y, x)
+    shift = p[0]
+    print p,
+    plt.plot(x,y)
+    plt.plot(gaussian(x,p[0], p[1]))
+    plt.show()
+    #redo this    
+    px = 1000
+    RV = (np.exp(wavelength2[px+1])-np.exp(wavelength2[px]))/np.exp(wavelength2[px])* c*shift
+    print 'RV',RV                
+
+
+# In[ ]:
+
+
+
+
+# In[ ]:
+
+#Fit gaussian in CCCurves
+def gaussian(x, mu, sig, ):
+    return np.exp(-np.power(x - mu, 2.) / 2 / np.power(sig, 2.))
+
+def fit_gaussian(p, flux, x_range):
+    a = optimize.leastsq(diff_gausian, p, args= [flux, x_range])
+    return a
+
+def diff_gausian(p, args):
+    
+    flux = args[0]
+    x_range = args[1]
+    diff = gaussian(x_range, p[0],p[1]) - flux/np.max(flux)
+    return diff
+
+def get_wavelength(wavelengths, pixel):
+    intPx = int(pixel)
+    fracPx = pixel - int(pixel)
+
+    return (wavelengths[intPx+1] - wavelengths[intPx])*fracPx + wavelengths[intPx]
+
+def extract_HERMES_wavelength(fileName):
+
+    a = pf.open(fileName)
+
+    CRVAL1 = a[0].header['CRVAL1'] # / Co-ordinate value of axis 1                    
+    CDELT1 = a[0].header['CDELT1'] #  / Co-ordinate increment along axis 1             
+    CRPIX1 = a[0].header['CRPIX1'] #  / Reference pixel along axis 1                   
+
+    #Creates an array of offset wavelength from the referece px/wavelength
+    Lambda = CRVAL1 - (CRPIX1 - (np.arange(int(CRPIX1)*2)))* CDELT1
+
+    return Lambda
+
+
+# ### pyHermes
+
+# In[ ]:
+
+cd /Users/Carlos/Documents/HERMES/reductions/
+
+
+# In[ ]:
+
+import pyfits as pf
+import pylab as plt
+import numpy as np
+
+
+# In[ ]:
+
+a = pf.open('pyhermes/initial_RV_bulk/140820HD285507_p1/1408200037_FIB228_1.fits')
+b = pf.open('pyhermes/initial_RV_bulk/140820/ccd_1/20aug10039comb.fits')
+file2_1 = pf.open('6.5/HD285507/cam1/20aug10039red.fits')
+
+
+# In[ ]:
+
+plt.plot(a[0].data/np.nanmax(a[0].data))
+plt.plot(a[1].data/np.nanmax(a[1].data))
+plt.show()
+
+
+# In[ ]:
+
+# plt.plot(a[0].data)
+plt.plot(a[1].data)
+# plt.plot(b[0].data[227])
+plt.show()
+
+
+# In[ ]:
+
+import RVTools as RVT
+reload(RVT)
+RVT.extract_HERMES_wavelength(a.filename())
+# a.filename()
+
+
+# In[ ]:
+
+
+thisFile = pf.open(a.filename())
+
+CRVAL1 = thisFile[0].header['CRVAL1'] # / Co-ordinate value of axis 1                    
+CDELT1 = thisFile[0].header['CDELT1'] #  / Co-ordinate increment along axis 1             
+CRPIX1 = thisFile[0].header['CRPIX1'] #  / Reference pixel along axis 1                   
+NAXIS1 = thisFile[0].header['NAXIS1'] #  / length of the array     
+print CRVAL1,CDELT1,CRPIX1, NAXIS1
+
+#Creates an array of offset wavelength from the referece px/wavelength
+Lambda = (np.arange(int(NAXIS1)))* CDELT1 + CRVAL1
+
+print Lambda
+print thisFile[0].header['CDELT1']*(np.arange(1,thisFile[0].header['NAXIS1']+1,1)-thisFile[0].header['CRPIX1'])+thisFile[0].header['CRVAL1']
+thisFile = pf.open(file2_1.filename())
+
+CRVAL1 = thisFile[0].header['CRVAL1'] # / Co-ordinate value of axis 1                    
+CDELT1 = thisFile[0].header['CDELT1'] #  / Co-ordinate increment along axis 1             
+CRPIX1 = thisFile[0].header['CRPIX1'] #  / Reference pixel along axis 1       
+print CRVAL1,CDELT1,CRPIX1
+
+
+#Creates an array of offset wavelength from the referece px/wavelength
+Lambda = CRVAL1 - (CRPIX1 - (np.arange(int(CRPIX1)*2)) -1)* CDELT1
+
+print Lambda
+print thisFile[0].header['CDELT1']*(np.arange(1,4097,1)-thisFile[0].header['CRPIX1'])+thisFile[0].header['CRVAL1']
+
+
+# In[ ]:
+
+
+
+
+# In[ ]:
+
+from specutils.io import read_fits
+myspec = read_fits.read_fits_spectrum1d(a.filename())
+
+
+# In[ ]:
+
+# plt.plot(myspec)
+# plt.show()
+
+myspec.dispersion()
+
+
+# In[ ]:
+
+from specutils.wcs import specwcs
+from astropy.io import fits
+from astropy import units as u
+from specutils import Spectrum1D
+
+header = fits.getheader(b.filename())
+dispersion_start = header['CRVAL1'] - (header['CRPIX1'] - 1) * header['CDELT1']
+linear_wcs = specwcs.Spectrum1DPolynomialWCS(degree=1, c0=dispersion_start, c1=header['CDELT1'], unit=u.Unit('Angstrom'))
+flux = fits.getdata(a.filename())
+myspec = Spectrum1D(flux=flux, wcs=linear_wcs)
+
+
+# In[ ]:
+
+linear_wcs.evaluate(range(10))
+
+
+# In[ ]:
+
+a[0].header.items()
+
+
+# In[ ]:
+
+b[1].header.items()
+
+
+# In[ ]:
+
+pwd
+
+
+# In[ ]:
+
+ls
+
+
+# In[ ]:
+
+cd ..
+
+
+# In[ ]:
+
+cd obj/
+
+
+# In[ ]:
+
+ls
+
+
+# In[ ]:
+
+import pickle
+filename = 'HD1581.obj'
+# filename = 'Field01.obj'
+filehandler = open(filename, 'r')
+thisStar = pickle.load(filehandler)
+
+
+# In[ ]:
+
+thisStar.exposures.JDs*1000
+
+
+# In[ ]:
+
 
 

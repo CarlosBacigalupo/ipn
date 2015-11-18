@@ -54,7 +54,7 @@ if len(fileList)>0:
         sigmas[i,:,1] = thisStar.exposures.cameras[1].sigmas
         sigmas[i,:,2] = thisStar.exposures.cameras[2].sigmas
         sigmas[i,:,3] = thisStar.exposures.cameras[3].sigmas
-        JDs = np.array(thisStar.exposures.JDs)
+        MJDs = np.array(thisStar.exposures.JDs)
         baryVels = np.array(thisStar.exposures.abs_baryVels-thisStar.exposures.abs_baryVels[0])
         filehandler.close()
         thisStar = None
@@ -64,12 +64,21 @@ if len(fileList)>0:
         
         print ''
     
+    baryVels3D = np.zeros(RVs.shape)
+    baryVels3D[:,:,0] = np.tile(baryVels,[RVs.shape[0],1])
+    baryVels3D[:,:,1] = np.tile(baryVels,[RVs.shape[0],1])
+    baryVels3D[:,:,2] = np.tile(baryVels,[RVs.shape[0],1])
+    baryVels3D[:,:,3] = np.tile(baryVels,[RVs.shape[0],1])
+    RVs[RVs==0.]=np.nan
+    baryRVs = RVs - baryVels3D
+
     
     data = np.array(data)
     order = np.argsort(data[:,2].astype(float).astype(int))
     
     data = data[order]
     RVs = RVs[order]
+    baryRVs = baryRVs[order]
     SNRs = SNRs[order]
     sigmas = sigmas[order]
 
@@ -77,18 +86,20 @@ if len(fileList)>0:
     #save?
     np.save('npy/data',data)
     np.save('npy/RVs',RVs)
+    np.save('npy/baryRVs',baryRVs)
     np.save('npy/SNRs',SNRs)
     np.save('npy/sigmas',sigmas)
     np.save('npy/baryVels',baryVels)
-    np.save('npy/JDs',JDs)
+    np.save('npy/MJDs',MJDs)
 
     print ''
     print 'data',data.shape
     print 'RVs',RVs.shape
+    print 'baryRVs',baryRVs.shape
     print 'SNRs',SNRs.shape
     print 'sigmas',sigmas.shape
     print 'baryVels',baryVels.shape
-    print 'JDs',JDs.shape
+    print 'MJDs',MJDs.shape
 
 else:
     print 'No reduced .obj files found here'

@@ -13,8 +13,8 @@ import importlib
 ver = '6.5'
 booLog = False
 useBias = False
-copyFiles = False
-doReduce = True
+copyFiles = True
+doReduce = False
 overwrite = False
 idxFile = 'no_flat_no_bias.idx'
 startFrom = 0 #number of data set to begin with. 0 for beginning. Good for starting half way through if it cancelled
@@ -27,11 +27,11 @@ final_dir =''
 
 if len(sys.argv)>1:
     dataset = sys.argv[1]
-    try:
-        thisDataset = importlib.import_module('data_sets.'+dataset)
-    except:
-        print 'Could not load',dataset         
-        sys.exit()
+#     try:
+    thisDataset = importlib.import_module('data_sets.'+dataset)
+#     except:
+#         print 'Could not load',dataset         
+#         sys.exit()
     
     reduceMode = thisDataset.reduceMode         
         

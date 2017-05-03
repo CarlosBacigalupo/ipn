@@ -1,7 +1,7 @@
-# -*- coding: utf-8 -*-
-# <nbformat>3.0</nbformat>
 
-# <codecell>
+# coding: utf-8
+
+# In[8]:
 
 # import os
 # import create_obj as cr_obj
@@ -15,11 +15,13 @@ import numpy as np
 import toolbox
 import pandas as pd
 
-# <codecell>
+
+# In[10]:
 
 cd ~/Documents/HERMES/reductions/6.5/m67_lr/
 
-# <codecell>
+
+# In[11]:
 
 #create list of stars, pivot, plate, mjd
 starNames = np.array([])
@@ -60,7 +62,8 @@ print starNames.shape, 'stars'
 # print starNames
 # a.columns
 
-# <codecell>
+
+# In[12]:
 
 #Convert starNames to name_pivot_plate,MJD
 
@@ -72,7 +75,8 @@ for i, line in enumerate(starNames):
 
 print starNames_piv_pl
 
-# <codecell>
+
+# In[13]:
 
 #Convert starNames_piv_pl,mjd to unique name_piv_pl vs MJD table
 
@@ -88,7 +92,8 @@ for line in starNames_piv_pl:
     colIdx = np.where(cols==line[1])[0][0]
     obsMatrix[rowIdx, colIdx] = 1
 
-# <codecell>
+
+# In[14]:
 
 def X(x):
     if int(x)==0:
@@ -100,28 +105,32 @@ def X(x):
 def nottin(x):
     return x
 
-# <codecell>
+
+# In[15]:
 
 all_MJD_Exp = np.load('/Users/Carlos/Documents/ipn/npy/outMJD_Exp.npy')
 all_MJD_Exp = np.array(all_MJD_Exp, dtype='|f8')
 ordIdx = np.argsort(all_MJD_Exp[:,0])
 allMJDs = all_MJD_Exp[:,0][ordIdx]
 
-# <codecell>
+
+# In[16]:
 
 x = np.array(cols, dtype='|f8')
 colsFlt = x.astype(np.float)
 print colsFlt.shape
 
-# <codecell>
+
+# In[17]:
 
 booResult = np.in1d(np.round(allMJDs, 5), np.round(colsFlt,5))
 colsIdx = np.arange(allMJDs.shape[0])[booResult]
 print np.sum(booResult), booResult. shape, allMJDs.shape, colsFlt.shape, colsIdx.shape
 
-# <codecell>
 
-#print matrix in latex form
+# In[18]:
+
+#print matrix in latex form 
 
 a = pd.DataFrame(obsMatrix)
 # a.columns = cols #this for MJDs
@@ -141,7 +150,29 @@ print a.to_latex(formatters=[X, X, X, X, X,
                              X, X, X, X, X,
                              X, X, X, X, X])
 
-# <codecell>
+
+# In[32]:
+
+#print matrix in latex form 
+page = 3
+perPage = 20
+thisPage = np.arange(perPage*(page-1),perPage*page)
+thisPage = np.arange(60,65)
+print thisPage, colsIdx[thisPage]
+
+
+a = pd.DataFrame(obsMatrix[:,thisPage])
+# a.columns = cols #this for MJDs
+a.columns = colsIdx[thisPage] #this for obsID
+a.index = rows
+print a.to_latex(formatters=[X, X, X, X, X,
+                             X, X, X, X, X,
+                             X, X, X, X, X,
+                             X, X, X, X, X,
+                             X, X, X, X, X])
+
+
+# In[ ]:
 
 counter = 0
 for i in range(colsFlt.shape[0]):
@@ -153,7 +184,8 @@ for i in range(colsFlt.shape[0]):
     else:
         print 
 
-# <codecell>
+
+# In[ ]:
 
 counter = 0
 for i in range(100):
@@ -165,7 +197,8 @@ for i in range(100):
     else:
         print 
 
-# <codecell>
+
+# In[296]:
 
 #create list of first observation MJDs
 firstObs = []
@@ -179,7 +212,8 @@ print len(firstObs)
 firstObs = np.unique(firstObs)
 print len(firstObs)
 
-# <codecell>
+
+# In[330]:
 
 #create name_piv_pl_mjd for all tagets
 x = np.array(starNames_piv_pl[:,1], dtype='|f8')
@@ -196,27 +230,34 @@ for i in firstObs:
 starNames_piv_pl_mjd = np.array(starNames_piv_pl_mjd)
 np.save('starNames_piv_pl_mjd.npy',starNames_piv_pl_mjd)
 
-# <codecell>
+
+# In[332]:
 
 #the number of unique name_piv_pl_firstMJD
 starNames_piv_pl_mjd.shape
 
-# <codecell>
+
+# In[ ]:
 
 #tests
 
-# <codecell>
+
+# In[335]:
 
 combinedName = starNames_piv_pl_mjd[0]
 
-# <codecell>
+
+# In[337]:
 
 starName, pivot, plate, MJD = combinedName.split('_')
 
-# <codecell>
+
+# In[338]:
 
 print starName, pivot, plate, MJD
 
-# <codecell>
+
+# In[ ]:
+
 
 

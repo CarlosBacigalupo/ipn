@@ -1,345 +1,9 @@
 
 # coding: utf-8
 
-# In[ ]:
+# In[12]:
 
-def extract_HERMES_wavelength(header):
-    
-    CRVAL1 = header['CRVAL1'] # / Co-ordinate value of axis 1                    
-    CDELT1 = header['CDELT1'] #  / Co-ordinate increment along axis 1             
-    CRPIX1 = header['CRPIX1'] #  / Reference pixel along axis 1                   
-    
-    print CRVAL1,CDELT1, CRPIX1
-    
-    #Creates an array of offset wavelength from the referece px/wavelength
-    Lambda = CRVAL1 - (CRPIX1 - (np.arange(int(CRPIX1)*2)) -1)* CDELT1
-
-    return Lambda
-
-
-# In[ ]:
-
-import pylab as plt
-import pyfits as pf
-
-
-# In[ ]:
-
-a = pf.open('25aug10035.ms.fits')
-
-
-# In[ ]:
-
-CRVAL1 = 4714.9999999
-CDELTA1 = .045177
-CRPIX1 = 1.
-data_len = 4096
-
-
-# In[ ]:
-
-wl = np.arange(data_len)*CDELTA1+CRVAL1
-
-
-# In[ ]:
-
-wl
-
-
-# In[ ]:
-
-myfile = pf.open('21aug10036red.fits')
-
-
-# In[ ]:
-
-extract_HERMES_wavelength(myfile[0].header)
-
-
-# In[ ]:
-
-flux1 = myfile[0].data[5]
-flux2 = myfile[0].data[20]
-
-
-# In[ ]:
-
-plt.plot(flux1)
-plt.plot(flux2)
-    
-plt.show()
-
-    
-
-
-# In[ ]:
-
-plt.plot(np.correlate(flux1, flux2, 'same'))
-plt.show()
-
-
-# In[ ]:
-
-import pickle
-import toolbox
-
-
-# In[ ]:
-
-cd /Users/Carlos/Documents/HERMES/reductions/6.5/rhoTuc/obj/
-
-
-# In[ ]:
-
-thisCam = thisStar.exposures.cameras[3]
-
-
-# In[ ]:
-
-thisCam.RVs
-
-
-# In[ ]:
-
-import numpy as np
-import pickle
-import pylab as plt
-from scipy import interpolate, signal, optimize, constants
-import pyfits as pf
-import sys
-import RVTools as RVT
-reload(RVT)
-import time
-
-# filename = 'HD1581.obj'
-# filename = 'Brght01.obj'
-# filename = 'red_Giant01.obj'
-# filename = 'Giant01.obj'
-filename = 'red_Giant12.obj'
-# filename = 'Field01.obj'
-filehandler = open(filename, 'r')
-thisStar = pickle.load(filehandler)
-
-thisCam = thisStar.exposures.cameras[0]
-
-
-
-# In[ ]:
-
-import numpy as np
-import pickle
-import pylab as plt
-from scipy import interpolate, signal, optimize, constants
-import pyfits as pf
-import sys
-import RVTools as RVT
-reload(RVT)
-import time
-
-# filename = 'HD1581.obj'
-# filename = 'Brght01.obj'
-# filename = 'red_Giant01.obj'
-# filename = 'Giant01.obj'
-filename = 'Giant12.obj'
-# filename = 'Field01.obj'
-filehandler = open(filename, 'r')
-thisStar = pickle.load(filehandler)
-
-thisCam = thisStar.exposures.cameras[0]
-
-CCReferenceSet=0
-CCTHisSet = 2
-corrHWidth = 3
-for CCTHisSet in range(15):
-    # lambda1, flux1 = thisCam.wavelengths[CCReferenceSet], thisCam.red_fluxes[CCReferenceSet]
-    # plt.plot(lambda1,flux1)
-    # lambda2, flux2 = thisCam.wavelengths[CCTHisSet], thisCam.red_fluxes[CCTHisSet]
-    # plt.plot(lambda2,flux2)
-    # plt.show()
-
-    lambda1, flux1 = RVT.clean_flux(thisCam.wavelengths[CCReferenceSet], thisCam.red_fluxes[CCReferenceSet], thisCam, medianRange = 5)
-    plt.plot(thisCam.red_fluxes[CCTHisSet])
-#     plt.plot(lambda1,flux1)
-    lambda2, flux2 = RVT.clean_flux(thisCam.wavelengths[CCTHisSet], thisCam.red_fluxes[CCTHisSet], thisCam, medianRange = 5)
-#     plt.plot(lambda2,flux2)
-    plt.show()
-
-    CCCurve = signal.fftconvolve(flux1, flux2[::-1], mode='same')
-#     CCCurve2 = signal.fftconvolve(flux1[-np.isnan(flux1)], flux2[-np.isnan(flux2)][::-1], mode='same')
-    # print np.sum(-np.isnan(flux1)), len(flux1)
-    corrMax = np.where(CCCurve==max(CCCurve))[0][0]
-
-    p_guess = [corrMax,corrHWidth]
-    x_mask = np.arange(corrMax-corrHWidth, corrMax+corrHWidth+1)
-    p = RVT.fit_gaussian(p_guess, CCCurve[x_mask], np.arange(len(CCCurve))[x_mask])[0]
-
-#     plt.plot(lambda1,CCCurve/np.max(CCCurve))
-    # plt.plot(CCCurve2)
-    # plt.plot(lambda2[x_mask],max(CCCurve)* gaussian(x_mask, p[0],p[1]))
-    plt.show()
-
-    if np.modf(CCCurve.shape[0]/2.0)[0]>1e-5:
-        pixelShift = (p[0]-(CCCurve.shape[0]-1)/2.) #odd number of elements
-    else:
-        pixelShift = (p[0]-(CCCurve.shape[0])/2.) #even number of elements
-
-
-    # # thisQ, thisdRV = QdRV(thisCam.wavelengths[i], thisCam.red_fluxes[i])
-
-    mid_px = thisCam.wavelengths.shape[1]/2
-    dWl = (thisCam.wavelengths[CCReferenceSet,mid_px+1]-thisCam.wavelengths[CCReferenceSet,mid_px]) / thisCam.wavelengths[CCReferenceSet,mid_px]
-    RV = dWl * pixelShift * constants.c 
-    print CCTHisSet,'RV',RV,
-    print
-
-    # #                 SNR = np.median(thisCam.red_fluxes[i])/np.std(thisCam.red_fluxes[i])
-
-
-# In[ ]:
-
-import pickle
-filename = 'HD1581.obj'
-# filename = 'Brght01.obj'
-.# filename = 'red_Giant01.obj'
-# filename = 'Giant01.obj'
-# filename = 'Field01.obj'
-filehandler = open(filename, 'r')
-thisStar = pickle.load(filehandler)
-
-thisCam = thisStar.exposures.cameras[0]
-CCReferenceSet=3
-lambda1, flux1 = thisCam.wavelengths[CCReferenceSet], thisCam.red_fluxes[CCReferenceSet]
-plt.plot(lambda1,flux1)
-
-lambda2, flux2, fluxMed = clean_flux(thisCam.wavelengths[CCReferenceSet], thisCam.red_fluxes[CCReferenceSet], thisCam, medianRange = 5)
-plt.plot(lambda2,flux2)
-plt.plot(lambda2,fluxMed)
-plt.show()
-
-
-# In[ ]:
-
-def clean_flux(wavelength, flux, thisCam, xDef = 1, medianRange = 0):
-    '''Clean a 1D spectrum. 
-    
-    Parameters
-    ----
-    xDef : int or None, optional
-        Coeficient to resample. Final array will be flux.shape[0]*xDef long. 
-        
-    medianRange : int, optional
-        Number of pixels to median over. 0 will skip this step. Optional.
-
-    '''
-
-    #median outliers
-    if medianRange>0:
-        fluxMed = signal.medfilt(flux,medianRange)
-        fluxDiff = abs(flux-fluxMed)
-        fluxDiffStd = np.std(fluxDiff)
-        mask = fluxDiff> 2 * fluxDiffStd
-        flux[mask] = fluxMed[mask]
-
-
-    if ((wavelength[-np.isnan(flux)].shape[0]>0) &  (flux[-np.isnan(flux)].shape[0]>0)):
-        
-        #flatten curve by fitting a 3rd order poly
-        fFlux = optimize.curve_fit(cubic, wavelength[-np.isnan(flux)], flux[-np.isnan(flux)], p0 = [1,1,1,1])
-        fittedCurve = cubic(wavelength, fFlux[0][0], fFlux[0][1], fFlux[0][2], fFlux[0][3])
-        flux = flux/fittedCurve-1
-        
-        #apply tukey
-        flux = flux * tukey(0.1, len(flux))
-
-        #resample
-        if (xDef>1):
-            fFlux = interpolate.interp1d(wavelength, flux) 
-            wavelength = np.linspace(min(wavelength), max(wavelength),len(wavelength)*xDef)
-            flux = fFlux(wavelength)
-
-    else: #if not enough data return NaNs
-        if (xDef>1):
-            wavelength = np.linspace(min(wavelength), max(wavelength),len(wavelength)*xDef)
-            flux = np.ones(wavelength.shape[0])*np.nan
-        
-    return wavelength, flux, fluxMed
-
-
-
-# In[ ]:
-
-def cubic(x,a,b,c,d):
-    '''
-    Cubic function
-    '''
-    return a*x**3+b*x**2+c*x+d
-
-
-# In[ ]:
-
-def tukey(alpha, N):
-    '''Creates a tukey function
-    
-    
-    Parameters
-    ----
-    alpha : float
-        Fraction of the pixels to fade in/out.
-        i.e. alpha=0.1 will use 10% of the pixels to go from 0 to 1. 
-        
-    N : int
-        Totla number of pixels in the array.
-        
-        
-    Returns
-    ------
-
-    N-length array of floats from 0 to 1. 
-    '''
-
-    
-    tukey = np.zeros(N)
-    for i in range(int(alpha*(N-1)/2)):
-        tukey[i] = 0.5*(1+np.cos(np.pi*(2*i/alpha/(N-1)-1)))
-    for i in range(int(alpha*(N-1)/2),int((N-1)*(1-alpha/2))):
-        tukey[i] = 1
-    for i in range(int((N-1)*(1-alpha/2)),int((N-1))):
-        tukey[i] = 0.5*(1+np.cos(np.pi*(2*i/alpha/(N-1)-2/alpha+1)))
-    
-    return tukey
-
-
-# In[ ]:
-
-for i in thisCam.red_fluxes:
-    plt.plot(i)
-plt.show()
-# plt.plot(thisCam.RVs)
-# plt.show()
-
-
-# In[ ]:
-
-for flux,mj in zip(thisCam.red_fluxes,thisStar.exposures.JDs):
-    plt.plot(flux+mj)
-plt.show()
-# plt.plot(thisCam.RVs)
-# plt.show()
-
-
-# In[ ]:
-
-np.sum(thisCam.red_fluxes, axis=1)
-
-
-# In[ ]:
-
-print thisStar.exposures.JDs
-
-
-# In[ ]:
-
-ls
+cd ~/Documents/HERMES/reductions/6.5/m67_lr/
 
 
 # In[ ]:
@@ -362,43 +26,6 @@ plt.show()
 
 # In[ ]:
 
-#Fit gaussian in CCCurves
-def gaussian(x, mu, sig, ):
-    return np.exp(-np.power(x - mu, 2.) / 2 / np.power(sig, 2.))
-
-def fit_gaussian(p, flux, x_range):
-    a = optimize.leastsq(diff_gausian, p, args= [flux, x_range])
-    return a
-
-def diff_gausian(p, args):
-    
-    flux = args[0]
-    x_range = args[1]
-    diff = gaussian(x_range, p[0],p[1]) - flux/np.max(flux)
-    return diff
-
-def get_wavelength(wavelengths, pixel):
-    intPx = int(pixel)
-    fracPx = pixel - int(pixel)
-
-    return (wavelengths[intPx+1] - wavelengths[intPx])*fracPx + wavelengths[intPx]
-
-def extract_HERMES_wavelength(fileName):
-
-	a = pf.open(fileName)
-
-	CRVAL1 = a[0].header['CRVAL1'] # / Co-ordinate value of axis 1                    
-	CDELT1 = a[0].header['CDELT1'] #  / Co-ordinate increment along axis 1             
-	CRPIX1 = a[0].header['CRPIX1'] #  / Reference pixel along axis 1                   
-	
-	#Creates an array of offset wavelength from the referece px/wavelength
-	Lambda = CRVAL1 - (CRPIX1 - (np.arange(int(CRPIX1)*2)) -1)* CDELT1
-
-	return Lambda
-
-
-# In[ ]:
-
 np.sum(thisCam.wavelengths,1)
 np.sum(np.isnan(thisCam.wavelengths))
 
@@ -411,120 +38,116 @@ RV = dWl * 0.5 * 3e8
 print 'RV',RV, mid_px, thisCam.wavelengths[0,mid_px+1], thisCam.wavelengths[0,mid_px]
 
 
-# In[ ]:
+# In[2]:
 
-def clean_flux(wavelength, flux, thisCam, xDef = 1, medianRange = 0):
-    '''Clean a 1D spectrum. 
+from scipy.ndimage.measurements import label
+import numpy as np
+
+
+# In[57]:
+
+from scipy import nanmedian
+
+
+# In[7]:
+
+a = np.random.rand(10)>0.5
+print a,label(a)
+
+
+# In[19]:
+
+import pickle
+import RVTools as RVT
+import pylab as plt
+# filename = 'HD1581.obj'
+# filename = 'Brght01.obj'
+# filename = 'red_Giant01.obj'
+# filename = 'Giant01.obj'
+filename = 'obj/HD1581.obj'
+filename = 'obj/M67-375_216_1_56668.5921065.obj'
+filename = 'obj/M67-381_186_0_56643.6659144.obj'
+filename = 'obj/M67-381_186_0_56664.5809375.obj'
+
+filehandler = open(filename, 'r')
+thisStar = pickle.load(filehandler)
+thisCam = thisStar.exposures.cameras[0]
+
+
+# In[60]:
+
+flux = thisCam.red_fluxes[0].copy()
+flux2 = flux.copy()
+flux[:30] = np.nan
+flux[3336:3339] = np.nan
+flux[4080:4097] = np.nan
+plt.plot(flux)
+plt.plot(flux2)
+# plt.show()
+
+
+# In[62]:
+
+nanMap = np.isnan(flux)
+
+if np.sum(nanMap)<flux.shape[0]:
+
+    nanGroups, nNanGroups = label(nanMap)
+
+    for thisGroup in range(1,nNanGroups+1):
+        pxFix = np.where(nanGroups==thisGroup)[0]
+#         print pxFix,
+        if np.min(pxFix)==0: #is it at the beggining?
+            print 'beginning'
+            vlMin = nanmedian(flux)
+            vlMax = flux[np.max(pxFix)+1]
+        elif np.max(pxFix)==(flux.shape[0]-1):  #is it at the end?
+            print 'end'
+            vlMin = flux[np.min(pxFix)-1]
+            vlMax = nanmedian(flux)
+        else:
+            print 'middle'
+            vlMin = flux[np.min(pxFix)-1]
+            vlMax = flux[np.max(pxFix)+1]
     
-    Parameters
-    ----
-    xDef : int or None, optional
-        Coeficient to resample. Final array will be flux.shape[0]*xDef long. 
-        
-    medianRange : int, optional
-        Number of pixels to median over. 0 will skip this step. Optional.
+    print pxFix
+    flux[pxFix] = np.linspace(vlMin, vlMax, num=pxFix.shape[0])
 
-    '''
-        
-    #median outliers
-    if medianRange>0:
-        fluxMed = signal.medfilt(flux,medianRange)
-        w = np.where(abs((flux-fluxMed)/np.maximum(fluxMed,50)) > 0.4)
-        for ix in w[0]:
-            flux[ix] = fluxMed[ix]
-            
-    print 'flux out has',np.sum(np.isnan(flux))
-
-    if ((wavelength[-np.isnan(flux)].shape[0]>0) &  (flux[-np.isnan(flux)].shape[0]>0)):
-        
-        #flatten curve by fitting a 3rd order poly
-        fFlux = optimize.curve_fit(cubic, wavelength[-np.isnan(flux)], flux[-np.isnan(flux)], p0 = [1,1,1,1])
-        fittedCurve = cubic(wavelength, fFlux[0][0], fFlux[0][1], fFlux[0][2], fFlux[0][3])
-        flux = flux/fittedCurve-1
-
-        #apply tukey
-        flux = flux * tukey(0.1, len(flux))
-
-        #resample
-        if (xDef>1):
-            fFlux = interpolate.interp1d(wavelength, flux) 
-            wavelength = np.linspace(min(wavelength), max(wavelength),len(wavelength)*xDef)
-            flux = fFlux(wavelength)
-
-    else: #if not enough data return NaNs
-        if (xDef>1):
-            wavelength = np.linspace(min(wavelength), max(wavelength),len(wavelength)*xDef)
-            flux = np.ones(wavelength.shape[0])*np.nan
-    
-    return wavelength, flux
-
-
-# In[ ]:
-
-def cubic(x,a,b,c,d):
-    '''
-    Cubic function
-    '''
-    return a*x**3+b*x**2+c*x+d
-
-
-# In[ ]:
-
-def tukey(alpha, N):
-    '''Creates a tukey function
-    
-    
-    Parameters
-    ----
-    alpha : float
-        Fraction of the pixels to fade in/out.
-        i.e. alpha=0.1 will use 10% of the pixels to go from 0 to 1. 
-        
-    N : int
-        Totla number of pixels in the array.
-        
-        
-    Returns
-    ------
-
-    N-length array of floats from 0 to 1. 
-    '''
-
-    
-    tukey = np.zeros(N)
-    for i in range(int(alpha*(N-1)/2)):
-        tukey[i] = 0.5*(1+np.cos(np.pi*(2*i/alpha/(N-1)-1)))
-    for i in range(int(alpha*(N-1)/2),int((N-1)*(1-alpha/2))):
-        tukey[i] = 1
-    for i in range(int((N-1)*(1-alpha/2)),int((N-1))):
-        tukey[i] = 0.5*(1+np.cos(np.pi*(2*i/alpha/(N-1)-2/alpha+1)))
-    
-    return tukey
-
-
-# In[ ]:
-
-a
-
-
-# In[ ]:
-
-thisStar.exposures.cameras[3].sigmas
-
-
-# In[ ]:
-
-
-print thisCam.fileNames.shape
-
-print thisCam.wavelengths.shape
-
-
-# In[ ]:
-
-print thisCam.RVs
-plt.plot(thisCam.RVs,'.')
+plt.plot(flux)
 plt.show()
+
+# #     leftEdgeIdx=0
+# #     rightEdgeIdx=len(flux)
+
+# #     plt.plot(nanMap)
+# #     plt.show()
+
+# #     nanMapIdx = np.where(nanMap==True) <<<<<make the next lines faster by using this
+# if np.sum(nanMap)>0:
+#     print 'Found NaNs in flux array'
+
+# for i,booI in enumerate(nanMap):
+#     if booI==False:
+#         leftEdgeIdx = i
+#         break
+
+# for j,rbooI in enumerate(nanMap[::-1]):
+#     if rbooI==False:
+#         rightEdgeIdx = len(nanMap)-j
+#         break        
+
+# fluxMedian = stats.nanmedian(flux)
+# if leftEdgeIdx>0:
+#     flux[:leftEdgeIdx] = np.linspace(fluxMedian, flux[leftEdgeIdx+1],leftEdgeIdx)
+# if rightEdgeIdx<len(flux):
+#     flux[rightEdgeIdx:] = np.linspace(flux[rightEdgeIdx-1], fluxMedian, len(flux)-rightEdgeIdx)
+
+# nanMap = np.isnan(flux)        
+# if np.sum(nanMap)>0:
+#     print 'NaNs remain in flux array'        
+
+# plt.plot(nanMap)
+# plt.show()
 
 
 # In[ ]:
@@ -690,12 +313,12 @@ PyAstronomy
 import PyAstronomy
 
 
-# In[ ]:
+# In[173]:
 
-cd ~/Documents/HERMES/reductions/6.5/HD1581/
+cd ~/Documents/HERMES/reductions/6.5/m67_lr/
 
 
-# In[ ]:
+# In[185]:
 
 import pickle
 # filename = 'HD1581.obj'
@@ -703,12 +326,21 @@ import pickle
 # filename = 'red_Giant01.obj'
 # filename = 'Giant01.obj'
 filename = 'obj/HD1581.obj'
+filename = 'obj/M67-375_216_1_56668.5921065.obj'
+filename = 'obj/M67-381_186_0_56643.6659144.obj'
+filename = 'obj/M67-381_186_0_56664.5809375.obj'
+
 filehandler = open(filename, 'r')
 thisStar = pickle.load(filehandler)
 thisCam = thisStar.exposures.cameras[0]
 
 
-# In[ ]:
+# In[186]:
+
+thisStar.exposures.MJDs
+
+
+# In[187]:
 
 import pylab as plt
 plt.plot(thisCam.red_fluxes[0])
@@ -2479,42 +2111,6 @@ print thisStar.exposures.MJDs- MJD
 good_bary = (rel_bary-rel_bary[0])*1000
 
 
-# In[23]:
-
-def gaussian(x, mu, sig, ):
-    x = np.array(x)
-    return np.exp(-np.power(x - mu, 2.) / 2 / np.power(sig, 2.))
-
-
-def flexi_gaussian(x, mu, sig, power, a, d ):
-    x = np.array(x)
-    return a* np.exp(-np.power(np.abs((x - mu) * np.sqrt(2*np.log(2))/sig),power))+d
-
-def fit_gaussian(p, flux, x_range):
-    a = optimize.leastsq(diff_gaussian, p, args= [flux, x_range])
-    return a
-
-def fit_flexi_gaussian(p, flux, x_range):
-    a = optimize.leastsq(diff_flexi_gaussian, p, args= [flux, x_range])
-    return a
-
-def diff_gaussian(p, args):
-    
-    flux = args[0]
-    x_range = args[1]
-
-    diff = gaussian(x_range, p[0],p[1]) - flux
-    return diff
-
-def diff_flexi_gaussian(p, args):
-    
-    flux = args[0]
-    x_range = args[1]
-    weights = np.abs(np.gradient(flux)) * (flux+np.max(flux)*.1)
-    diff = (flexi_gaussian(x_range, p[0], p[1], p[2], p[3], p[4]) - flux)# *weights
-    return diff
-
-
 # In[142]:
 
 from scipy import stats, constants, optimize, signal
@@ -2965,6 +2561,16 @@ thisStar = pickle.load(filehandler)
 # In[ ]:
 
 thisStar.exposures.JDs*1000
+
+
+# In[ ]:
+
+
+
+
+# In[1]:
+
+2+2
 
 
 # In[ ]:

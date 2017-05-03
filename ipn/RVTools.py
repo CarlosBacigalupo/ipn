@@ -1,0 +1,853 @@
+# -*- coding: utf-8 -*-
+# <nbformat>3.0</nbformat>
+
+# <codecell>
+
+import numpy as np
+import pylab as plt
+from scipy import interpolate, signal, optimize, constants, stats
+import pyfits as pf
+import sys
+import os
+
+# <codecell>
+
+# sys.path = ['', '/disks/ceres/makemake/aphot/kalumbe/reductions/NGC2477_1arc_6.2','/usr/local/yt-hg', '/home/science/staff/kalumbe/my-astro-lib', '/usr/lib/python2.7', '/usr/lib/python2.7/plat-x86_64-linux-gnu', '/usr/lib/python2.7/lib-tk', '/usr/lib/python2.7/lib-old', '/usr/lib/python2.7/lib-dynload', '/usr/lib/python2.7/dist-packages', '/usr/lib/python2.7/dist-packages/PILcompat', '/usr/lib/python2.7/dist-packages/gtk-2.0', '/usr/lib/pymodules/python2.7', '/usr/lib/python2.7/dist-packages/ubuntu-sso-client', '/usr/lib/python2.7/dist-packages/ubuntuone-client', '/usr/lib/python2.7/dist-packages/ubuntuone-couch', '/usr/lib/python2.7/dist-packages/ubuntuone-storage-protocol', '/usr/lib/python2.7/dist-packages/wx-2.8-gtk2-unicode']
+
+# <codecell>
+
+def check_equal_wl(wl1, wl2):
+    result = False
+    
+    diff = np.sum(wl1-wl2)
+    
+    if diff<1e-17:
+        result = True
+    return result
+
+# <codecell>
+
+def pivot2idx(pivot):
+    pivot = np.array(pivot)
+    
+    rev_num = [np.nan] + ((np.tile(np.arange(10,0,-1),40)+np.repeat(np.arange(0,40)*10,10))-1).tolist()
+    rev_num = np.array(rev_num)
+    
+    return rev_num[pivot]
+
+# <codecell>
+
+def idx2pivot(idx):
+
+    rev_num = [np.nan] + ((np.tile(np.arange(10,0,-1),40)+np.repeat(np.arange(0,40)*10,10))-1).tolist()
+    
+    if len(np.where(rev_num==idx))>0:
+        result = np.where(rev_num==idx)[0][0]
+    else:
+        result = np.nan
+
+    return result
+
+# <codecell>
+
+def clean_flux(wavelength, flux, thisCam = [], xDef = 1, medianRange = 0, flatten = True, useRange = []):
+    '''Clean a 1D spectrum. 
+    
+    Parameters
+    ----
+    xDef : int or None, optional
+        Coeficient to resample. Final array will be flux.shape[0]*xDef long. 
+        
+    medianRange : int, optional
+        Number of pixels to median over. 0 will skip this step. Optional.
+
+    '''
+    
+    #fix initial nans on edges
+    nanMap = np.isnan(flux)
+    leftEdgeIdx=0
+    rightEdgeIdx=len(flux)
+    
+#     nanMapIdx = np.where(nanMap==True) make the next lines faster by using this....
+    
+    for i,booI in enumerate(nanMap):
+        if booI==False:
+            leftEdgeIdx = i
+            break
+            
+    for j,rbooI in enumerate(nanMap[::-1]):
+        if rbooI==False:
+            rightEdgeIdx = len(nanMap)-j
+            break        
+
+    fluxMedian = stats.nanmedian(flux)
+    if leftEdgeIdx>0:
+        flux[:leftEdgeIdx] = np.linspace(fluxMedian, flux[leftEdgeIdx+1],leftEdgeIdx)
+    if rightEdgeIdx<len(flux):
+        flux[rightEdgeIdx:] = np.linspace(flux[rightEdgeIdx-1], fluxMedian, len(flux)-rightEdgeIdx)
+
+        
+        
+    #median outliers
+    if medianRange>0:
+        fluxMed = signal.medfilt(flux,medianRange)
+        fluxDiff = abs(flux-fluxMed)
+        fluxDiffStd = np.std(fluxDiff)
+        mask = fluxDiff> 2 * fluxDiffStd
+        flux[mask] = fluxMed[mask]
+
+    if ((wavelength[-np.isnan(flux)].shape[0]>0) &  (flux[-np.isnan(flux)].shape[0]>0)):
+        
+        if flatten==True:#flatten curve by fitting a 3rd order poly
+            fFlux = optimize.curve_fit(cubic, wavelength[-np.isnan(flux)], flux[-np.isnan(flux)], p0 = [1,1,1,1])
+            fittedCurve = cubic(wavelength, fFlux[0][0], fFlux[0][1], fFlux[0][2], fFlux[0][3])
+            flux = flux/fittedCurve-1
+        
+        #apply tukey
+        flux = flux * tukey(0.1, len(flux))
+
+        #resample
+        if (xDef>1):
+            fFlux = interpolate.interp1d(wavelength, flux) 
+            wavelength = np.linspace(min(wavelength), max(wavelength),len(wavelength)*xDef)
+            flux = fFlux(wavelength)
+
+    else: #if not enough data return NaNs
+        if (xDef>1):
+            wavelength = np.linspace(min(wavelength), max(wavelength),len(wavelength)*xDef)
+            flux = np.ones(wavelength.shape[0])*np.nan
+    print 'range',len(useRange)
+    if ((useRange!=[]) and (len(useRange)==2)):
+        rangeFilter = (wavelength>=useRange[0]) & (wavelength<=useRange[1])
+        print 'Using range',useRange, np.sum(rangeFilter), 'pixels'
+        
+        wavelength = wavelength[rangeFilter]
+        flux = flux[rangeFilter]
+        
+    return wavelength, flux
+
+
+# <codecell>
+
+def cubic(x,a,b,c,d):
+    '''
+    Cubic function
+    '''
+    return a*x**3+b*x**2+c*x+d
+
+# <codecell>
+
+def tukey(alpha, N):
+    '''Creates a tukey function
+    
+    
+    Parameters
+    ----
+    alpha : float
+        Fraction of the pixels to fade in/out.
+        i.e. alpha=0.1 will use 10% of the pixels to go from 0 to 1. 
+        
+    N : int
+        Totla number of pixels in the array.
+        
+        
+    Returns
+    ------
+
+    N-length array of floats from 0 to 1. 
+    '''
+
+    
+    tukey = np.zeros(N)
+    for i in range(int(alpha*(N-1)/2)):
+        tukey[i] = 0.5*(1+np.cos(np.pi*(2*i/alpha/(N-1)-1)))
+    for i in range(int(alpha*(N-1)/2),int((N-1)*(1-alpha/2))):
+        tukey[i] = 1
+    for i in range(int((N-1)*(1-alpha/2)),int((N-1))):
+        tukey[i] = 0.5*(1+np.cos(np.pi*(2*i/alpha/(N-1)-2/alpha+1)))
+    
+    return tukey
+
+# <codecell>
+
+#Find the common range of wl for all cameras
+def find_max_wl_range(thisStar):
+    for thisCam in thisStar.exposures.cameras:
+        if np.nansum(thisCam.wavelengths - thisCam.wavelengths[0,:])==0:
+            print 'WL aligned'
+        else:
+            print 'WL NOT aligned'
+
+        mask = np.isnan(thisCam.red_fluxes)
+        collapsed_mask = np.sum(mask, axis=0)==0
+        single_wl =  thisCam.wavelengths[0][collapsed_mask]
+        thisCam.wavelengths = np.reshape(np.tile(single_wl, thisCam.wavelengths.shape[0]), 
+                         ((thisCam.wavelengths.shape[0], single_wl.shape[0])))
+        full_mask =  np.reshape(np.tile(collapsed_mask, thisCam.wavelengths.shape[0]), thisCam.red_fluxes.shape)
+        thisCam.red_fluxes =  np.reshape(thisCam.red_fluxes[full_mask], (thisCam.red_fluxes.shape[0], np.sum(collapsed_mask)))
+
+# <codecell>
+
+#Create cross correlation curves wrt epoch 0
+def RVs_CC_t0(thisStar, starIdx,  xDef = 1, CCReferenceSet = 0, printDetails=False, corrHWidth=10, medianRange = 0, useRangeFilter = False):
+
+#     validDates = np.all([np.nansum(thisCam.red_fluxes,1).astype(bool) for thisCam in thisStar.exposures.cameras],0)
+    print ''
+    for cam,thisCam in enumerate(thisStar.exposures.cameras):
+        RVs = []
+        sigmas = [] 
+        Qs = []
+        SNRs = []
+
+        validDates = np.nansum(thisCam.red_fluxes,1).astype(bool)
+        
+        print 'Camera',cam
+        
+        camFilter = []
+        if useRangeFilter==True:
+            try:
+                if cam==0:
+                    camFilter = np.load('npy/cam1Filter.npy')
+                elif cam==1:
+                    camFilter = np.load('npy/cam2Filter.npy')
+                elif cam==2:
+                    camFilter = np.load('npy/cam3Filter.npy')
+                elif cam==3:
+                    camFilter = np.load('npy/cam4Filter.npy')
+            except:
+                print 'No camera filter found. Using full range.'
+            
+            print 'camFilter',camFilter
+        if len(np.arange(len(validDates))[validDates])>0:
+            CCReferenceSet = np.arange(len(validDates))[validDates][0]
+        else:
+            CCReferenceSet = 0
+            
+            
+        lambda1, flux1 = clean_flux(thisCam.wavelengths[CCReferenceSet], thisCam.red_fluxes[CCReferenceSet], thisCam, medianRange=medianRange, useRange = camFilter)
+        
+        plts = 0    
+        for epoch, JD in enumerate(thisStar.exposures.JDs):
+            print epoch,
+            lambda2, flux2 = clean_flux(thisCam.wavelengths[epoch], thisCam.red_fluxes[epoch], thisCam, medianRange=medianRange, useRange = camFilter)
+
+            if validDates[epoch]==True:
+                if check_equal_wl(lambda1, lambda2)==True:
+    #                 CCCurve = signal.fftconvolve(flux1, flux2[::-1], mode='same')
+    #                 if epoch <5:
+    #                     plt.plot(flux1)
+    #                     plt.plot(flux2)
+    #                     plt.plot(CCCurve)
+    #                     plt.show()
+                    try:
+    #                     print 'max_idx, len(CCCurve) =',np.where(CCCurve==max(CCCurve)), CCCurve.shape
+                        CCCurve = []
+                        CCCurve = signal.fftconvolve(flux1[-np.isnan(flux1)], flux2[-np.isnan(flux2)][::-1], mode='same')
+                        corrMax = np.where(CCCurve==max(CCCurve))[0][0]
+                        p_guess = [corrMax,corrHWidth]
+                        x_mask = np.arange(corrMax-corrHWidth, corrMax+corrHWidth+1)
+                        if max(x_mask)<len(CCCurve):
+            #                 try:
+            #                 print '4 params',p_guess, x_mask, np.sum(x_mask), CCCurve.shape
+                            p = fit_gaussian(p_guess, CCCurve[x_mask], np.arange(len(CCCurve))[x_mask])[0]
+                            if np.modf(CCCurve.shape[0]/2.0)[0]>1e-5:
+                                pixelShift = (p[0]-(CCCurve.shape[0]-1)/2.) #odd number of elements
+                            else:
+                                pixelShift = (p[0]-(CCCurve.shape[0])/2.) #even number of elements
+            #                 except:
+            #                     pixelShift = 0
+
+                            thisQ, thisdRV = QdRV(thisCam.wavelengths[epoch], thisCam.red_fluxes[epoch])
+
+                            mid_px = thisCam.wavelengths.shape[1]/2
+                            dWl = (thisCam.wavelengths[epoch,mid_px+1]-thisCam.wavelengths[epoch,mid_px]) / thisCam.wavelengths[epoch,mid_px]
+                            RV = dWl * pixelShift * constants.c 
+                            print 'RV',RV
+
+                        else:
+                            R = 0
+                            thisQ = 0
+                            thisdRV = 0
+                            RV = 0
+                            print 'Invalid data point'
+
+                    except Exception,e: 
+                        print 'CC Error'
+                        print str(e)
+                        R = 0
+                        thisQ = 0
+                        thisdRV = 0
+                        RV = 0
+    #                     if plts<5:
+    #                         plts+=1
+    #                         plt.plot(flux1)
+    #                         plt.plot(flux2)
+    #                         plt.plot(CCCurve)
+    #                         plt.show()
+                else:
+                    thisQ = 0
+                    thisdRV = 0
+                    RV = 0
+                    print 'Wavelength range not equal'
+
+            else:
+#                 if i==CCReferenceSet:
+#                     print 'The CC reference set is not present. Can\'t continue. Launch again with different reference set.'
+#                     sys.exit()
+                thisQ = 0
+                thisdRV = 0
+                RV = 0
+                print 'Invalid data point'
+
+            SNR = np.sqrt(stats.nanmedian(thisCam.red_fluxes[epoch]))
+            
+            if np.isnan(SNR)==True: 
+                msg = 'NaN in SNR calculation sqrt(median(flux)).'
+                msg += str(np.sum(np.isnan(thisCam.red_fluxes[epoch])))
+                msg += '/'+str(thisCam.red_fluxes[epoch].shape[0])+' NaNs in flux.'
+                msg += ' Median_flux='+str(stats.nanmedian(thisCam.red_fluxes[epoch]))
+                print msg
+                comment(starIdx,epoch,cam,msg )
+                print 'SNR NaN',
+            print SNR
+
+            SNRs.append(SNR)
+            Qs.append(thisQ)
+            sigmas.append(thisdRV)
+            RVs.append(RV)
+
+
+                
+        thisCam.sigmas = np.array(sigmas)
+        thisCam.Qs = np.array(Qs)
+        thisCam.RVs = np.array(RVs)
+        thisCam.SNRs = np.array(SNRs)
+
+# <codecell>
+
+def comment(star, epoch, cam, comment):
+    comments = []
+    try:
+        os.mkdir('npy')
+    except:
+        pass
+    
+    try:
+        comments = np.load('npy/comments.npy')
+    except:
+        pass
+    
+    if comments==[]:
+        comments = np.zeros((1,),dtype=('i4,i4,i4,a100'))
+        comments[:] = [(star, epoch, cam, comment)]
+    else:
+        x = np.zeros((1,),dtype=('i4,i4,i4,a100'))
+        x[:] = [(star, epoch, cam, comment)]
+        comments = np.append(comments,x)
+    
+    np.save('npy/comments.npy',comments)
+        
+
+# <codecell>
+
+#Create cross correlation curves wrt epoch 0
+def single_RVs_CC_t0(thisStar, cam = 0, t = 0, corrHWidth =10, xDef = 1):
+
+        print 'Camera',cam, '- t0 wrt t',t
+        
+        thisCam = thisStar.exposures.cameras[cam]
+            
+        lambda1, flux1 = clean_flux(thisCam.wavelengths[0], thisCam.red_fluxes[0], thisCam, medianRange=5, xDef=xDef )
+        
+        lambda2, flux2 = clean_flux(thisCam.wavelengths[t], thisCam.red_fluxes[t], thisCam, medianRange=5, xDef=xDef)
+        CCCurve = []
+        CCCurve = signal.fftconvolve(flux1[-np.isnan(flux1)], flux2[-np.isnan(flux2)][::-1], mode='same')
+        corrMax = np.where(CCCurve==max(CCCurve))[0][0]
+        p_guess = [corrMax,corrHWidth]
+        x_mask = np.arange(corrMax-corrHWidth, corrMax+corrHWidth+1)
+        if max(x_mask)<len(CCCurve):
+            p = fit_gaussian(p_guess, CCCurve[x_mask], np.arange(len(CCCurve))[x_mask])[0]
+            if np.modf(CCCurve.shape[0]/2.0)[0]>1e-5:
+                pixelShift = (p[0]-(CCCurve.shape[0]-1)/2.) #odd number of elements
+            else:
+                pixelShift = (p[0]-(CCCurve.shape[0])/2.) #even number of elements
+
+
+            mid_px = thisCam.wavelengths.shape[1]/2
+            dWl = (thisCam.wavelengths[t,mid_px+1]-thisCam.wavelengths[t,mid_px]) / thisCam.wavelengths[t,mid_px]/xDef
+            RV = dWl * pixelShift * constants.c 
+            print 'RV',RV
+        else:
+            p=RV=0
+            
+#         print 'HERE:'
+
+        return lambda1,flux1, lambda2,flux2, CCCurve, p, x_mask, RV 
+        
+
+# <codecell>
+
+#Bouchy functions
+def QdRV(Lambda, A0):
+	
+	W1 = W(Lambda, A0)
+	Q_out = 0
+	dRV = 0
+	if np.sum(W1)>0:
+		Q_out = Q(W1, A0)
+		dRV = constants.c/np.sqrt(np.sum(W1))
+	
+	return Q_out, dRV
+
+def Q(W, A0):
+	'''
+    Calculates the Q factor of a spectrum from W(weight) and A0(flux) form Bouchy 2001.
+    
+    Parameters
+    ----------
+    W : np.array
+        n x 1 np.array weight 
+        
+    AO : np.array
+        n x 1 np.array with flux counts
+    
+            
+    Returns
+    -------
+    Q : float
+        Quality factor. 
+        
+    Notes
+    -----
+
+    '''
+	Q = 0
+	if np.sum(A0[-np.isnan(A0)])>0:
+		Q = np.sqrt(np.sum(W)/np.sum(A0[-np.isnan(A0)]))
+	
+	return Q
+
+
+
+
+def W(Lambda, A0):
+	'''
+    Calculates the weight function form Bouchy 2001.
+    
+    Parameters
+    ----------
+    Lambda : np.array
+        n x 1 np.array with wavelength bins
+        
+    AO : np.array
+        n x 1 np.array with counts
+    
+            
+    Returns
+    -------
+    W : np.array
+        n x 1 np.array weights as a function of pixel.
+        
+    Notes
+    -----
+    Lambda and A0 should be equal length.
+    Uses:
+    W(i) = Lambda(i)**2 (dA0(i)/dLambda(i))**2 / A0(i)
+    Assumes noise free detector. (No sigma_D**2 term in the denominator).
+    dA0(i)/dLambda(i) simplified as discrete DeltaY/DeltaX.
+    '''
+
+	dA0dL = np.zeros(len(A0)-1)
+	
+	for i in range(len(A0)-1): #compute partial derivative
+		dA0dL[i] = (A0[i+1] - A0[i])/(Lambda[i+1] - Lambda[i])
+
+	#compute W (removing last term from Lambda and A0 as dA0dL has n-1 terms.
+	W = Lambda[:-1]**2 * dA0dL**2 / A0[:-1]
+	
+	#clean nans
+	W[np.isnan(W)] = 0
+	
+	return W
+
+# <codecell>
+
+#Fit gaussian in CCCurves
+def gaussian(x, mu, sig, ):
+    return np.exp(-np.power(x - mu, 2.) / 2 / np.power(sig, 2.))
+
+def fit_gaussian(p, flux, x_range):
+    a = optimize.leastsq(diff_gausian, p, args= [flux, x_range])
+    return a
+
+def diff_gausian(p, args):
+    
+    flux = args[0]
+    x_range = args[1]
+    diff = gaussian(x_range, p[0],p[1]) - flux/np.max(flux)
+    return diff
+
+def get_wavelength(wavelengths, pixel):
+    intPx = int(pixel)
+    fracPx = pixel - int(pixel)
+
+    return (wavelengths[intPx+1] - wavelengths[intPx])*fracPx + wavelengths[intPx]
+
+def extract_HERMES_wavelength(fileName):
+
+	a = pf.open(fileName)
+
+	CRVAL1 = a[0].header['CRVAL1'] # / Co-ordinate value of axis 1                    
+	CDELT1 = a[0].header['CDELT1'] #  / Co-ordinate increment along axis 1             
+	CRPIX1 = a[0].header['CRPIX1'] #  / Reference pixel along axis 1                   
+	
+	#Creates an array of offset wavelength from the referece px/wavelength
+	Lambda = CRVAL1 - (CRPIX1 - (np.arange(int(CRPIX1)*2)) -1)* CDELT1
+
+	return Lambda
+
+# <codecell>
+
+def pivot_to_y(ref_file):
+     
+    a = pf.getdata(ref_file)
+    
+    return a[:,200]
+
+# <codecell>
+
+
+def calibrator_weights(deltay, sigma):
+    """For calibrator stars with CCD y values deltay from the target star
+    and radial velocity errors sigma, create an optimal set of weights.
+
+    We want to minimise the variance of the weighted sum of calibrator
+    radial velocities where we have the following constraints:
+
+    1) \Sigma w_i = 1  (i.e. the average value of the calibrators measure CCD shifts)
+    2) \Sigma w_i dy_i = 0 (i.e. allow the wavelength solution to rotate about the target)
+
+    See http://en.wikipedia.org/wiki/Quadratic_programming
+    """
+    N = len(sigma)
+    #Start of with a matrix of zeros then fill it with the "Q" and "E" matrices
+    M = np.zeros((N+2,N+2))
+    M[(range(N),range(N))] = sigma
+#     idx = np.where(deltay==0)[0][0]
+#     M[idx,idx] = 1e17
+    M[N,0:N] = deltay
+    M[0:N,N] = deltay
+    M[N+1,0:N] = np.ones(N)
+    M[0:N,N+1] = np.ones(N)
+    b = np.zeros(N+2)
+    b[N+1] = 1.0
+    #Solve the problem M * x = b
+    x = np.linalg.solve(M,b)
+    #The first N elements of x contain the weights.
+    return x[0:N]
+
+# <codecell>
+
+def calibrator_weights2(deltay,SNR):
+
+    c = 1/np.abs(deltay)/SNR
+    c[deltay==0]=0
+    c /=np.sum(c)
+    return c
+
+# <codecell>
+
+def calibrator_weights3(deltay,SNR):
+#nope
+    c = (SNR+np.abs(deltay))/np.abs(deltay)
+    c[deltay==0]=0
+    c /=np.sum(c)
+    return c
+
+# <codecell>
+
+def create_allW(data = [], SNRs = [], starSet=[], RVCorrMethod = 'PM', refEpoch = 0):
+
+    if ((data!=[]) and (SNRs!=[])):
+        if ((starSet!=[]) and (len(starSet.shape)==1) and (starSet[0]>0)):
+            data = data[starSet]
+            SNRs = SNRs[starSet]
+
+        #load function that translates pivot# to y-pixel  p2y(pivot)=y-pixel of pivot
+        p2y = pivot_to_y('/Users/Carlos/Documents/HERMES/reductions/6.2/rhoTuc_6.2/0_20aug/1/20aug10042tlm.fits') 
+
+        #gets the y position of for the data array
+        datay = p2y[data[:,2].astype(float).astype(int)]
+        order = np.argsort(datay)
+        
+        #Creates empty array for relative weights
+        #allW[Weights, camera, staridx of the star to be corrected]
+        allW = np.zeros((data.shape[0],4,data.shape[0]))
+
+        for thisStarIdx in range(data.shape[0]):
+
+            #converts datay into deltay
+            deltay = datay-datay[thisStarIdx]
+
+            for cam in range(4):
+
+                thisSigma = 1./SNRs[:,refEpoch,cam].copy()
+                thisSigma[np.isnan(thisSigma)]=1e+17  #sets NaNs into SNR=1e-17
+                
+                if np.sum(thisSigma)>0:
+                    if RVCorrMethod == 'PM':
+                        W = calibrator_weights(deltay,thisSigma)
+                    elif RVCorrMethod == 'DM':
+                        W = calibrator_weights2(deltay,thisSigma)
+                        
+#                         print data[thisStarIdx,0],RVCorrMethod
+                        if data[thisStarIdx,0]=='Giant01':
+                            for a,b,c in zip(thisSigma[order],W[order], thisSigma[order]):
+                                print 1./a,b,c
+                        print ''
+
+                else:
+                    W = np.zeros(deltay.shape[0]) #hack to fix an all zeros SNRs for failed reductions
+                
+                allW[:,cam,thisStarIdx] = W
+                    
+    else:
+        print 'Create allW: Input arrays missing'
+        allW =[]
+
+    return allW
+
+# <codecell>
+
+def create_RVCorr_PM(RVs, allW, RVClip = 1e17,starSet=[]):
+    RVCorr = np.zeros(RVs.shape)
+    print 'Clipping to',RVClip
+    RVs[np.abs(RVs)>RVClip]=0
+    
+    for thisStarIdx in range(RVs.shape[0]):
+        for epoch in range(RVs.shape[1]):
+            thisRVCorr = (allW[:,:,thisStarIdx]+1)*RVs[:,epoch,:]
+            RVCorr[:,epoch,:] = thisRVCorr + RVs[:,epoch,:] 
+
+    return RVCorr
+
+# <codecell>
+
+def create_RVCorr_DM(RVs, allW, RVClip = 1e17,starSet=[]):
+    RVCorr = np.zeros(RVs.shape)
+    print 'Clipping to',RVClip
+    RVs[np.abs(RVs)>RVClip]=0
+    
+    for thisStarIdx in range(RVs.shape[0]):
+        for epoch in range(RVs.shape[1]):
+            for cam in range(RVs.shape[2]):
+                thisRVCorr = np.nansum(allW[:,cam,thisStarIdx]*RVs[:,epoch,cam])
+                RVCorr[thisStarIdx,epoch,cam] = thisRVCorr
+
+    return RVCorr
+
+# <codecell>
+
+def quad(x,a,b,c):
+    curve  = a*x**2+b*x+c
+    return curve
+
+def fit_quad(p, quadX, quadY):
+    a = optimize.leastsq(diff_quad, p, args= [quadX, quadY], epsfcn=0.1)
+    return a
+
+def diff_quad(p, args):
+    quadX = args[0]
+    quadY = args[1]
+    diff = quad(quadX, p[0],p[1], p[2]) - quadY
+    return diff
+
+# <codecell>
+
+def fit_continuum(disp, flux, knot_spacing=200, sigma_clip=(1.0, 0.2), \
+      max_iterations=3, order=3, exclude=None, include=None, \
+      additional_points=None, function='spline', scale=1.0, **kwargs):
+    """Fits the continuum for a given `Spectrum1D` spectrum.
+    
+    Parameters
+    ----
+    knot_spacing : float or None, optional
+        The knot spacing for the continuum spline function in Angstroms. Optional.
+        If not provided then the knot spacing will be determined automatically.
+    
+    sigma_clip : a tuple of two floats, optional
+        This is the lower and upper sigma clipping level respectively. Optional.
+        
+    max_iterations : int, optional
+        Maximum number of spline-fitting operations.
+        
+    order : int, optional
+        The order of the spline function to fit.
+        
+    exclude : list of tuple-types containing floats, optional
+        A list of wavelength regions to always exclude when determining the
+        continuum. Example:
+        
+        >> exclude = [
+        >>    (3890.0, 4110.0),
+        >>    (4310.0, 4340.0)
+        >>  ]
+        
+        In the example above the regions between 3890 A and 4110 A, as well as
+        4310 A to 4340 A will always be excluded when determining the continuum
+        regions.
+
+    function: only 'spline' or 'poly'
+
+    scale : float
+        A scaling factor to apply to the normalised flux levels.
+        
+    include : list of tuple-types containing floats, optional
+        A list of wavelength regions to always include when determining the
+        continuum.
+        
+    Notes
+    -----
+    (c) Dr. Casey
+    """
+    
+    exclusions = []
+    continuum_indices = range(len(flux))
+
+    # Snip left and right
+    finite_positive_flux = np.isfinite(flux) * flux > 0
+
+    #print "finite flux", np.any(finite_positive_flux), finite_positive_flux
+    #print "where flux", np.where(finite_positive_flux)
+    #print "flux is...", flux
+    left_index = np.where(finite_positive_flux)[0][0]
+    right_index = np.where(finite_positive_flux)[0][-1]
+
+    # See if there are any regions we need to exclude
+    if exclude is not None and len(exclude) > 0:
+        exclude_indices = []
+        
+        if isinstance(exclude[0], float) and len(exclude) == 2:
+            # Only two floats given, so we only have one region to exclude
+            exclude_indices.extend(range(*np.searchsorted(disp, exclude)))
+            
+        else:
+            # Multiple regions provided
+            for exclude_region in exclude:
+                exclude_indices.extend(range(*np.searchsorted(disp, exclude_region)))
+    
+        continuum_indices = np.sort(list(set(continuum_indices).difference(np.sort(exclude_indices))))
+        
+    # See if there are any regions we should always include
+    if include is not None and len(include) > 0:
+        include_indices = []
+        
+        if isinstance(include[0], float) and len(include) == 2:
+            # Only two floats given, so we can only have one region to include
+            include_indices.extend(range(*np.searchsorted(disp, include)))
+            
+        else:
+            # Multiple regions provided
+            for include_region in include:
+                include_indices.extend(range(*np.searchsorted(disp, include_region)))
+    
+
+    # We should exclude non-finite numbers from the fit
+    non_finite_indices = np.where(~np.isfinite(flux))[0]
+    continuum_indices = np.sort(list(set(continuum_indices).difference(non_finite_indices)))
+
+    # We should also exclude zero or negative flux points from the fit
+    zero_flux_indices = np.where(0 >= flux)[0]
+    continuum_indices = np.sort(list(set(continuum_indices).difference(zero_flux_indices)))
+
+    original_continuum_indices = continuum_indices.copy()
+
+    if knot_spacing is None or knot_spacing == 0:
+        knots = []
+
+    else:
+        knot_spacing = abs(knot_spacing)
+        
+        end_spacing = ((disp[-1] - disp[0]) % knot_spacing) /2.
+    
+        if knot_spacing/2. > end_spacing: end_spacing += knot_spacing/2.
+            
+        knots = np.arange(disp[0] + end_spacing, disp[-1] - end_spacing + knot_spacing, knot_spacing)
+        if len(knots) > 0 and knots[-1] > disp[continuum_indices][-1]:
+            knots = knots[:knots.searchsorted(disp[continuum_indices][-1])]
+            
+        if len(knots) > 0 and knots[0] < disp[continuum_indices][0]:
+            knots = knots[knots.searchsorted(disp[continuum_indices][0]):]
+
+    for iteration in xrange(max_iterations):
+        
+        splrep_disp = disp[continuum_indices]
+        splrep_flux = flux[continuum_indices]
+
+        splrep_weights = np.ones(len(splrep_disp))
+
+        # We need to add in additional points at the last minute here
+        if additional_points is not None and len(additional_points) > 0:
+
+            for point, flux, weight in additional_points:
+
+                # Get the index of the fit
+                insert_index = int(np.searchsorted(splrep_disp, point))
+                
+                # Insert the values
+                splrep_disp = np.insert(splrep_disp, insert_index, point)
+                splrep_flux = np.insert(splrep_flux, insert_index, flux)
+                splrep_weights = np.insert(splrep_weights, insert_index, weight)
+
+        if function == 'spline':
+            order = 5 if order > 5 else order
+            tck = interpolate.splrep(splrep_disp, splrep_flux,
+                k=order, task=-1, t=knots, w=splrep_weights)
+
+            continuum = interpolate.splev(disp, tck)
+
+        elif function in ("poly", "polynomial"):
+        
+            p = poly1d(polyfit(splrep_disp, splrep_flux, order))
+            continuum = p(disp)
+
+        else:
+            raise ValueError("Unknown function type: only spline or poly available (%s given)" % (function, ))
+        
+        difference = continuum - flux
+        sigma_difference = difference / np.std(difference[np.isfinite(flux)])
+
+        # Clipping
+        upper_exclude = np.where(sigma_difference > sigma_clip[1])[0]
+        lower_exclude = np.where(sigma_difference < -sigma_clip[0])[0]
+        
+        exclude_indices = list(upper_exclude)
+        exclude_indices.extend(lower_exclude)
+        exclude_indices = np.array(exclude_indices)
+        
+        if len(exclude_indices) is 0: break
+        
+        exclusions.extend(exclude_indices)
+        
+        # Before excluding anything, we must check to see if there are regions
+        # which we should never exclude
+        if include is not None:
+            exclude_indices = set(exclude_indices).difference(include_indices)
+        
+        # Remove regions that have been excluded
+        continuum_indices = np.sort(list(set(continuum_indices).difference(exclude_indices)))
+    
+    # Snip the edges based on exclude regions
+    if exclude is not None and len(exclude) > 0:
+
+        # If there are exclusion regions that extend past the left_index/right_index,
+        # then we will need to adjust left_index/right_index accordingly
+
+        left_index = np.max([left_index, np.min(original_continuum_indices)])
+        right_index = np.min([right_index, np.max(original_continuum_indices)])
+        
+
+    # Apply flux scaling
+    continuum *= scale
+    return disp, flux/continuum
+

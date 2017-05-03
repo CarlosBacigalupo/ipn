@@ -18,6 +18,8 @@ from lmfit import minimize, Parameters
 # sys.path = ['', '/disks/ceres/makemake/aphot/kalumbe/reductions/NGC2477_1arc_6.2','/usr/local/yt-hg', '/home/science/staff/kalumbe/my-astro-lib', '/usr/lib/python2.7', '/usr/lib/python2.7/plat-x86_64-linux-gnu', '/usr/lib/python2.7/lib-tk', '/usr/lib/python2.7/lib-old', '/usr/lib/python2.7/lib-dynload', '/usr/lib/python2.7/dist-packages', '/usr/lib/python2.7/dist-packages/PILcompat', '/usr/lib/python2.7/dist-packages/gtk-2.0', '/usr/lib/pymodules/python2.7', '/usr/lib/python2.7/dist-packages/ubuntu-sso-client', '/usr/lib/python2.7/dist-packages/ubuntuone-client', '/usr/lib/python2.7/dist-packages/ubuntuone-couch', '/usr/lib/python2.7/dist-packages/ubuntuone-storage-protocol', '/usr/lib/python2.7/dist-packages/wx-2.8-gtk2-unicode']
 
 
+# ## Sine fitting
+
 # In[7]:
 
 def fit_sine_RVs(baryRVs, MJDs,data, RVClip = 1e6, starIdx = -1, cam = -1, npyName = 'sineFit.npy'):
@@ -171,285 +173,123 @@ def fit_results(data, sineFit, avgSineFit, baryRVs, avgBaryRVs):
     print 'Fine'
 
 
-# In[1]:
-
-def check_equal_wl(wl1, wl2):
-    result = False
-    
-    diff = np.sum(wl1-wl2)
-    
-    if diff<1e-17:
-        result = True
-    return result
-
-
-# In[1]:
-
-def pivot2idx(pivot):
-    pivot = np.array(pivot)
-    
-    rev_num = [np.nan] + ((np.tile(np.arange(10,0,-1),40)+np.repeat(np.arange(0,40)*10,10))-1).tolist()
-    rev_num = np.array(rev_num)
-    
-    return rev_num[pivot]
-
-
-# In[ ]:
-
-def idx2pivot(idx):
-
-    rev_num = [np.nan] + ((np.tile(np.arange(10,0,-1),40)+np.repeat(np.arange(0,40)*10,10))-1).tolist()
-    
-    if len(np.where(rev_num==idx))>0:
-        result = np.where(rev_num==idx)[0][0]
-    else:
-        result = np.nan
-
-    return result
-
+# ## Cross correlation
 
 # In[2]:
 
-def resample_sp(wavelength, flux, minWL, maxWL, xStep):
+#Create cross correlation curves wrt epoch 0
+def RVs_CC_t0(thisStar, starIdx, minMJD=0 ,  xDef = 1, CCReferenceSet = 0, printDetails=False, corrHWidth=4, medianRange = 0, useRangeFilter = False):
     '''
-    Rebins the flux into xSteps in log_e space
+    Cross-correlates all epochs wrt t0. Writes the results to thisStar.cameras[].RVs
+    
     
     Parameters
     ----
-    wavelength : 1-D array
-            Wavelength values 
-            
-    flux : 1-D array
-        Flux values 
+    thisStar : obj
+        Object holding the star that holds the fluxes to be cross-correlated
         
-    xStep : float
-        Increase step between pixels in log_e(wl)
+    starIdx : int
+        Index of the star in to be linked in the comments. Not very useful. 
         
         
     Returns
     ------
-    new_wavelength: 
-        log_e(wl) in xStep steps
+    Nottin.
     
-    new_flux: 
-        rebinned flux
-
     '''
     
-    lnWavelength = np.log(wavelength)
-    fFlux = interpolate.splrep(lnWavelength, flux) 
-    new_wavelength = np.arange(np.log(minWL), np.log(maxWL),xStep)
-    new_flux = interpolate.splev(new_wavelength, fFlux, der=0)
-    
-#     plt.plot(np.log(wavelength),flux)
-#     plt.plot(new_wavelength,new_flux)
-#     plt.show()
-    
-    return new_wavelength, new_flux
 
+#     validDates = np.all([np.nansum(thisCam.red_fluxes,1).astype(bool) for thisCam in thisStar.exposures.cameras],0)
+    print ''
+    for cam,thisCam in enumerate(thisStar.exposures.cameras[:]):
+        RVs = []
+        sigmas = [] 
+        Qs = []
+        SNRs = []
 
-# In[20]:
-
-def cubic(x,a,b,c,d):
-    '''
-    Cubic function
-    '''
-    return a*x**3+b*x**2+c*x+d
-
-
-# In[1]:
-
-#Find the common range of wl for all cameras
-def find_max_wl_range(thisCam):
-    '''
-    Checks the range of valid wavelength for all exposures in given camera.
-    '''
-    if len(thisCam.wavelengths)>0:
-        minWL = np.max(np.min(thisCam.wavelengths, axis=1))
-        maxWl = np.min(np.max(thisCam.wavelengths, axis=1))
-
-    else:
-        minWL, maxWl = 0,0
+        validDates = np.nansum(thisCam.red_fluxes,1).astype(bool)
         
-    return minWL, maxWl
-
-
-# In[ ]:
-
-def clean_arc(wavelength, flux, minWL=0, maxWL=0, xStep = 5*10**-6):
-    '''
-    Clean a 1D spectrum. 
-    
-    Parameters
-    ----
-    wavelength : int or None, optional
-        Array of wavelengths 
+        print 'Camera',cam
         
-    flux : int or None, optional
-        Array of fluxes 
+        minWL, maxWL = find_max_wl_range(thisCam)
         
-    minWL : int, optional
-        Minimum walength value to return 
-        
-    maxWL : int, optional
-        Maximum wavelength value to return 
-        
-    xStep : float, optional
-        Coeficient to resample. Final array will be flux.shape[0]*xDef long. 
-        
-    medianRange : int, optional
-        Number of pixels to median over. 0 will skip this step. Optional.
-
-    flatten : boolean, optional
-        Divides flux by a fitted 3rd ord polynomial if True. Optional.
-        
-    Returns
-    ----
-    wavelength : numpy, floats
-        Array of wavelengths 
-        
-    flux : numpy, floats
-        Array of fluxes 
-        
-
-    '''
-    
-    #fix initial nans on edges
-    nanMap = np.isnan(flux)
-    leftEdgeIdx=0
-    rightEdgeIdx=len(flux)
-    
-#     nanMapIdx = np.where(nanMap==True) <<<<<make the next lines faster by using this
-    if np.sum(nanMap)>0:
-        print 'Found NaNs in flux array'
-    
-    for i,booI in enumerate(nanMap):
-        if booI==False:
-            leftEdgeIdx = i
-            break
+        #Filters exposures to a minimum MJD
+#         if minMJD>0:
+#             print 'Reducing MJD to >=',minMJD
+#             validDates = thisStar.exposures.MJDs>=minMJD
             
-    for j,rbooI in enumerate(nanMap[::-1]):
-        if rbooI==False:
-            rightEdgeIdx = len(nanMap)-j
-            break        
-
-    fluxMedian = stats.nanmedian(flux)
-    if leftEdgeIdx>0:
-        flux[:leftEdgeIdx] = np.linspace(0, flux[leftEdgeIdx+1],leftEdgeIdx)
-    if rightEdgeIdx<len(flux):
-        flux[rightEdgeIdx:] = np.linspace(flux[rightEdgeIdx-1], 0, len(flux)-rightEdgeIdx)
-
-        
-    if ((wavelength[-np.isnan(flux)].shape[0]>0) &  (flux[-np.isnan(flux)].shape[0]>0)):
-        #resample
-        wavelength,flux = resample_sp(wavelength, flux, minWL, maxWL, xStep)
-        
-    else: #if not enough data return NaNs
-        wavelength = np.ones(4096)*np.nan
-        flux = np.ones(4096)*np.nan
-        
-    return wavelength, flux
-
-
-
-# In[63]:
-
-def clean_flux(wavelength, flux, minWL=0, maxWL=0, xStep = 10**-5, medianRange = 0, flatten = True):
-    '''
-    Clean a 1D spectrum. 
-    
-    Parameters
-    ----
-    wavelength : int or None, optional
-        Array of wavelengths 
-        
-    flux : int or None, optional
-        Array of fluxes 
-        
-    minWL : int, optional
-        Minimum walength value to return 
-        
-    maxWL : int, optional
-        Maximum wavelength value to return 
-        
-    xStep : float, optional
-        Coeficient to resample. Final array will be flux.shape[0]*xDef long. 
-        
-    medianRange : int, optional
-        Number of pixels to median over. 0 will skip this step. Optional.
-
-    flatten : boolean, optional
-        Divides flux by a fitted 3rd ord polynomial if True. Optional.
-        
-    Returns
-    ----
-    wavelength : numpy, floats
-        Array of wavelengths 
-        
-    flux : numpy, floats
-        Array of fluxes 
-        
-
-    '''
-    
-    #fix initial nans on edges
-    nanMap = np.isnan(flux)
-    leftEdgeIdx=0
-    rightEdgeIdx=len(flux)
-    
-#     nanMapIdx = np.where(nanMap==True) <<<<<make the next lines faster by using this
-    if np.sum(nanMap)>0:
-        print 'Found NaNs in flux array'
-        
-    for i,booI in enumerate(nanMap):
-        if booI==False:
-            leftEdgeIdx = i
-            break
             
-    for j,rbooI in enumerate(nanMap[::-1]):
-        if rbooI==False:
-            rightEdgeIdx = len(nanMap)-j
-            break        
-
-    fluxMedian = stats.nanmedian(flux)
-    if leftEdgeIdx>0:
-        flux[:leftEdgeIdx] = np.linspace(fluxMedian, flux[leftEdgeIdx+1],leftEdgeIdx)
-    if rightEdgeIdx<len(flux):
-        flux[rightEdgeIdx:] = np.linspace(flux[rightEdgeIdx-1], fluxMedian, len(flux)-rightEdgeIdx)
-
-        
-        
-    #median outliers
-    if medianRange>0:
-        fluxMed = signal.medfilt(flux,medianRange)
-        fluxDiff = abs(flux-fluxMed)
-#         fluxDiff = flux-fluxMed
-        fluxDiffStd = np.std(fluxDiff)
-        mask = fluxDiff> 3 * fluxDiffStd
-        flux[mask] = fluxMed[mask]
-
-
-    if ((wavelength[-np.isnan(flux)].shape[0]>0) &  (flux[-np.isnan(flux)].shape[0]>0)):
-        
-        if flatten==True:#flatten curve by fitting a 3rd order poly
-            fFlux = optimize.curve_fit(cubic, wavelength[-np.isnan(flux)], flux[-np.isnan(flux)], p0 = [1,1,1,1])
-            fittedCurve = cubic(wavelength, fFlux[0][0], fFlux[0][1], fFlux[0][2], fFlux[0][3])
-            flux = flux/fittedCurve-1
-        else:
-            flux = flux/fluxMedian-1
+#         if len(np.arange(len(validDates))[validDates])>0:
+#             CCReferenceSet = np.arange(len(validDates))[validDates][0]
+#         else:
+#             CCReferenceSet = 0
             
-        #apply tukey
-        flux = flux * signal.tukey(len(flux), 0.2)
-
-        #resample
-        wavelength,flux = resample_sp(wavelength, flux, minWL, maxWL, xStep)
+#         print 'Refernce set =',CCReferenceSet
         
-    else: #if not enough data return NaNs
-        wavelength = np.ones(4096)*np.nan
-        flux = np.ones(4096)*np.nan
+        lambda1, flux1 = clean_flux(thisCam.wavelengths[CCReferenceSet], thisCam.red_fluxes[CCReferenceSet], minWL, maxWL, medianRange=medianRange)
         
-    return wavelength, flux
+        plts = 0    
+        for epoch, MJD in enumerate(thisStar.exposures.MJDs):
+            print epoch,
+            lambda2, flux2 = clean_flux(thisCam.wavelengths[epoch], thisCam.red_fluxes[epoch], minWL, maxWL, medianRange=medianRange)
+            
+            SNR = np.sqrt(stats.nanmedian(thisCam.red_fluxes[epoch]))
+            
+            try:
+                
+                #Duncan's approach to CC. 
+                CCCurve = np.correlate(flux1, flux2, mode='full')
 
+                y = CCCurve[int(CCCurve.shape[0]/2.)-corrHWidth:int(CCCurve.shape[0]/2.)+1+corrHWidth].copy()
+                y /=np.max(y)
+                x = np.arange(-corrHWidth,corrHWidth+1)
+                p,_ = fit_flexi_gaussian([1.,3.,2.,1.,0],y,x )
+                shift = p[0]
+                
+                plt.plot(flux1)
+                plt.plot(flux2)
+                plt.title(str(SNR))
+                plt.show()
+                
+                plt.plot(CCCurve)
+                plt.show()
+                
+                plt.plot(x,y)
+                x_dense = np.linspace(min(x),max(x))
+                plt.plot(x_dense,flexi_gaussian(x_dense,p[0],p[1],p[2],p[3],p[4]), label='gaussian')
+                plt.legend(loc=0)
+                plt.show()
+
+                
+                
+#                 thisQ, thisdRV = QdRV(thisCam.wavelengths[epoch], thisCam.red_fluxes[epoch])
+
+                px = 1000
+                RV = (np.exp(lambda1[px+1]-lambda1[px]) -1) * constants.c * shift
+                print thisStar.exposures.MJDs[epoch], 'RV',RV                
+
+            except Exception,e: 
+                print 'CC Error'
+                print str(e)
+                R = 0
+                thisQ = 0
+                thisdRV = 0
+                RV = 0
+
+
+
+
+            SNRs.append(SNR)
+    #         Qs.append(thisQ)
+    #         sigmas.append(thisdRV)
+            RVs.append(RV)
+
+
+
+#     thisCam.sigmas = np.array(sigmas)
+#     thisCam.Qs = np.array(Qs)
+    thisCam.RVs = np.array(RVs)
+    thisCam.SNRs = np.array(SNRs)
 
 
 # In[ ]:
@@ -553,6 +393,277 @@ def RVs_CC_t0_arc(thisStar, CCReferenceSet = 0, corrHWidth=10):
 
 # In[ ]:
 
+def clean_spec_NaNs(flux):
+    
+    #fix initial nans on edges
+    nanMap = np.isnan(flux)
+    nanGroups, nNanGroups = label(nanMap)
+#     leftEdgeIdx=0
+#     rightEdgeIdx=len(flux)
+    
+#     plt.plot(nanMap)
+#     plt.show()
+    
+#     nanMapIdx = np.where(nanMap==True) <<<<<make the next lines faster by using this
+    if np.sum(nanMap)>0:
+        print 'Found NaNs in flux array'
+        
+    for i,booI in enumerate(nanMap):
+        if booI==False:
+            leftEdgeIdx = i
+            break
+            
+    for j,rbooI in enumerate(nanMap[::-1]):
+        if rbooI==False:
+            rightEdgeIdx = len(nanMap)-j
+            break        
+
+    fluxMedian = stats.nanmedian(flux)
+    if leftEdgeIdx>0:
+        flux[:leftEdgeIdx] = np.linspace(fluxMedian, flux[leftEdgeIdx+1],leftEdgeIdx)
+    if rightEdgeIdx<len(flux):
+        flux[rightEdgeIdx:] = np.linspace(flux[rightEdgeIdx-1], fluxMedian, len(flux)-rightEdgeIdx)
+
+    nanMap = np.isnan(flux)        
+    if np.sum(nanMap)>0:
+        print 'NaNs remain in flux array'        
+
+    plt.plot(nanMap)
+    plt.show()
+
+
+# In[63]:
+
+def clean_flux(wavelength, flux, minWL=0, maxWL=0, xStep = 10**-5, medianRange = 0, flatten = True):
+    '''
+    Clean a 1D spectrum. 
+    
+    Parameters
+    ----
+    wavelength : int or None, optional
+        Array of wavelengths 
+        
+    flux : int or None, optional
+        Array of fluxes 
+        
+    minWL : int, optional
+        Minimum walength value to return 
+        
+    maxWL : int, optional
+        Maximum wavelength value to return 
+        
+    xStep : float, optional
+        Coeficient to resample. Final array will be flux.shape[0]*xDef long. 
+        
+    medianRange : int, optional
+        Number of pixels to median over. 0 will skip this step. Optional.
+
+    flatten : boolean, optional
+        Divides flux by a fitted 3rd ord polynomial if True. Optional.
+        
+    Returns
+    ----
+    wavelength : numpy, floats
+        Array of wavelengths 
+        
+    flux : numpy, floats
+        Array of fluxes 
+        
+
+    '''
+    
+
+    #median outliers
+    if medianRange>0:
+        fluxMed = signal.medfilt(flux,medianRange)
+        fluxDiff = abs(flux-fluxMed)
+#         fluxDiff = flux-fluxMed
+        fluxDiffStd = np.std(fluxDiff)
+        mask = fluxDiff> 3 * fluxDiffStd
+        flux[mask] = fluxMed[mask]
+
+
+    if ((wavelength[-np.isnan(flux)].shape[0]>0) &  (flux[-np.isnan(flux)].shape[0]>0)):
+        
+        if flatten==True:#flatten curve by fitting a 3rd order poly
+            fFlux = optimize.curve_fit(cubic, wavelength[-np.isnan(flux)], flux[-np.isnan(flux)], p0 = [1,1,1,1])
+            fittedCurve = cubic(wavelength, fFlux[0][0], fFlux[0][1], fFlux[0][2], fFlux[0][3])
+            flux = flux/fittedCurve-1
+        else:
+            flux = flux/fluxMedian-1
+            
+        #apply tukey
+        flux = flux * signal.tukey(len(flux), 0.2)
+
+        #resample
+        wavelength,flux = resample_sp(wavelength, flux, minWL, maxWL, xStep)
+        
+    else: #if not enough data return NaNs
+        wavelength = np.ones(4096)*np.nan
+        flux = np.ones(4096)*np.nan
+        
+    return wavelength, flux
+
+
+
+# In[ ]:
+
+def clean_arc(wavelength, flux, minWL=0, maxWL=0, xStep = 5*10**-6):
+    '''
+    Clean a 1D arc spectrum. 
+    
+    Parameters
+    ----
+    wavelength : int or None, optional
+        Array of wavelengths 
+        
+    flux : int or None, optional
+        Array of fluxes 
+        
+    minWL : int, optional
+        Minimum walength value to return 
+        
+    maxWL : int, optional
+        Maximum wavelength value to return 
+        
+    xStep : float, optional
+        Coeficient to resample. Final array will be flux.shape[0]*xDef long. 
+        
+    medianRange : int, optional
+        Number of pixels to median over. 0 will skip this step. Optional.
+
+    flatten : boolean, optional
+        Divides flux by a fitted 3rd ord polynomial if True. Optional.
+        
+    Returns
+    ----
+    wavelength : numpy, floats
+        Array of wavelengths 
+        
+    flux : numpy, floats
+        Array of fluxes 
+        
+
+    '''
+    
+    #fix initial nans on edges
+    nanMap = np.isnan(flux)
+    leftEdgeIdx=0
+    rightEdgeIdx=len(flux)
+    
+#     nanMapIdx = np.where(nanMap==True) <<<<<make the next lines faster by using this
+    if np.sum(nanMap)>0:
+        print 'Found NaNs in flux array'
+    
+    for i,booI in enumerate(nanMap):
+        if booI==False:
+            leftEdgeIdx = i
+            break
+            
+    for j,rbooI in enumerate(nanMap[::-1]):
+        if rbooI==False:
+            rightEdgeIdx = len(nanMap)-j
+            break        
+
+    fluxMedian = stats.nanmedian(flux)
+    if leftEdgeIdx>0:
+        flux[:leftEdgeIdx] = np.linspace(0, flux[leftEdgeIdx+1],leftEdgeIdx)
+    if rightEdgeIdx<len(flux):
+        flux[rightEdgeIdx:] = np.linspace(flux[rightEdgeIdx-1], 0, len(flux)-rightEdgeIdx)
+
+        
+    if ((wavelength[-np.isnan(flux)].shape[0]>0) &  (flux[-np.isnan(flux)].shape[0]>0)):
+        #resample
+        wavelength,flux = resample_sp(wavelength, flux, minWL, maxWL, xStep)
+        
+    else: #if not enough data return NaNs
+        wavelength = np.ones(4096)*np.nan
+        flux = np.ones(4096)*np.nan
+        
+    return wavelength, flux
+
+
+
+# In[1]:
+
+def check_equal_wl(wl1, wl2):
+    result = False
+    
+    diff = np.sum(wl1-wl2)
+    
+    if diff<1e-17:
+        result = True
+    return result
+
+
+# In[2]:
+
+def resample_sp(wavelength, flux, minWL, maxWL, xStep):
+    '''
+    Rebins the flux into xSteps in log_e space
+    
+    Parameters
+    ----
+    wavelength : 1-D array
+            Wavelength values 
+            
+    flux : 1-D array
+        Flux values 
+        
+    xStep : float
+        Increase step between pixels in log_e(wl)
+        
+        
+    Returns
+    ------
+    new_wavelength: 
+        log_e(wl) in xStep steps
+    
+    new_flux: 
+        rebinned flux
+
+    '''
+    
+    lnWavelength = np.log(wavelength)
+    fFlux = interpolate.splrep(lnWavelength, flux) 
+    new_wavelength = np.arange(np.log(minWL), np.log(maxWL),xStep)
+    new_flux = interpolate.splev(new_wavelength, fFlux, der=0)
+    
+#     plt.plot(np.log(wavelength),flux)
+#     plt.plot(new_wavelength,new_flux)
+#     plt.show()
+    
+    return new_wavelength, new_flux
+
+
+# In[20]:
+
+def cubic(x,a,b,c,d):
+    '''
+    Cubic function
+    '''
+    return a*x**3+b*x**2+c*x+d
+
+
+# In[1]:
+
+#Find the common range of wl for all cameras
+def find_max_wl_range(thisCam):
+    '''
+    Checks the range of valid wavelength for all exposures in given camera.
+    '''
+    if len(thisCam.wavelengths)>0:
+        minWL = np.max(np.min(thisCam.wavelengths, axis=1))
+        maxWl = np.min(np.max(thisCam.wavelengths, axis=1))
+
+    else:
+        minWL, maxWl = 0,0
+        
+    return minWL, maxWl
+
+
+# In[ ]:
+
 def gaussian(x, mu, sig, ):
     x = np.array(x)
     return np.exp(-np.power(x - mu, 2.) / 2 / np.power(sig, 2.))
@@ -585,131 +696,6 @@ def diff_flexi_gaussian(p, args):
     weights = np.abs(np.gradient(flux)) * (flux+np.max(flux)*.1)
     diff = (flexi_gaussian(x_range, p[0], p[1], p[2], p[3], p[4]) - flux)# *weights
     return diff
-
-
-# In[2]:
-
-#Create cross correlation curves wrt epoch 0
-def RVs_CC_t0(thisStar, starIdx, minMJD=0 ,  xDef = 1, CCReferenceSet = 0, printDetails=False, corrHWidth=10, medianRange = 0, useRangeFilter = False):
-    '''
-    Cross-correlates all epochs wrt t0. Writes the results to thisStar.cameras[].RVs
-    
-    
-    Parameters
-    ----
-    thisStar : obj
-        Object holding the star that holds the fluxes to be cross-correlated
-        
-    starIdx : int
-        Index of the star in to be linked in the comments. Not very useful. 
-        
-        
-    Returns
-    ------
-    Nottin.
-    
-    '''
-    
-
-#     validDates = np.all([np.nansum(thisCam.red_fluxes,1).astype(bool) for thisCam in thisStar.exposures.cameras],0)
-    print ''
-    for cam,thisCam in enumerate(thisStar.exposures.cameras[:1]):
-        RVs = []
-        sigmas = [] 
-        Qs = []
-        SNRs = []
-
-        validDates = np.nansum(thisCam.red_fluxes,1).astype(bool)
-        
-        print 'Camera',cam
-        
-        minWL, maxWL = find_max_wl_range(thisCam)
-        
-        #Filters exposures to a minimum MJD
-#         if minMJD>0:
-#             print 'Reducing MJD to >=',minMJD
-#             validDates = thisStar.exposures.MJDs>=minMJD
-            
-            
-#         if len(np.arange(len(validDates))[validDates])>0:
-#             CCReferenceSet = np.arange(len(validDates))[validDates][0]
-#         else:
-#             CCReferenceSet = 0
-            
-#         print 'Refernce set =',CCReferenceSet
-        
-        lambda1, flux1 = clean_flux(thisCam.wavelengths[CCReferenceSet], thisCam.red_fluxes[CCReferenceSet], minWL, maxWL, medianRange=medianRange)
-        
-        plts = 0    
-        for epoch, MJD in enumerate(thisStar.exposures.MJDs):
-            print epoch,
-            lambda2, flux2 = clean_flux(thisCam.wavelengths[epoch], thisCam.red_fluxes[epoch], minWL, maxWL, medianRange=medianRange)
-
-            try:
-                
-                #Duncan's approach to CC. 
-                CCCurve = np.correlate(flux1, flux2, mode='full')
-
-                y = CCCurve[int(CCCurve.shape[0]/2.)+1-5:int(CCCurve.shape[0]/2.)+1+4].copy()
-                y /=np.max(y)
-                x = np.arange(-4,5)
-                p,_ = fit_gaussian([1,3.],y,x )
-                shift = p[0]
-                
-#                 thisQ, thisdRV = QdRV(thisCam.wavelengths[epoch], thisCam.red_fluxes[epoch])
-
-                px = 1000
-                RV = (np.exp(lambda1[px+1]-lambda1[px]) -1) * constants.c * shift
-                print 'RV',RV                
-
-            except Exception,e: 
-                print 'CC Error'
-                print str(e)
-                R = 0
-                thisQ = 0
-                thisdRV = 0
-                RV = 0
-
-            SNR = np.sqrt(stats.nanmedian(thisCam.red_fluxes[epoch]))
-
-
-            SNRs.append(SNR)
-    #         Qs.append(thisQ)
-    #         sigmas.append(thisdRV)
-            RVs.append(RV)
-
-
-
-#     thisCam.sigmas = np.array(sigmas)
-#     thisCam.Qs = np.array(Qs)
-    thisCam.RVs = np.array(RVs)
-    thisCam.SNRs = np.array(SNRs)
-
-
-# In[24]:
-
-def comment(star, epoch, cam, comment):
-    comments = []
-    try:
-        os.mkdir('npy')
-    except:
-        pass
-    
-    try:
-        comments = np.load('npy/comments.npy')
-    except:
-        pass
-    
-    if comments==[]:
-        comments = np.zeros((1,),dtype=('i4,i4,i4,a100'))
-        comments[:] = [(star, epoch, cam, comment)]
-    else:
-        x = np.zeros((1,),dtype=('i4,i4,i4,a100'))
-        x[:] = [(star, epoch, cam, comment)]
-        comments = np.append(comments,x)
-    
-    np.save('npy/comments.npy',comments)
-        
 
 
 # In[25]:
@@ -748,6 +734,17 @@ def single_RVs_CC_t0(thisStar, cam = 0, t = 0, corrHWidth =10, xDef = 1):
 
         return lambda1,flux1, lambda2,flux2, CCCurve, p, x_mask, RV 
         
+
+
+# In[1]:
+
+def pivot2idx(pivot):
+    pivot = np.array(pivot)
+    
+    rev_num = [np.nan] + ((np.tile(np.arange(10,0,-1),40)+np.repeat(np.arange(0,40)*10,10))-1).tolist()
+    rev_num = np.array(rev_num)
+    
+    return rev_num[pivot]
 
 
 # In[26]:
@@ -836,22 +833,43 @@ def W(Lambda, A0):
 	return W
 
 
-# In[27]:
+# In[ ]:
 
-#Fit gaussian in CCCurves
 def gaussian(x, mu, sig, ):
+    x = np.array(x)
     return np.exp(-np.power(x - mu, 2.) / 2 / np.power(sig, 2.))
 
+
+def flexi_gaussian(x, mu, sig, power, a, d ):
+    x = np.array(x)
+    return a* np.exp(-np.power(np.abs((x - mu) * np.sqrt(2*np.log(2))/sig),power))+d
+
 def fit_gaussian(p, flux, x_range):
-    a = optimize.leastsq(diff_gausian, p, args= [flux, x_range])
+    a = optimize.leastsq(diff_gaussian, p, args= [flux, x_range])
     return a
 
-def diff_gausian(p, args):
+def fit_flexi_gaussian(p, flux, x_range):
+    a = optimize.leastsq(diff_flexi_gaussian, p, args= [flux, x_range])
+    return a
+
+def diff_gaussian(p, args):
     
     flux = args[0]
     x_range = args[1]
-    diff = gaussian(x_range, p[0],p[1]) - flux/np.max(flux)
+
+    diff = gaussian(x_range, p[0],p[1]) - flux
     return diff
+
+def diff_flexi_gaussian(p, args):
+    
+    flux = args[0]
+    x_range = args[1]
+    weights = np.abs(np.gradient(flux)) * (flux+np.max(flux)*.1)
+    diff = (flexi_gaussian(x_range, p[0], p[1], p[2], p[3], p[4]) - flux)# *weights
+    return diff
+
+
+# In[27]:
 
 def get_wavelength(wavelengths, pixel):
     intPx = int(pixel)
@@ -859,36 +877,6 @@ def get_wavelength(wavelengths, pixel):
 
     return (wavelengths[intPx+1] - wavelengths[intPx])*fracPx + wavelengths[intPx]
 
-def extract_HERMES_wavelength(fileName):
-
-    a = pf.open(fileName)
-
-    CRVAL1 = a[0].header['CRVAL1'] # / Co-ordinate value of axis 1                    
-    CDELT1 = a[0].header['CDELT1'] #  / Co-ordinate increment along axis 1             
-    CRPIX1 = a[0].header['CRPIX1'] #  / Reference pixel along axis 1                   
-
-    #Creates an array of offset wavelength from the referece px/wavelength
-    Lambda = CRVAL1 - (CRPIX1 - (np.arange(int(CRPIX1)*2)))* CDELT1
-
-    return Lambda
-
-
-# In[ ]:
-
-def extract_iraf_wavelength(header, app):
-    WS = 'WS_'+str(app)
-    WD = 'WD_'+str(app)
-
-    first_px = float(header[WS])
-    disp = float(header[WD])
-    length = header['NAXIS1']
-    wl = np.arange(length)*disp
-    wl += first_px
-    
-    return wl
-
-
-# In[ ]:
 
 def extract_pyhermes_wavelength(fileName):
 
@@ -905,6 +893,21 @@ def extract_pyhermes_wavelength(fileName):
     return Lambda
 
 
+def extract_iraf_wavelength(header, app):
+    WS = 'WS_'+str(app)
+    WD = 'WD_'+str(app)
+
+    first_px = float(header[WS])
+    disp = float(header[WD])
+    length = header['NAXIS1']
+    wl = np.arange(length)*disp
+    wl += first_px
+    
+    return wl
+
+
+
+
 # In[28]:
 
 def pivot_to_y(ref_file):
@@ -912,6 +915,20 @@ def pivot_to_y(ref_file):
     a = pf.getdata(ref_file)
     
     return a[:,200]
+
+
+# In[ ]:
+
+def idx2pivot(idx):
+
+    rev_num = [np.nan] + ((np.tile(np.arange(10,0,-1),40)+np.repeat(np.arange(0,40)*10,10))-1).tolist()
+    
+    if len(np.where(rev_num==idx))>0:
+        result = np.where(rev_num==idx)[0][0]
+    else:
+        result = np.nan
+
+    return result
 
 
 # In[29]:
@@ -1069,226 +1086,28 @@ def diff_quad(p, args):
     return diff
 
 
-# In[21]:
+# In[24]:
 
-def tukey(alpha, N):
-    '''
-    Deprecated, use scipy.signal.tukey
-    Creates a tukey function
+def comment(star, epoch, cam, comment):
+    comments = []
+    try:
+        os.mkdir('npy')
+    except:
+        pass
     
+    try:
+        comments = np.load('npy/comments.npy')
+    except:
+        pass
     
-    Parameters
-    ----
-    alpha : float
-        Fraction of the pixels to fade in/out.
-        i.e. alpha=0.1 will use 10% of the pixels to go from 0 to 1. 
-        
-    N : int
-        Totla number of pixels in the array.
-        
-        
-    Returns
-    ------
-
-    N-length array of floats from 0 to 1. 
-    '''
-
-    
-    tukey = np.zeros(N)
-    for i in range(int(alpha*(N-1)/2)):
-        tukey[i] = 0.5*(1+np.cos(np.pi*(2*i/alpha/(N-1)-1)))
-    for i in range(int(alpha*(N-1)/2),int((N-1)*(1-alpha/2))):
-        tukey[i] = 1
-    for i in range(int((N-1)*(1-alpha/2)),int((N-1))):
-        tukey[i] = 0.5*(1+np.cos(np.pi*(2*i/alpha/(N-1)-2/alpha+1)))
-    
-    return tukey
-
-
-# In[36]:
-
-def fit_continuum(disp, flux, knot_spacing=200, sigma_clip=(1.0, 0.2),       max_iterations=3, order=3, exclude=None, include=None,       additional_points=None, function='spline', scale=1.0, **kwargs):
-    """Fits the continuum for a given `Spectrum1D` spectrum.
-    
-    Parameters
-    ----
-    knot_spacing : float or None, optional
-        The knot spacing for the continuum spline function in Angstroms. Optional.
-        If not provided then the knot spacing will be determined automatically.
-    
-    sigma_clip : a tuple of two floats, optional
-        This is the lower and upper sigma clipping level respectively. Optional.
-        
-    max_iterations : int, optional
-        Maximum number of spline-fitting operations.
-        
-    order : int, optional
-        The order of the spline function to fit.
-        
-    exclude : list of tuple-types containing floats, optional
-        A list of wavelength regions to always exclude when determining the
-        continuum. Example:
-        
-        >> exclude = [
-        >>    (3890.0, 4110.0),
-        >>    (4310.0, 4340.0)
-        >>  ]
-        
-        In the example above the regions between 3890 A and 4110 A, as well as
-        4310 A to 4340 A will always be excluded when determining the continuum
-        regions.
-
-    function: only 'spline' or 'poly'
-
-    scale : float
-        A scaling factor to apply to the normalised flux levels.
-        
-    include : list of tuple-types containing floats, optional
-        A list of wavelength regions to always include when determining the
-        continuum.
-        
-    Notes
-    -----
-    (c) Dr. Casey
-    """
-    
-    exclusions = []
-    continuum_indices = range(len(flux))
-
-    # Snip left and right
-    finite_positive_flux = np.isfinite(flux) * flux > 0
-
-    #print "finite flux", np.any(finite_positive_flux), finite_positive_flux
-    #print "where flux", np.where(finite_positive_flux)
-    #print "flux is...", flux
-    left_index = np.where(finite_positive_flux)[0][0]
-    right_index = np.where(finite_positive_flux)[0][-1]
-
-    # See if there are any regions we need to exclude
-    if exclude is not None and len(exclude) > 0:
-        exclude_indices = []
-        
-        if isinstance(exclude[0], float) and len(exclude) == 2:
-            # Only two floats given, so we only have one region to exclude
-            exclude_indices.extend(range(*np.searchsorted(disp, exclude)))
-            
-        else:
-            # Multiple regions provided
-            for exclude_region in exclude:
-                exclude_indices.extend(range(*np.searchsorted(disp, exclude_region)))
-    
-        continuum_indices = np.sort(list(set(continuum_indices).difference(np.sort(exclude_indices))))
-        
-    # See if there are any regions we should always include
-    if include is not None and len(include) > 0:
-        include_indices = []
-        
-        if isinstance(include[0], float) and len(include) == 2:
-            # Only two floats given, so we can only have one region to include
-            include_indices.extend(range(*np.searchsorted(disp, include)))
-            
-        else:
-            # Multiple regions provided
-            for include_region in include:
-                include_indices.extend(range(*np.searchsorted(disp, include_region)))
-    
-
-    # We should exclude non-finite numbers from the fit
-    non_finite_indices = np.where(~np.isfinite(flux))[0]
-    continuum_indices = np.sort(list(set(continuum_indices).difference(non_finite_indices)))
-
-    # We should also exclude zero or negative flux points from the fit
-    zero_flux_indices = np.where(0 >= flux)[0]
-    continuum_indices = np.sort(list(set(continuum_indices).difference(zero_flux_indices)))
-
-    original_continuum_indices = continuum_indices.copy()
-
-    if knot_spacing is None or knot_spacing == 0:
-        knots = []
-
+    if comments==[]:
+        comments = np.zeros((1,),dtype=('i4,i4,i4,a100'))
+        comments[:] = [(star, epoch, cam, comment)]
     else:
-        knot_spacing = abs(knot_spacing)
-        
-        end_spacing = ((disp[-1] - disp[0]) % knot_spacing) /2.
+        x = np.zeros((1,),dtype=('i4,i4,i4,a100'))
+        x[:] = [(star, epoch, cam, comment)]
+        comments = np.append(comments,x)
     
-        if knot_spacing/2. > end_spacing: end_spacing += knot_spacing/2.
-            
-        knots = np.arange(disp[0] + end_spacing, disp[-1] - end_spacing + knot_spacing, knot_spacing)
-        if len(knots) > 0 and knots[-1] > disp[continuum_indices][-1]:
-            knots = knots[:knots.searchsorted(disp[continuum_indices][-1])]
-            
-        if len(knots) > 0 and knots[0] < disp[continuum_indices][0]:
-            knots = knots[knots.searchsorted(disp[continuum_indices][0]):]
-
-    for iteration in xrange(max_iterations):
+    np.save('npy/comments.npy',comments)
         
-        splrep_disp = disp[continuum_indices]
-        splrep_flux = flux[continuum_indices]
-
-        splrep_weights = np.ones(len(splrep_disp))
-
-        # We need to add in additional points at the last minute here
-        if additional_points is not None and len(additional_points) > 0:
-
-            for point, flux, weight in additional_points:
-
-                # Get the index of the fit
-                insert_index = int(np.searchsorted(splrep_disp, point))
-                
-                # Insert the values
-                splrep_disp = np.insert(splrep_disp, insert_index, point)
-                splrep_flux = np.insert(splrep_flux, insert_index, flux)
-                splrep_weights = np.insert(splrep_weights, insert_index, weight)
-
-        if function == 'spline':
-            order = 5 if order > 5 else order
-            tck = interpolate.splrep(splrep_disp, splrep_flux,
-                k=order, task=-1, t=knots, w=splrep_weights)
-
-            continuum = interpolate.splev(disp, tck)
-
-        elif function in ("poly", "polynomial"):
-        
-            p = poly1d(polyfit(splrep_disp, splrep_flux, order))
-            continuum = p(disp)
-
-        else:
-            raise ValueError("Unknown function type: only spline or poly available (%s given)" % (function, ))
-        
-        difference = continuum - flux
-        sigma_difference = difference / np.std(difference[np.isfinite(flux)])
-
-        # Clipping
-        upper_exclude = np.where(sigma_difference > sigma_clip[1])[0]
-        lower_exclude = np.where(sigma_difference < -sigma_clip[0])[0]
-        
-        exclude_indices = list(upper_exclude)
-        exclude_indices.extend(lower_exclude)
-        exclude_indices = np.array(exclude_indices)
-        
-        if len(exclude_indices) is 0: break
-        
-        exclusions.extend(exclude_indices)
-        
-        # Before excluding anything, we must check to see if there are regions
-        # which we should never exclude
-        if include is not None:
-            exclude_indices = set(exclude_indices).difference(include_indices)
-        
-        # Remove regions that have been excluded
-        continuum_indices = np.sort(list(set(continuum_indices).difference(exclude_indices)))
-    
-    # Snip the edges based on exclude regions
-    if exclude is not None and len(exclude) > 0:
-
-        # If there are exclusion regions that extend past the left_index/right_index,
-        # then we will need to adjust left_index/right_index accordingly
-
-        left_index = np.max([left_index, np.min(original_continuum_indices)])
-        right_index = np.min([right_index, np.max(original_continuum_indices)])
-        
-
-    # Apply flux scaling
-    continuum *= scale
-    return disp, flux/continuum
 

@@ -1,7 +1,7 @@
-# -*- coding: utf-8 -*-
-# <nbformat>3.0</nbformat>
 
-# <codecell>
+# coding: utf-8
+
+# In[1]:
 
 import numpy as np
 import pandas as pd
@@ -12,136 +12,148 @@ import RVTools as RVT
 import astropy.units as u
 from astropy.coordinates import SkyCoord
 
-# <codecell>
+
+# In[2]:
 
 def f1(x):
     return '%5.2f' % x
 
-# <headingcell level=3>
 
-# 47tuc
+# ### 47tuc
 
-# <codecell>
+# In[ ]:
 
 cd ~/Documents/HERMES/reductions/47Tuc_core_6.2/npy
 
-# <codecell>
+
+# In[ ]:
 
 cd ~/Documents/HERMES/reductions/47Tuc_core_6.2/npy_150509/
 
-# <codecell>
+
+# In[ ]:
 
 cd ~/Documents/HERMES/reductions/47Tuc_core_1arc_6.2/npy/
 
-# <codecell>
+
+# In[ ]:
 
 cd ~/Documents/HERMES/reductions/47Tuc_core_1arc_6.2/npy_150509/
 
-# <codecell>
+
+# In[ ]:
 
 cd ~/Documents/HERMES/reductions/6.5/47Tuc_core/npy/
 
-# <headingcell level=3>
 
-# HD1581
+# ### HD1581
 
-# <codecell>
+# In[ ]:
 
 cd ~/Documents/HERMES/reductions/HD1581_6.2/npy/
 
-# <codecell>
+
+# In[ ]:
 
 cd ~/Documents/HERMES/data/140820/data/ccd_1/
 
-# <headingcell level=3>
 
-# HD285507
+# ### HD285507
 
-# <codecell>
+# In[ ]:
 
 cd ~/Documents/HERMES/reductions/HD285507_6.2/npy_150509/
 
-# <codecell>
+
+# In[ ]:
 
 cd ~/Documents/HERMES/reductions/HD285507_6.2/npy/
 
-# <codecell>
+
+# In[ ]:
 
 cd ~/Documents/HERMES/reductions/6.5/HD285507_1arc/npy/
 
-# <codecell>
+
+# In[ ]:
 
 cd ~/Documents/HERMES/reductions/HD285507_1arc_6.2/npy/
 
-# <codecell>
+
+# In[ ]:
 
 cd ~/Documents/HERMES/reductions/6.5/HD285507/npy/
 
-# <codecell>
+
+# In[ ]:
 
 cd ~/Documents/HERMES/data/140820/data/ccd_1/
 
-# <headingcell level=3>
 
-# m67
+# ### m67
 
-# <codecell>
+# In[ ]:
 
 cd ~/Documents/HERMES/reductions/m67_6.2/npy
 
-# <codecell>
+
+# In[ ]:
 
 cd ~/Documents/HERMES/reductions/m67_6.2/npy_raw/
 
-# <codecell>
+
+# In[ ]:
 
 cd ~/Documents/HERMES/reductions/m67_1arc_6.2/
 
-# <codecell>
 
-cd ~/Documents/HERMES/reductions/6.5/m67_lr/npy/
+# In[5]:
 
-# <codecell>
+cd ~/Documents/HERMES/reductions/6.5/m67_lr/npy2/
+
+
+# In[ ]:
 
 cd ~/Documents/HERMES/data/140820/data/ccd_1/
 
-# <headingcell level=3>
 
-# NGC2477
+# ### NGC2477
 
-# <codecell>
+# In[ ]:
 
 cd ~/Documents/HERMES/reductions/NGC2477_6.2/npy
 
-# <codecell>
+
+# In[ ]:
 
 cd ~/Documents/HERMES/reductions/NGC2477_6.2/npy_150509/
 
-# <codecell>
+
+# In[ ]:
 
 cd ~/Documents/HERMES/reductions/NGC2477_1arc_6.2/
 
-# <codecell>
+
+# In[ ]:
 
 cd ~/Documents/HERMES/reductions/6.5/NGC2477/
 
-# <headingcell level=3>
 
-# rhoTuc
+# ### rhoTuc
 
-# <codecell>
+# In[ ]:
 
 cd ~/Documents/HERMES/reductions/rhoTuc_6.2/npy
 
-# <codecell>
+
+# In[ ]:
 
 cd ~/Documents/HERMES/reductions/6.2/rhoTuc_1arc_6.2/npy
 
-# <headingcell level=3>
 
-# Sine Fit Results
+# ### Sine Fit Results
 
-# <codecell>
+# In[ ]:
 
 fittedData = np.load('fittedData.npy')
 fittedResults = np.load('fittedResults.npy')
@@ -186,11 +198,10 @@ print df.loc[0:30][[0,3,7,11,15]].to_latex() #cam1
 print '\\'+'newpage'
 print df.loc[0:30][[0,4,8,12,16]].to_latex() #cam1
 
-# <headingcell level=3>
 
-# % of stars within a given RV
+# ### % of stars within a given RV
 
-# <codecell>
+# In[ ]:
 
 data=np.load('data.npy')
 RVs=np.load('RVs.npy')
@@ -208,16 +219,16 @@ a.columns = labels
 
 print a.to_latex(formatters=[f1, f1, f1, f1])
 
-# <codecell>
+
+# In[ ]:
 
 a = os.system('ls ')
 print 
 
-# <headingcell level=3>
 
-# Shows all observatios for a list of 'good_targets'
+# ### Shows all observatios for a list of 'good_targets'
 
-# <codecell>
+# In[ ]:
 
 import pyfits as pf
 import numpy as np
@@ -265,20 +276,21 @@ for j in dirs:
         a.close
 # raw = np.array(raw)
 
-# <headingcell level=3>
 
-# Shows all observations
+# ### Shows all observations
 
-# <codecell>
+# In[6]:
 
 import numpy as np
 import pandas as pd
 
-# <codecell>
+
+# In[7]:
 
 cd ~/Documents/ipn/
 
-# <codecell>
+
+# In[11]:
 
 # outFileNames = np.load('npy/outFileNames.npy')
 # outObjects = np.load('npy/outObjects.npy')
@@ -296,13 +308,14 @@ cd ~/Documents/ipn/
 # np.save('npy/outPlates.npy', outPlates)
 # np.save('npy/outMJD_Exp.npy', outMJD_Exp)
 
-# <codecell>
+
+# In[8]:
 
 
-outFileNames = np.load('npy/outFileNames.npy')
-outObjects = np.load('npy/outObjects.npy')
-outPlates = np.load('npy/outPlates.npy')
-outMJD_Exp = np.load('npy/outMJD_Exp.npy')
+outFileNames = np.load('outFileNames.npy')
+outObjects = np.load('outObjects.npy')
+outPlates = np.load('outPlates.npy')
+outMJD_Exp = np.load('outMJD_Exp.npy')
 
 ordIdx = np.argsort(outMJD_Exp[:,0])
 
@@ -315,11 +328,10 @@ a.columns = labels
 
 print a.to_latex(index=False)
 
-# <headingcell level=3>
 
-# Stars Names and magnitudes
+# ### Stars Names and magnitudes
 
-# <codecell>
+# In[ ]:
 
 data=np.load('data.npy')
 # RVs=np.load('RVs.npy')
@@ -338,11 +350,10 @@ a.columns = labels
 
 print a.to_latex()
 
-# <headingcell level=3>
 
-# W tests
+# ### W tests
 
-# <codecell>
+# In[ ]:
 
 #real data
 
@@ -378,7 +389,8 @@ for cam in range(4):
 #     plt.show()
 
 
-# <codecell>
+
+# In[ ]:
 
 #SIMULATION
 import RVTools as RVT
@@ -426,35 +438,39 @@ for i in range(3):
         plt.savefig(figTitle); plt.close()
 #         plt.show()
 
-# <codecell>
+
+# In[ ]:
 
 SNRs=np.load('SNRs.npy')
 import toolbox as tb
 
-# <codecell>
+
+# In[ ]:
 
 for i,a in enumerate(zip(data[:,],SNRs[:,0,0])):
     print i,a[0],a[1], tb.dec2sex(float(a[0][3])/15), tb.dec2sex(float(a[0][4]))
 
-# <headingcell level=3>
 
-# All stars summary
+# ### All stars summary
 
-# <codecell>
+# In[ ]:
 
 #('NAME', 'S80'), ('RA', '>f8'), ('DEC', '>f8'), ('X', '>i4'), ('Y', '>i4'), ('XERR', '>i2'), ('YERR', '>i2'), ('THETA', '>f8'), ('TYPE', 'S1'), ('PIVOT', '>i2'), ('MAGNITUDE', '>f8'), ('PID', '>i4'), ('COMMENT', 'S80'), ('RETRACTOR', 'S10'), ('WLEN', '>f8'), ('PMRA', '>f8'), ('PMDEC', '>f8')
 
-# <codecell>
+
+# In[ ]:
 
 # a = pf.open('20aug10039.fits') #HD285507
 a = pf.open('20aug10053.fits') #HD1581
 
-# <codecell>
+
+# In[ ]:
 
 good_targets_filter = (a[1].data['TYPE']=='P')
 good_targets_idx = np.arange(400)[good_targets_filter]
 
-# <codecell>
+
+# In[ ]:
 
 outArray = []
 for i in good_targets_idx:
@@ -476,26 +492,30 @@ df.columns = labels
 outLatex = df.to_latex()
 print df.to_latex()
 
-# <codecell>
+
+# In[ ]:
 
 text_file = open("starsLatex.txt", "w")
 text_file.write(outLatex)
 text_file.close()
 
-# <headingcell level=3>
 
-# All stars summary - from obj
+# ### All stars summary - from obj
 
-# <codecell>
+# In[7]:
 
 import glob
 import pickle
+import numpy as np
+import pandas as pd
 
-# <codecell>
 
-cd ~/Documents/HERMES/reductions/6.5/m67_lr/obj/
+# In[4]:
 
-# <codecell>
+cd ~/Documents/HERMES/reductions/6.5/m67_lr/obj_single/
+
+
+# In[5]:
 
 filehandler = open('M67-375.obj', 'r')
 thisStar = pickle.load(filehandler)
@@ -505,7 +525,8 @@ thisStar.exposures.plates[10][-1]
 # print np.vstack((thisStar.exposures.pivots,np.nansum(thisCamera.red_fluxes,axis=1))).transpose()
 # print thisStar.exposures.p
 
-# <codecell>
+
+# In[8]:
 
 
 outFileNames = np.load('/Users/Carlos/Documents/ipn/npy/outFileNames.npy')
@@ -524,7 +545,8 @@ outFileNames = outFileNames[ordIdx]
 outMJD_Exp = outMJD_Exp[ordIdx]
 
 
-# <codecell>
+
+# In[9]:
 
 obsMatrix = np.ones((292, 99, 2, 4))*np.nan #stars, observations, [pivot, plate], cam
 
@@ -582,32 +604,38 @@ df.columns = labels
 outLatex = df.to_latex(index=False)
 print df.to_latex(index=False)
 
-# <codecell>
+
+# In[ ]:
 
 text_file = open("starsLatex.txt", "w")
 text_file.write(outLatex)
 text_file.close()
 
-# <codecell>
+
+# In[ ]:
 
 obsMatrix #stars, observations, [pivot, plate], cam
 for i in range(10):
     plt.plot(obsMatrix[i,:,0,0],'.')
 plt.show()
 
-# <codecell>
+
+# In[ ]:
 
 np.save('obsMatrix.npy',obsMatrix)
 
-# <codecell>
+
+# In[ ]:
 
 obsMatrix = np.load('obsMatrix.npy')
 
-# <codecell>
+
+# In[ ]:
 
 obsMatrix.shape[0]
 
-# <codecell>
+
+# In[ ]:
 
 #stars with consistent plate and fibre
 totalStars = 0
@@ -619,7 +647,8 @@ for thisStar in range(obsMatrix.shape[0]):
             totalStars += 1
             print thisStar, totalStars
 
-# <codecell>
+
+# In[ ]:
 
 for thisStar in range(obsMatrix.shape[0]):
     for thisObs in range(obsMatrix.shape[1]):
@@ -628,21 +657,22 @@ for thisStar in range(obsMatrix.shape[0]):
                 FirstObs = [thisStar, thisObs, obsMatrix[thisStar, thisObs, 0, thisCam], obsMatrix[thisStar, thisObs, 1, thisCam], thisCam]
                 
 
-# <codecell>
+
+# In[ ]:
 
 obsGroup = 0
 for thisObs in range(obsMatrix.shape[1]):
     
 
-# <headingcell level=3>
 
-# CC pyhermes
+# ### CC pyhermes
 
-# <codecell>
+# In[ ]:
 
 cd ~/Documents/HERMES/reductions
 
-# <codecell>
+
+# In[ ]:
 
 #HD285507
 
@@ -679,7 +709,8 @@ filep3_data = filep3[0].data
 filep4_data = filep4[0].data
 filep5_data = filep5[0].data
 
-# <codecell>
+
+# In[ ]:
 
 #HD1581
 
@@ -716,7 +747,8 @@ filep3_data = filep3[0].data
 filep4_data = filep4[0].data
 filep5_data = filep5[0].data
 
-# <codecell>
+
+# In[ ]:
 
 plt.plot(filep1_wl, filep1_data)
 plt.plot(filep2_wl, filep2_data)
@@ -725,14 +757,16 @@ plt.plot(filep4_wl, filep4_data)
 plt.plot(filep5_wl, filep5_data)
 plt.show()
 
-# <codecell>
+
+# In[ ]:
 
 print np.sum(filep1_wl-filep2_wl)
 print np.sum(filep1_wl-filep3_wl)
 print np.sum(filep1_wl-filep4_wl)
 print np.sum(filep1_wl-filep5_wl)
 
-# <codecell>
+
+# In[ ]:
 
 reload(RVT)
 xDef = 2
@@ -776,7 +810,8 @@ print filep2_wl.shape[0], filep2_wl.shape[0]/2, p/xDef
 print dWl, pixelShift, RVT.constants.c, pixelShift * RVT.constants.c
 print 'RV',RV
 
-# <codecell>
+
+# In[ ]:
 
 good results HD285507
 cam1
@@ -800,7 +835,8 @@ RV 419.397288864
 RV -257.445290527
 RV -1305.97883204
 
-# <codecell>
+
+# In[ ]:
 
 good results HD1581
 cam1

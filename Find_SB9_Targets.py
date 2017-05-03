@@ -1,20 +1,20 @@
-#!/opt/local/bin/python
-#!/opt/local/bin/python
-# -*- coding: utf-8 -*-
-# <nbformat>3.0</nbformat>
 
-# <codecell>
+# coding: utf-8
+
+# In[1]:
 
 import numpy as np
 import os
 import pandas as pd
 import pylab as plt
 
-# <codecell>
+
+# In[2]:
 
 os.chdir('/Users/Carlos/Documents/databases/SB9')
 
-# <codecell>
+
+# In[3]:
 
 # Description of SB9
 
@@ -77,22 +77,57 @@ os.chdir('/Users/Carlos/Documents/databases/SB9')
 #  Levato H., Morrell N.I., Torres G., Udry S., 2004, 
 #  Astronomy and Astrophysics, 424, 727-732.
 
-# <codecell>
+
+# In[66]:
+
+c = np.genfromtxt('Main.dta', dtype = str, delimiter='|', usecols = 2)
+
+
+# In[67]:
+
+def split_RA_Dec(RADec):
+    try:
+        thisOne = [int(RADec[:2]),int(RADec[2:4]),float(int(RADec[4:9])/1000.),
+                   int(RADec[9:12]),int(RADec[12:14]),float(int(RADec[14:18])/100.)]
+    except:
+        thisOne = [0,0,0,0,0,0]
+    return thisOne
+
+
+# In[68]:
+
+c_all = []
+for i in c:
+    c_all.append(split_RA_Dec(i))
+    
+
+
+# In[69]:
+
+c = np.array(c_all)
+
+
+# In[70]:
+
+max(c[:,0])
+
+
+# In[79]:
 
 #load full database into big_df
 
-def split_RA_Dec(RADec):
+# def split_RA_Dec(RADec):
     
-    thisOne = [(int(RADec[:2]),int(RADec[2:4]),float(int(RADec[4:9])/1000.),int(RADec[9:12]),int(RADec[12:14]),float(int(RADec[14:18])/100.))]
-    return thisOne
+#     thisOne = [(int(RADec[:2]),int(RADec[2:4]),float(int(RADec[4:9])/1000.),int(RADec[9:12]),int(RADec[12:14]),float(int(RADec[14:18])/100.))]
+#     return thisOne
 
-c = np.genfromtxt('Main.dta', delimiter='|', usecols = 2, converters={2:split_RA_Dec})
-goodC = np.zeros((len(c),6))
-for row in range(len(c)):
-    if type(c[row])!=float:
-        for col in range(6):
-            goodC[row,col] =c[row][0][col]
-c=goodC
+# c = np.genfromtxt('Main.dta', delimiter='|', usecols = 2, converters={2:split_RA_Dec})
+# goodC = np.zeros((len(c),6))
+# for row in range(len(c)):
+#     if type(c[row])!=float:
+#         for col in range(6):
+#             goodC[row,col] =c[row][0][col]
+# c=goodC
 
 
 #      1            System Number (SB8: <=1469)
@@ -175,35 +210,85 @@ alias_df = pd.DataFrame({ 'No' : d0,
 big_df = main_df.merge(orbits_df, on='No')
 big_df['SpecType1'] = big_df['SpecType1'].astype(str)
 
-# <codecell>
+alias_mask = alias_df['cat'] == 'HIP'
 
-big_df
+named_df = big_df.merge(alias_df[alias_mask], on='No')
 
-# <codecell>
 
-dailyRV_mask = ((big_df['K1_P'] > 0.5) & (big_df['K1_P'] < 10.))
-period_mask = big_df['period(days)'] < 5. 
-K2_mask = np.isnan(big_df['K2'])
-eccentricity_mask = big_df['eccentricity'] < 0.1
-grade_mask = big_df['grade'] == 5
-dec_mask = ((big_df['Dec1'] > -75) & (big_df['Dec1'] < 15)) 
-RA_mask = ((big_df['RA1'] > 22) | (big_df['RA1'] <4)) 
-no667_mask = big_df['No'] != 667
+# In[80]:
 
-big_df['Vmag1'][big_df['No']==40]=5.393
-big_df['Vmag1'][big_df['No']==1482]=np.nan
-big_df['Vmag1'][big_df['No']==1847]=np.nan
+print named_df[:10]
 
-big_df['SpecType1'][big_df['No']==40]='F6V'
-big_df['SpecType1'][big_df['No']==1482]=np.nan
-big_df['SpecType1'][big_df['No']==1847]=np.nan
+
+# In[88]:
+
+dailyRV_mask = ((named_df['K1_P'] > 0.5) & (named_df['K1_P'] < 10.))
+period_mask = named_df['period(days)'] < 5. 
+K2_mask = np.isnan(named_df['K2'])
+eccentricity_mask = named_df['eccentricity'] < 0.1
+grade_mask = named_df['grade'] == 5
+dec_mask = ((named_df['Dec1'] > -75) & (named_df['Dec1'] < 15)) 
+RA_mask = ((named_df['RA1'] > 22) | (named_df['RA1'] <4)) 
+no667_mask = named_df['No'] != 667
+
+named_df['Vmag1'][named_df['No']==40]=5.393
+named_df['Vmag1'][named_df['No']==1482]=np.nan
+named_df['Vmag1'][named_df['No']==1847]=np.nan
+
+named_df['SpecType1'][named_df['No']==40]='F6V'
+named_df['SpecType1'][named_df['No']==1482]=np.nan
+named_df['SpecType1'][named_df['No']==1847]=np.nan
 
 full_mask = dailyRV_mask & period_mask & eccentricity_mask & grade_mask & dec_mask & K2_mask & RA_mask & no667_mask
 print 'Candidates in selection',np.sum(full_mask)
-big_df[full_mask]
+print named_df[full_mask]
+
+big_df = named_df[full_mask]
 
 
-# <codecell>
+# In[106]:
+
+cols = big_df.columns.tolist()
+print cols
+
+
+# In[148]:
+
+colsNew = [cols[-1]]+[cols[-2]]+cols[4:7]+cols[0:3]+cols[7:10]+[cols[-3]]
+
+
+# In[150]:
+
+print colsNew
+colsName = ['ID', 'RA (hr mm ss)', 'Dec (Deg mm ss)', 'Spectral Type', 'Magnitude (V)', 'RV Semi-amplitude (Km/s)', 'period(days)']
+
+
+# In[186]:
+
+col1 = big_df['cat'] + ['  ', ' ', ' '] +big_df['ID'].map(str) 
+col2 = big_df['RA1'].map(int).map(str) + [' ', ' ', ' '] + big_df['RA2'].map(int).map(str) +  [' ', '  ', ' '] + big_df['RA3'].map(str)
+col3 = big_df['Dec1'].map(int).map(str) + [' ', ' ', '  '] + big_df['Dec2'].map(int).map(str) +  [' ', ' ', ' '] + big_df['Dec3'].map(str) + ['','',' ']
+col4 = big_df['SpecType1']
+col5 = big_df['Vmag1']
+col6 = big_df['K1']
+col7 = big_df['period(days)']
+nice_df = pd.concat([col1, col2, col3, col4, col5, col6, col7], axis=1)
+nice_df.columns =colsName 
+
+
+# In[187]:
+
+print nice_df.to_latex(index=False)
+
+
+# In[190]:
+
+
+pd.options.display.max_columns = 50
+print big_df[colsNew]
+
+
+# In[8]:
 
 '''observing days:
 day# start end
@@ -214,7 +299,8 @@ day# start end
 5 2456895.083333 2456895.291667 #25
 '''
 
-# <codecell>
+
+# In[85]:
 
 #visibility plot
 for i in np.where(full_mask==True)[0]:
@@ -249,7 +335,8 @@ plt.yticks(np.arange(-90,90, 20))
 plt.legend()
 plt.show()
 
-# <codecell>
+
+# In[ ]:
 
 #RV vs day plot for selected SB
 start_day = 2456889.500000 # The Julian date for CE  2014 August 20 00:00:00.0 UT  (10am australia)
@@ -263,10 +350,10 @@ for i in np.where(full_mask==True)[0]:
     peri_arg = big_df['peri_arg'][i]
     peri_time = big_df['peri_time'][i] + 2400000
     K1 = big_df['K1'][i]
-    no = big_df['No'][i]
+    no = 'HIP '+big_df['ID'][i]
     print no, K1, peri_time, P, peri_arg
     RV = K1* np.sin( (days-peri_time)/P*2*np.pi + peri_arg/360*2*np.pi )
-    plt.plot(days, RV, linewidth = 1, label = int(no) )
+    plt.plot(days, RV, linewidth = 1, label = no )
 
 plt.xlabel('JD')
 plt.ylabel('RV (km/s)')
@@ -276,13 +363,16 @@ plt.gca().add_patch(plt.Rectangle((2456892.083333,-100),0.2083339998498559,200, 
 plt.gca().add_patch(plt.Rectangle((2456894.083333,-100),0.2083339998498559,200, alpha = 0.5))
 plt.gca().add_patch(plt.Rectangle((2456895.083333,-100),0.2083339998498559,200, alpha = 0.5))
 
-plt.legend()
+plt.legend(loc=0)
 plt.show()
 
-# <codecell>
+
+# In[ ]:
 
 
-# <codecell>
+
+
+# In[86]:
 
 P = big_df['period'][0]
 peri_arg = big_df['peri_arg'][0]
@@ -294,20 +384,50 @@ RV = K1* np.sin(days/P*2*np.pi+peri_arg/360*2*np.pi)
 plt.plot(days, RV)
 plt.show()
 
-# <codecell>
+
+# In[225]:
 
 np.asarray(c)
 
-# <codecell>
+
+# In[116]:
 
 a=np.genfromtxt('Main.dta', delimiter='|')#, converters= {1: str})
 
-# <codecell>
+
+# In[12]:
 
 plt.plot(range(10))
 plt.xlabel('asdad')
 plt.show()
 
-# <codecell>
+
+# In[ ]:
+
+
+
+
+# In[74]:
+
+dailyRV_mask = ((big_df['K1_P'] > 0.5) & (big_df['K1_P'] < 10.))
+period_mask = big_df['period(days)'] < 5. 
+K2_mask = np.isnan(big_df['K2'])
+eccentricity_mask = big_df['eccentricity'] < 0.1
+grade_mask = big_df['grade'] == 5
+dec_mask = ((big_df['Dec1'] > -75) & (big_df['Dec1'] < 15)) 
+RA_mask = ((big_df['RA1'] > 22) | (big_df['RA1'] <4)) 
+no667_mask = big_df['No'] != 667
+
+big_df['Vmag1'][big_df['No']==40]=5.393
+big_df['Vmag1'][big_df['No']==1482]=np.nan
+big_df['Vmag1'][big_df['No']==1847]=np.nan
+
+big_df['SpecType1'][big_df['No']==40]='F6V'
+big_df['SpecType1'][big_df['No']==1482]=np.nan
+big_df['SpecType1'][big_df['No']==1847]=np.nan
+
+full_mask = dailyRV_mask & period_mask & eccentricity_mask & grade_mask & dec_mask & K2_mask & RA_mask & no667_mask
+print 'Candidates in selection',np.sum(full_mask)
+print big_df[full_mask]
 
 

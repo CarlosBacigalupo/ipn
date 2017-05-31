@@ -1,0 +1,235 @@
+
+#!/usr/bin/python
+
+import myHerpyTools as MHT 
+import os
+import numpy as np
+import sys
+import time
+import importlib
+
+#reduction flags
+# ver = '6.5'
+booLog = False
+useBias = False
+copyFiles = False
+doReduce = True
+overwrite = False
+# idxFile = 'no_flat_no_bias.idx'
+startFrom = 0 #number of data set to begin with. 0 for beginning. Good for starting half way through if it cancelled
+baseFolder='/Users/Carlos/Documents/HERMES/reductions/new_start_6.5'
+
+# -1 for all
+reduceSet = -1
+reduceCam = np.arange(4)
+targetFolder =''
+
+dataset = 'HD1581'
+if 1==1: #len(sys.argv)>1:
+# if len(sys.argv)>1:
+#     dataset = sys.argv[1]
+    try:
+        thisDataset = importlib.import_module('data_sets.'+dataset)
+    except:
+        print 'Could not load dataset:',dataset         
+        sys.exit()
+    
+#     if len(sys.argv)>2:
+#         reduceSet = int(sys.argv[2])
+#         if len(sys.argv)>3:
+#             reduceCam = np.array([int(sys.argv[3])])
+            
+    #compose file prefixes from date_list
+    months = np.array(['', 'jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'])
+    d = np.array([s[4:] for s in thisDataset.date_list])
+    m = months[np.array([s[2:4] for s in thisDataset.date_list]).astype(int)]
+    filename_prfx = np.core.defchararray.add(d, m)
+    dataFolders = np.array([str(i)+'_'+s for i,s in enumerate(filename_prfx)])
+    
+    if reduceSet==-1: 
+        reduceSet = dataFolders
+    else:
+        reduceSet = dataFolders[reduceSet]
+        
+
+import pylab as plt
+
+reload(MHT)
+for thisCam in reduceCam[0:1]:
+    
+    targetFolder = baseFolder + '/' + dataset + '/' + 'herpy_out' + '/' + str(thisCam)    
+    print targetFolder
+    
+    for thisSetIdx, thisSet in enumerate([s + '/' + str(thisCam+1) for s in reduceSet]):
+        print thisSet 
+        fileList = [filename_prfx[thisSetIdx] + str(thisCam+1) + str(name).zfill(4)+ '.fits' for name in thisDataset.ix_array[thisSetIdx]]
+        
+        #flat
+        flatFileName = baseFolder + '/' + dataset + '/' + thisSet + '/' + fileList[0] #'0_20aug/1/20aug10034.fits'
+        print time.strftime('%X %x %Z'), '  Starting open'
+        flat = MHT.openFile(flatFileName)
+        print time.strftime('%X %x %Z'), '  Ending open'
+        print
+        print time.strftime('%X %x %Z'), '  Starting make_flat_flat'
+        flat_flat = MHT.make_flat_flat(flat)
+        print time.strftime('%X %x %Z'), '  Ending make_flat_flat'
+        print
+        print time.strftime('%X %x %Z'), '  Starting make_flat_flat_bin'
+        flat_flat_bin = MHT.make_flat_flat_bin(flat_flat)
+        print time.strftime('%X %x %Z'), '  Ending make_flat_flat_bin'
+        print
+        print time.strftime('%X %x %Z'), '  Starting make_fibre_centroids'
+        fibre_centroids = MHT.make_fibre_centroids(flat_flat_bin)
+        print time.strftime('%X %x %Z'), '  Ending make_fibre_centroids'
+        print
+#         print time.strftime('%X %x %Z'), '  Starting make_fibrePolys'
+#         fibrePolys = MHT.make_fibrePolys(fibre_centroids)
+#         print time.strftime('%X %x %Z'), '  Ending make_fibrePolys'
+#         print
+#         print time.strftime('%X %x %Z'), '  Starting make_tramlines'
+#         tramlines = MHT.make_tramlines(fibre_centroids, fibrePolys)
+#         print time.strftime('%X %x %Z'), '  Ending make_tramlines'
+#         print
+#         print "Tramlines shape:", tramlines.shape
+        
+        
+#         #arc
+#         arcFileName = baseFolder + '/' + dataset + '/' + thisSet + '/' + fileList[1] # '0_20aug/1/20aug10052.fits'
+#         arc =  MHT.openFile(arcFileName)
+
+#         #find vertical shift and apply it to the tram lines
+#         shift = MHT.find_vertical_shift(flat, arc) #result to be subtracted to the tramlines (1st array in the CC...)
+#         tramlines_shifted = tramlines - shift
+
+#         #save the arc
+#         extracted_arc = MHT.extract(tramlines_shifted, arc)
+#         print "Arc shape:", extracted_arc.shape
+#         pre = str(thisSetIdx) + '_' + 'arc_s1'
+#         post = 'cam' + str(thisCam+1)
+#         MHT.write_NPY(arcFileName, pre, post, extracted_arc, targetFolder)
+        
+
+#         #obs (1 or more)
+#         for thisFileIdx, thisFile in enumerate(fileList[2:]):
+#             objFileName = baseFolder + '/' + dataset + '/' + thisSet + '/' + thisFile # '0_20aug/1/20aug10053.fits'
+
+#             obj =  MHT.openFile(objFileName)
+#             extracted_obj = MHT.extract(tramlines_shifted, obj)
+#             print "Arc shape:", extracted_obj.shape
+#             pre = str(thisSetIdx) + '_' + 'obj' + str(thisFileIdx+1) + '_s1' 
+#             post = 'cam' + str(thisCam+1)
+#             MHT.write_NPY(objFileName, pre, post, extracted_obj, targetFolder)
+# #             print flatFileName, arcFileName, objFileName
+
+
+i=0
+gFibreIdx = [40]
+while(i<100):
+    if i in 
+    print fibrePx[i,0]
+    i+=1
+
+from scipy.ndimage.measurements import label
+out_array, fibres = label(flat_flat_bin, np.ones((3,3)))
+print 'Found', fibres,'fibres for centroiding'
+# n-=2 # fibres 252 and 253 are not good for HD1581 epoch 0 
+
+#create centroid array
+cols = out_array.shape[1]
+fibre_centroids = np.ones((400,cols))*np.nan
+gFibreIdx = [40]
+# for fibre in range(fibres):
+#     wRows, wCols = np.where(out_array==fibre+1)
+#     print fibre,
+#     for col in range(max(wCols)+1):
+#         fibre_centroids[fibre, col] = np.average(wRows[wCols==col])
+
+
+# fibrePx = np.load('fibrePx.npy')
+np.sum(np.isnan(fibrePx))
+
+np.sum(np.isnan(out_array))
+
+reload(MHT)
+fibre_centroids, out, fib = MHT.make_fibre_centroids(flat_flat_bin)
+
+
+fibrePx
+
+fibrePx = np.delete(fibrePx, 285, axis=0)
+
+f = fibrePx.copy()
+fibrePx[252] = np.ones(f.shape[1])*f[252,0]
+
+# a = fibre_centroids.copy()
+for i in range(270, 295):
+    print fibrePx[i,0], i
+
+plt.plot(a[:,0],np.ones(a.shape[0]),'.')
+plt.show()
+
+for n,i in enumerate(a):
+    plt.plot(i)
+    if n%10==0:
+        plt.imshow(flat_flat_bin)
+        plt.xlim(0,100)
+        plt.ylim(i[0]+100,i[0]-100)
+        plt.show()
+    
+
+c = np.insert(a,ins,a[ins-1,:]+8.5, axis=0)
+
+fibrePx.shape
+
+np.save('fibrePx', fibrePx)
+
+print c[0,0]
+print c[62,0]-c[63,0]
+print c[63,0]-c[64,0]
+print c[64,0]-c[65,0]
+print c[65,0]-c[66,0]
+
+print a[62,0]-a[63,0]
+print a[63,0]-a[64,0]
+print a[64,0]-a[65,0]
+print a[65,0]-a[66,0]
+
+b=fibrePx[:,100]-np.hstack((np.array([0]),fibrePx[:-1,100]))
+# b2=c[:,100]-np.hstack((np.array([0]),c[:-1,100]))
+
+ins = np.arange(4096)[((b>15) & (b<19))]
+
+# plt.subplots(1,2)
+# plt.subplot(121)
+# plt.imshow(flat_flat_bin)
+# plt.subplot(122)
+plt.plot(b)
+plt.show()
+
+
+b.shape
+
+plt.plot(a)
+plt.show()
+
+         
+    #run forest, run
+    if booLog==True: sys.stdout = open(str(startFrom)+str(reduceSet)+'_'+str(time.strftime('%X'))+'.log', 'w')
+                      
+    print time.strftime('%X %x %Z'), '  Starting reduction'
+    print time.strftime('%X %x %Z'), '  Ending reduction'
+    
+    # n=0
+    # for dataset, fileN in zip(filename_prfx, ix_array):
+    #     for i in fileN[2:]:
+    #         print str(n)+'_'+str(dataset),'\t',str(i)
+    #     n+=1
+
+else:
+    print 'No data_set specified.'
+    print 'run_myHerpy_1.py data_set [reduceSet] [reduceCam]'
+    
+    
+    
+
+

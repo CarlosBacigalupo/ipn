@@ -72,7 +72,7 @@ except:
 # RVP.RVs_all_stars()
 
 #Plot
-# RVP.RVs_all_stars_NPYs(booShowArcRVs = booShowArcRVs, idStars= idStars, sigmaClip = -1,RVClip = RVClip, topStars=topStars, booSave = booSave,booShow = booShow  , booBaryPlot=booBaryPlot, booBaryCorrect = booBaryCorrect)
+RVP.RVs_all_stars_NPYs(booShowArcRVs = booShowArcRVs, idStars= idStars, sigmaClip = -1,RVClip = RVClip, topStars=topStars, booSave = booSave,booShow = booShow  , booBaryPlot=booBaryPlot, booBaryCorrect = booBaryCorrect)
 
 #Plot
 # RVP.RV_Tree(zoom = zoom, RVClip = RVClip, booSave = booSave,booShow = booShow )
@@ -96,7 +96,7 @@ except:
 # RVP.arcRVs(booSave = booSave, booShow = booShow, booFit = booFit)
 
 #Plot
-RVP.sineFit(booSave = booSave, booShow = booShow, starIdx=starIdx, booShowAvg = booShowAvg)
+# RVP.sineFit(booSave = booSave, booShow = booShow, starIdx=starIdx, booShowAvg = booShowAvg)
 
 #Plot
 # RVP.RVAvgGroups(booSave = booSave, booShow = booShow)

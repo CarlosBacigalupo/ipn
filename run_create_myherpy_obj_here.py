@@ -10,50 +10,56 @@ import sys
 import toolbox
 import importlib
 
-booHD1581 = False
+booHD1581 = True
 IRAFFiles = '/Users/Carlos/Documents/HERMES/reductions/iraf/results/'   #folder to IRAF reduced files
 
-if len(sys.argv)>1:
-    
-    try: 
-        os.mkdir('cam1')
-        os.mkdir('cam2')
-        os.mkdir('cam3')
-        os.mkdir('cam4')
-        os.mkdir('obj')
-    except:
-        pass
-
-    dataset = sys.argv[1]
-    if dataset=='HD1581': booHD1581 = True
-
-    try:
-        thisDataset = importlib.import_module('data_sets.'+dataset)
-    except:
-        print 'Could not load',dataset         
-        sys.exit()
+try:
+    os.mkdir('herpy_obj')
+except:
+    pass
 
 
-    #compose file prefixes from date_list
-    months = np.array(['', 'jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'])
-    d = np.array([s[4:] for s in thisDataset.date_list])
-    m = months[np.array([s[2:4] for s in thisDataset.date_list]).astype(int)]
-    filename_prfx = np.core.defchararray.add(d, m)
-
-    #copy files
-    for i,folder in enumerate(thisDataset.date_list):
-        for files in thisDataset.ix_array[i][2:]:
-            for cam in range(1,5):
-                strCopy = 'cp ' + IRAFFiles + folder + '/helio/' + filename_prfx[i] + str(cam) + "%04d" % (files,) + '.ms.fits ' 
-                strCopy += 'cam'+ str(cam) + '/' + filename_prfx[i] + str(cam) + "%04d" % (files,) + '.fits ' 
-                print strCopy
-                try:
-                    os.system(strCopy)
-                except:
-                    print 'no copy'
-                
-else:
-    print 'arguments missing - skipping copy'
+# if len(sys.argv)>1:
+#     
+#     try: 
+#         os.mkdir('cam1')
+#         os.mkdir('cam2')
+#         os.mkdir('cam3')
+#         os.mkdir('cam4')
+#         os.mkdir('herpy_obj')
+#     except:
+#         pass
+# 
+#     dataset = sys.argv[1]
+#     if dataset=='HD1581': booHD1581 = True
+# 
+#     try:
+#         thisDataset = importlib.import_module('data_sets.'+dataset)
+#     except:
+#         print 'Could not load',dataset         
+#         sys.exit()
+# 
+# 
+#     #compose file prefixes from date_list
+#     months = np.array(['', 'jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'])
+#     d = np.array([s[4:] for s in thisDataset.date_list])
+#     m = months[np.array([s[2:4] for s in thisDataset.date_list]).astype(int)]
+#     filename_prfx = np.core.defchararray.add(d, m)
+# 
+#     #copy files
+#     for i,folder in enumerate(thisDataset.date_list):
+#         for files in thisDataset.ix_array[i][2:]:
+#             for cam in range(1,5):
+#                 strCopy = 'cp ' + IRAFFiles + folder + '/helio/' + filename_prfx[i] + str(cam) + "%04d" % (files,) + '.ms.fits ' 
+#                 strCopy += 'cam'+ str(cam) + '/' + filename_prfx[i] + str(cam) + "%04d" % (files,) + '.fits ' 
+#                 print strCopy
+#                 try:
+#                     os.system(strCopy)
+#                 except:
+#                     print 'no copy'
+#                 
+# else:
+#     print 'arguments missing - skipping copy'
     
                    
 
@@ -61,8 +67,12 @@ else:
 fileList = glob.glob('cam1/*.fits')
 starNames = []
 if len(fileList)>0:
-    if len(sys.argv)>2:
+    if booHD1581==True: 
+        starNames = ['Giant01']
+    
+    elif len(sys.argv)>2:
         starNames = [sys.argv[2]]
+    
     else:
         starNames = []
         for fitsname in fileList[:]:
@@ -76,16 +86,15 @@ if len(fileList)>0:
         starNames = np.array(starNames)
         starNames = np.unique(starNames)
     
-    if booHD1581==True: starNames = ['Giant01']
     
     print 'Collecting data from ',len(starNames),'stars'
     print starNames
     for i,star_name in enumerate(starNames):
         print i,star_name
-        thisStar = cr_obj.star(star_name, mode='iraf')
+        thisStar = cr_obj.star(star_name, mode='2dfdr')
           
         thisStar.exposures = cr_obj.exposures()
-        thisStar.exposures.load_exposures_iraf(thisStar.name)
+        thisStar.exposures.load_exposures_myherpy(thisStar.name, 0)
          
         if booHD1581==True: #to fix wrong values due to offset field
             thisStar.RA = 5.017749791666667   #from simbad
@@ -96,7 +105,7 @@ if len(fileList)>0:
         thisStar.exposures.calculate_baryVels(thisStar)
         if booHD1581==True: star_name = 'HD1581'
         thisStar.name = star_name
-        file_pi = open('obj/'+star_name+'.obj', 'w') 
+        file_pi = open('herpy_obj/'+star_name+'.obj', 'w') 
         pickle.dump(thisStar, file_pi) 
         file_pi.close()
 else:

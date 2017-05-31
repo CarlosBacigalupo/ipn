@@ -1,7 +1,7 @@
-# -*- coding: utf-8 -*-
-# <nbformat>3.0</nbformat>
 
-# <codecell>
+# coding: utf-8
+
+# In[2]:
 
 import pylab as plt
 import numpy as np
@@ -10,7 +10,8 @@ import pickle
 import scipy.stats as stats
 import RVTools as RVT
 
-# <codecell>
+
+# In[29]:
 
 labels = ['Blue','Green','Red','IR']
 
@@ -158,13 +159,15 @@ cnames = {
 'yellow':               '#FFFF00',
 'yellowgreen':          '#9ACD32'}
 
-# <codecell>
+
+# In[22]:
 
 import numpy as np
 a = np.array([1,2,3,4,4,4,4,4,4])
 np.array(cnames.values())[a]
 
-# <codecell>
+
+# In[ ]:
 
 def all_spec_overlap(thisStar, thisCamIdx = '', booShow = True, booSave = False):
     import gc
@@ -232,7 +235,8 @@ def all_spec_overlap(thisStar, thisCamIdx = '', booShow = True, booSave = False)
     plt.close()
     
 
-# <codecell>
+
+# In[ ]:
 
 def RVs_single_star(thisStar, sigmaClip = -1, RVClip = -1, booSave = False, booShow = True):
     
@@ -298,7 +302,8 @@ def RVs_single_star(thisStar, sigmaClip = -1, RVClip = -1, booSave = False, booS
             pass
     if booShow==True: plt.show()
 
-# <codecell>
+
+# In[ ]:
 
 def RVs_all_stars(booSave = False, booShow = True):
     
@@ -370,9 +375,10 @@ def RVs_all_stars(booSave = False, booShow = True):
                 
         
 
-# <codecell>
 
-def RVs_all_stars_NPYs(booShowArcRVs = False, idStars = [], sigmaClip = -1, RVClip = -1, topStars = -1, booSave = False, booShow = True, booBaryPlot = False, booBaryCorrect = False, title = ''):
+# In[1]:
+
+def RVs_all_stars_NPYs(booShowArcRVs = False, idStars = [], sigmaClip = -1, RVClip = -1, topStars = -1, booSave = False, booShow = True, booBaryPlot = False, booBaryCorrect = False, title = '', legend = True):
     
     data=np.load('npy/data.npy')
     RVs=np.load('npy/RVs.npy')
@@ -434,7 +440,7 @@ def RVs_all_stars_NPYs(booShowArcRVs = False, idStars = [], sigmaClip = -1, RVCl
             if title=='':
                 plt.title('RV - '+str(topStars)+'/'+str(RVs.shape[0])+' - '+labels[cam]+' camera')
             else:
-                plt.title(title, y=1.1)
+                plt.title(title +' - '+labels[cam]+' camera')
             
             if data[i,0] in idStars:
                 m = '*'
@@ -442,7 +448,7 @@ def RVs_all_stars_NPYs(booShowArcRVs = False, idStars = [], sigmaClip = -1, RVCl
                 c='k'
             else:
                 m = 'o'
-                s=1
+                s=5
                 c=colors[cam]
                 
             
@@ -497,7 +503,7 @@ def RVs_all_stars_NPYs(booShowArcRVs = False, idStars = [], sigmaClip = -1, RVCl
 
 
         plt.grid(True)
-#         plt.legend(loc=0)
+        if legend==True: plt.legend(loc=0)
         if booSave==True: 
             try:
                 plotName = 'plots/All_RVs_'+labels[cam]+''
@@ -511,7 +517,8 @@ def RVs_all_stars_NPYs(booShowArcRVs = False, idStars = [], sigmaClip = -1, RVCl
                 
         
 
-# <codecell>
+
+# In[37]:
 
 def RV_Tree(zoom = 1, sigmaClip = -1, RVClip = -1, booSave = False, booShow = True, booBaryPlot = False, booBaryCorrect = False, title = ''):
     
@@ -624,7 +631,8 @@ def RV_Tree(zoom = 1, sigmaClip = -1, RVClip = -1, booSave = False, booShow = Tr
             plt.close()        
         
 
-# <codecell>
+
+# In[ ]:
 
 def RV_Tree2(zoom = 1, sigmaClip = -1, RVClip = -1, booSave = False, booShow = True, booBaryPlot = False, booBaryCorrect = False, title = ''):
     
@@ -735,7 +743,8 @@ def RV_Tree2(zoom = 1, sigmaClip = -1, RVClip = -1, booSave = False, booShow = T
             plt.close()        
         
 
-# <codecell>
+
+# In[ ]:
 
 def sineFit(booSave = False, booShow = True, starIdx=-1, booShowAvg = True):
 
@@ -793,7 +802,8 @@ def sineFit(booSave = False, booShow = True, starIdx=-1, booShowAvg = True):
                 if booShow==True: plt.show()
                 plt.close()        
 
-# <codecell>
+
+# In[1]:
 
 def SNR_W(RVCorrMethod = 'PM', thisStarName = 'Giant01', sigmaClip = -1, RVClip = -1, booSave = False, booShow = True, booBaryPlot = False, booBaryCorrect = False, title = ''):
 #plots SNR and W vs value
@@ -835,7 +845,8 @@ def SNR_W(RVCorrMethod = 'PM', thisStarName = 'Giant01', sigmaClip = -1, RVClip 
         plt.close()        
         
 
-# <codecell>
+
+# In[ ]:
 
 def RVCorr_RV(thisStarName = 'Giant01', RVClip = -1, booSave = False, booShow = True, booBaryPlot = False, booBaryCorrect = False, title = ''):
     
@@ -886,7 +897,8 @@ def RVCorr_RV(thisStarName = 'Giant01', RVClip = -1, booSave = False, booShow = 
             if booShow==True: plt.show()
             plt.close()        
 
-# <codecell>
+
+# In[2]:
 
 def RVCorr_Slit(thisStarName = 'Giant01', RVClip = -1, booSave = False, booShow = True, booBaryPlot = False, booBaryCorrect = False, title = ''):
     
@@ -948,7 +960,8 @@ def RVCorr_Slit(thisStarName = 'Giant01', RVClip = -1, booSave = False, booShow 
         if booShow==True: plt.show()
         plt.close()        
 
-# <codecell>
+
+# In[38]:
 
 def SNR_RV_vs_fibre(RVClip = -1, booSave = False, booShow = True, title = ''):
     
@@ -1010,7 +1023,8 @@ def SNR_RV_vs_fibre(RVClip = -1, booSave = False, booShow = True, title = ''):
             
         
 
-# <codecell>
+
+# In[39]:
 
 def RV_vs_fibre(RVClip = -1, booSave = False, booShow = True, title = ''):
     
@@ -1064,7 +1078,8 @@ def RV_vs_fibre(RVClip = -1, booSave = False, booShow = True, title = ''):
             
         
 
-# <codecell>
+
+# In[40]:
 
 def SNR_vs_fibre(RVClip = -1, booSave = False, booShow = True, title = ''):
     
@@ -1117,7 +1132,8 @@ def SNR_vs_fibre(RVClip = -1, booSave = False, booShow = True, title = ''):
             
         
 
-# <codecell>
+
+# In[41]:
 
 def flux_and_CC(RVref=5000, booSave = False, booShow = True):
     #Creates plots of 2fluxes and the corresponding CC for RVs >RVref
@@ -1171,7 +1187,8 @@ def flux_and_CC(RVref=5000, booSave = False, booShow = True):
                 filehandler.close()
                 print 
 
-# <codecell>
+
+# In[ ]:
 
 def arcRVs(booSave = False, booShow = True, booFit = False):
     arcRVs = np.load('npy/arcRVs.npy')
@@ -1202,7 +1219,8 @@ def arcRVs(booSave = False, booShow = True, booFit = False):
     
     
 
-# <codecell>
+
+# In[ ]:
 
 def RVAvgGroups(booSave = False, booShow = True):
     baryRVs = np.load('npy/baryRVs.npy')

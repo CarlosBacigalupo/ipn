@@ -458,14 +458,16 @@ class exposures():
         
         print 'Collecting MJDs from camera', camIdx
         
-        wildcard = 'cam'+str(camIdx+1)+'/ThXe*.txt'
+        WLwildcard = 'cam'+str(camIdx+1)+'/WLS_F*.npy' 
+        FLUXwildcard = 'cam'+str(camIdx+1)+'/extracted_obj*.npy' 
 #         wildcard = 'cam'+str(camIdx+1)+'/HD1581*.txt'
-        print wildcard
-        files = glob.glob(wildcard)
+#         print wildcard
+        WLfiles = glob.glob(WLwildcard)
+        FLUXfiles = glob.glob(FLUXwildcard)
         print 'cam'+str(camIdx+1)+':',len(files) #,files    
         thisCam = self.cameras[camIdx]
-        for thisFile in files: 
-            print 'Opening',thisFile
+        for thisFileIdx in range(len(files)): 
+            print 'Opening',WLfiles[thisFileIdx], 'and',FLUXfiles[thisFileIdx],
             rawtxt = np.loadtxt(thisFile)
             self.MJDs.append(int(thisFile.split('.')[1])/1000.)
             thisCam.wavelengths.append(rawtxt[:,0]) 

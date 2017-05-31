@@ -1,122 +1,352 @@
 
 # coding: utf-8
 
-# In[ ]:
+# In[1]:
 
 import numpy as np
+import sys
+import importlib
+import os
 
 
-# In[ ]:
-
-cd /Users/Carlos/Documents/HERMES/reductions/myherpy/HD1581/cam1/
+# In[268]:
 
 
-# In[ ]:
+# dataset = 'HD1581'
+# dataset = 'HD285507'
+dataset = 'rhoTuc'
 
-ls
+cam = 3
+
+os.chdir("/Users/Carlos/Documents/HERMES/reductions/new_start_6.5/"+dataset+"/herpy_out/"+str(cam))
+
+if dataset=='HD1581':
+    
+    Th1 = np.loadtxt("ThXe_0_1.txt")
+    Th2 = np.loadtxt("ThXe_1_1.txt")
+    Th3 = np.loadtxt("ThXe_1_2.txt")
+    Th4 = np.loadtxt("ThXe_1_3.txt")
+    Th5 = np.loadtxt("ThXe_2_1.txt")
+    Th6 = np.loadtxt("ThXe_2_2.txt")
+    Th7 = np.loadtxt("ThXe_2_3.txt")
+    Th8 = np.loadtxt("ThXe_3_1.txt")
+    Th9 = np.loadtxt("ThXe_3_2.txt")
+    Th10 = np.loadtxt("ThXe_3_3.txt")
+    Th11 = np.loadtxt("ThXe_3_4.txt")
+    Th12 = np.loadtxt("ThXe_3_5.txt")
+    Th13 = np.loadtxt("ThXe_4_1.txt")
+    Th14 = np.loadtxt("ThXe_4_2.txt")
+    Th15 = np.loadtxt("ThXe_4_3.txt")
+
+    ThCube = np.array([Th1, Th2, Th3, Th4, Th5, Th6, Th7, Th8, Th9, Th10, Th11, Th12, Th13, Th14, Th15])
+
+    baryVels = np.load("/Users/Carlos/Documents/HERMES/reductions/6.5/HD1581/npy/baryVels.npy")
+
+    Days = np.load("/Users/Carlos/Documents/HERMES/reductions/6.5/HD1581/npy/JDs.npy")
+
+elif dataset=='HD285507':
+ 
+    Th1 = np.loadtxt("ThXe_0_1.txt")
+    Th2 = np.loadtxt("ThXe_0_1.txt")
+    Th3 = np.loadtxt("ThXe_0_3.txt")
+    Th4 = np.loadtxt("ThXe_1_1.txt")
+    Th5 = np.loadtxt("ThXe_1_2.txt")
+    Th6 = np.loadtxt("ThXe_1_3.txt")
+    Th7 = np.loadtxt("ThXe_2_1.txt")
+    Th8 = np.loadtxt("ThXe_2_2.txt")
+    Th9 = np.loadtxt("ThXe_2_3.txt")
+    Th10 = np.loadtxt("ThXe_3_1.txt")
+    Th11 = np.loadtxt("ThXe_3_2.txt")
+    Th12 = np.loadtxt("ThXe_3_3.txt")
+    Th13 = np.loadtxt("ThXe_4_1.txt")
+    Th14 = np.loadtxt("ThXe_4_2.txt")
+    Th15 = np.loadtxt("ThXe_4_3.txt")
+    
+    ThCube = np.array([Th1, Th2, Th3, Th4, Th5, Th6, Th7, Th8, Th9, Th10, Th11, Th12, Th13, Th14, Th15])
+
+    baryVels = np.load("/Users/Carlos/Documents/HERMES/reductions/6.5/HD285507/npy/baryVels.npy")
+
+    Days = np.load("/Users/Carlos/Documents/HERMES/reductions/6.5/HD285507/npy/MJDs.npy")
+
+elif dataset=='rhoTuc':
+
+    Th1 = np.loadtxt("ThXe_0_1.txt")
+    Th2 = np.loadtxt("ThXe_0_1.txt")
+    Th3 = np.loadtxt("ThXe_0_3.txt")
+    Th4 = np.loadtxt("ThXe_0_4.txt")
+    Th5 = np.loadtxt("ThXe_0_5.txt")
+    Th6 = np.loadtxt("ThXe_0_6.txt")
+    Th7 = np.loadtxt("ThXe_0_7.txt")
+    Th8 = np.loadtxt("ThXe_0_8.txt")
+    Th9 = np.loadtxt("ThXe_1_1.txt")
+    Th10 = np.loadtxt("ThXe_1_2.txt")
+    Th11 = np.loadtxt("ThXe_1_3.txt")
+    Th12 = np.loadtxt("ThXe_2_1.txt")
+    Th13 = np.loadtxt("ThXe_3_1.txt")
+    Th14 = np.loadtxt("ThXe_3_2.txt")
+    Th15 = np.loadtxt("ThXe_3_3.txt")
+    Th16 = np.loadtxt("ThXe_4_1.txt")
+    Th17 = np.loadtxt("ThXe_4_2.txt")
+    Th18 = np.loadtxt("ThXe_5_1.txt")
+    Th19 = np.loadtxt("ThXe_5_2.txt")
+    Th20 = np.loadtxt("ThXe_5_3.txt")
+    Th21 = np.loadtxt("ThXe_6_1.txt")
+    Th22 = np.loadtxt("ThXe_6_2.txt")
+    Th23 = np.loadtxt("ThXe_6_3.txt")
+    Th24 = np.loadtxt("ThXe_7_1.txt")
+    
+    Days = np.load("/Users/Carlos/Documents/HERMES/reductions/6.5/rhoTuc/npy/MJDs.npy")
+
+    baryVels = np.load("/Users/Carlos/Documents/HERMES/reductions/6.5/rhoTuc/npy/baryVels.npy")
+    
+    ThCube = np.array([Th1, Th2, Th3, Th4, Th5, Th6, Th7, Th8, Th9, Th10, Th11, Th12, Th13, Th14, Th15,
+                       Th16, Th17, Th18, Th19, Th20, Th21, Th22, Th23, Th24])
 
 
-# In[ ]:
 
-#Load the thxe arrays.
-#pack them into a cube [exp, px, [wl,flux]] [15,4095,2]
-#load the days (mayeb for use in interpolating the rv)
 
-Th1 = np.loadtxt("ThXe_0_53.56889811.txt")
-Th2 = np.loadtxt("ThXe_1_41.56890804.txt")
-Th3 = np.loadtxt("ThXe_1_42.56890807.txt")
-Th4 = np.loadtxt("ThXe_1_43.56890809.txt")
-Th5 = np.loadtxt("ThXe_2_36.56891707.txt")
-Th6 = np.loadtxt("ThXe_2_37.56891709.txt")
-Th7 = np.loadtxt("ThXe_2_38.56891711.txt")
-Th8 = np.loadtxt("ThXe_3_58.56893765.txt")
-Th9 = np.loadtxt("ThXe_3_59.56893767.txt")
-Th10 = np.loadtxt("ThXe_3_60.56893768.txt")
-Th11 = np.loadtxt("ThXe_3_61.56893769.txt")
-Th12 = np.loadtxt("ThXe_3_62.56893771.txt")
-Th13 = np.loadtxt("ThXe_4_44.56894743.txt")
-Th14 = np.loadtxt("ThXe_4_45.56894745.txt")
-Th15 = np.loadtxt("ThXe_4_46.56894746.txt")
+# In[269]:
 
-# Th1 = np.loadtxt("HD1581_0_53.56889811.txt")
-# Th2 = np.loadtxt("HD1581_1_41.56890804.txt")
-# Th3 = np.loadtxt("HD1581_1_42.56890807.txt")
-# Th4 = np.loadtxt("HD1581_1_43.56890809.txt")
-# Th5 = np.loadtxt("HD1581_2_36.56891707.txt")
-# Th6 = np.loadtxt("HD1581_2_37.56891709.txt")
-# Th7 = np.loadtxt("HD1581_2_38.56891711.txt")
-# Th8 = np.loadtxt("HD1581_3_58.56893765.txt")
-# Th9 = np.loadtxt("HD1581_3_59.56893767.txt")
-# Th10 = np.loadtxt("HD1581_3_60.56893768.txt")
-# Th11 = np.loadtxt("HD1581_3_61.56893769.txt")
-# Th12 = np.loadtxt("HD1581_3_62.56893771.txt")
-# Th13 = np.loadtxt("HD1581_4_44.56894743.txt")
-# Th14 = np.loadtxt("HD1581_4_45.56894745.txt")
-# Th15 = np.loadtxt("HD1581_4_46.56894746.txt")
-
-Days = np.array([56889811,56890804,56890807,56890809,56891707,56891709,
-                 56891711,56893765,56893767,56893768,56893769,56893771,56894743,
-                 56894745,56894746])
-ThCube = np.array([Th1, Th2, Th3, Th4, Th5, Th6, Th7, Th8, Th9, Th10, Th11, Th12, Th13, Th14, Th15])
+# plt.plot(np.exp(logAxis),Th3)
+# plt.plot(Th8)
+# plt.plot(Th9)
+# plt.plot(Th10)
+# plt.show()
 
 
 # #### The the maximum comon wl range
 
-# In[ ]:
-
-np.max(ThCube[:,0,0]), np.max(ThCube[:,0,0])+0.00001
-
-
-# In[ ]:
+# In[270]:
 
 #added the +0.000001 because it flops on the interpolation otherwise ( the 12th decimal place!!!)roundup...
 wlRange = np.array([np.max(ThCube[:,0,0])+0.00001, np.min(ThCube[:,-1,0])]) 
 
 
-# In[ ]:
+# In[271]:
 
 #Log axis of the common range (logged) 
 #step size (Duncan's suggestion) is about 1500m/s (i.e. x2 upscaled)
 logAxis = np.arange(np.log(wlRange)[0], np.log(wlRange)[1], 5*10**(-6))
 
 
-# In[ ]:
+# In[272]:
 
 #This holds the linearized interpolated flux for the 15 epoch
 #all share the same wl bins, that's why we don't need that dimension in the array (loosing the 3rd dimension)
-linLogThCube = np.zeros((15, logAxis.shape[0]))
+linLogThCube = np.zeros((ThCube.shape[0], logAxis.shape[0]))
 
 
 # ### We re-sample the flux based on the linearised log axis. 
 
-# In[ ]:
+# In[273]:
 
 from scipy.interpolate import interp1d
 
 
-# In[ ]:
+# In[274]:
 
-np.save("ThXe_HD1851", linLogThCube)
-
-
-# In[ ]:
+#commented to protect
+# for i in range(ThCube.shape[0]):
+#     f2 = interp1d(ThCube[i,:,0], ThCube[i,:,1], kind='cubic')
+#     linLogThCube[i,:] = f2(np.exp(logAxis))
+#     print i
 
 for i in range(ThCube.shape[0]):
-    f2 = interp1d(ThCube[i,:,0], ThCube[i,:,1], kind='cubic')
-    linLogThCube[i,:] = f2(np.exp(logAxis))
-    print i
-    #this was used to check the out of range in the inerpolation
+#     f2 = interp1d(ThCube[i,:,0], ThCube[i,:,1], kind='cubic')
+    linLogThCube[i,:] =  np.interp(np.exp(logAxis), ThCube[i,:,0], ThCube[i,:,1])
+    print i,
+    
+# this was used to check the out of range in the inerpolation
 #     print np.exp(logAxis)[0], np.exp(logAxis)[-1]
 #     print ThCube[i,:,0][0], ThCube[i,:,0][-1]
 #     print np.exp(logAxis)[0]-ThCube[i,:,0][0], np.exp(logAxis)[-1]-ThCube[i,:,0][-1]
 
 
-# In[ ]:
+# In[275]:
+
+np.save("ThXe_HD1581", linLogThCube)
+# linLogThCube = np.load("ThXe_HD1581.npy")
+
+
+# In[276]:
+
+# print linLogThCube.shape
+# i = 0
+# newFlux = np.interp(np.exp(logAxis), ThCube[i,:,0], ThCube[i,:,1]) #     f2 = interp1d(ThCube[i,:,0], ThCube[i,:,1], kind='cubic')
+# plt.plot(newFlux)
+#     linLogThCube[i,:] = f2(np.exp(logAxis))
+
+# for i, flux in enumerate(linLogThCube):
+#     if ((i>6) and (i<12)):
+# #     if i==0:    
+#         plt.plot(flux)
+#         plt.show()
+
+
+# In[277]:
+
+# plt.plot(medFilt)
+# plt.plot(polyEval)
+# plt.show()
+
+
+# In[278]:
+
+#takes linLogThCube and:
+#   - mean normalises
+#   - removes unwanted regions of spectra TODO
+#   - cleans cosmic rays
+#   - barycenter corrects TODO
+#   - flattens TODO
+#   - tappers TODO
+
+def clean_linLogThCube(linLogThCube, baryVels=[]):
+    from scipy.signal import medfilt
+    import pylab as plt
+    #4859
+    removeWl = [[4859,4863]]
+    
+
+    mean = np.mean(linLogThCube, axis=0)
+    mean /= np.mean(mean)
+    
+    cleanLinLogThCube = np.ones(linLogThCube.shape) *np.nan
+    for i in range(linLogThCube.shape[0]): #range (the amount of epochs)
+    # i=0
+        
+        thisSpec = remove_parts_by_wl(linLogThCube[i,:], logAxis, removeWl)
+
+        removeIdx  = find_comic_rays_idx(thisSpec,4)
+        if len(removeIdx)>0:
+            print 'Found cosmic rays',removeIdx
+            thisSpec = remove_parts_by_idx(thisSpec, removeIdx)
+
+        if i!=1000:
+            plt.plot(thisSpec)
+            plt.show()
+    
+        #baryShift
+#         pxShift = RV2px(1500, valStep)
+#         thisSpec = shift_spectrum(thisSpec, pxShift)
+
+        linLogThCube_n = (thisSpec/np.mean(thisSpec))
+
+        linLogThCube_m = linLogThCube_n - mean
+        medFilt = medfilt(linLogThCube_m,201)
+        coefs = np.polyfit(range(medFilt.shape[0]),medFilt, 5)
+        polyEval = np.polynomial.polynomial.polyval(range(medFilt.shape[0]),coefs[::-1])
+
+        linLogThCube_m_s =linLogThCube_n - polyEval
+        cleanLinLogThCube[i,:] = linLogThCube_m_s
+#         plt.plot(np.exp(logAxis), linLogThCube_m_s)
+#     plt.show()
+    return cleanLinLogThCube
+
+def RV2px(RV, valStep):
+    #RV in m/s
+    
+    px = RV/valStep
+       
+    return px
+
+
+def remove_parts_by_idx(inputSpec, removeIdx):
+    
+    inputSpecOut = inputSpec.copy()
+    
+    for i in removeIdx:
+        fromIdx = i[0]
+        toIdx = i[1]
+        fromVal = inputSpec[fromIdx]
+        toVal = inputSpec[toIdx]
+        
+        #make new section
+        inputSpecOut[np.arange(fromIdx,toIdx)] = np.interp(np.arange(fromIdx,toIdx), [fromIdx, toIdx], [fromVal, toVal])
+
+    return inputSpecOut
+        
+def remove_parts_by_wl(inputSpec, logAxis, removeWl):
+
+    removeIdx = []
+    for i in removeWl:
+        fromWl = i[0]
+        toWl = i[1]
+
+        fromDiff = np.abs(np.exp(logAxis)-fromWl)
+        toDiff = np.abs(np.exp(logAxis)-toWl)
+        fromIdx = np.where(np.min(fromDiff)==fromDiff)[0][0]
+        toIdx = np.where(np.min(toDiff)==toDiff)[0][0] 
+        removeIdx.append([fromIdx, toIdx])
+    
+    inputSpecOut = remove_parts_by_idx(inputSpec, removeIdx)
+    
+    return inputSpecOut
+        
+        
+def find_comic_rays_idx(inputSpec, sigma):
+
+    removeIdx = []
+
+    fFlux = optimize.curve_fit(cubic, range(inputSpec.shape[0]), inputSpec, p0 = [1,1,1,1])
+    fittedCurve = cubic(np.arange(inputSpec.shape[0]), fFlux[0][0], fFlux[0][1], fFlux[0][2], fFlux[0][3])
+
+    inputSpecOut = inputSpec.copy()/fittedCurve -1
+    std = np.std(inputSpecOut-np.mean(inputSpecOut, axis=0))
+    sigmas = inputSpecOut/std
+    a = np.where(sigmas>sigma)
+    
+    prevPx = 0
+    firstPx = 0
+    lastPx = 0
+    print 'a',a[0]
+    for i in a[0]:
+#         print 'i',i
+        if np.abs(prevPx-i)>1:
+#             print'yes'
+            if prevPx>0:
+                removeIdx.append([firstPx, lastPx])
+#                 print 'adding1', firstPx, lastPx
+            firstPx = i
+        lastPx = i
+        prevPx = i
+        
+#         print prevPx,firstPx,lastPx
+    if len(a[0])>0:
+        removeIdx.append([firstPx, lastPx])
+#         print 'adding2', firstPx, lastPx
+
+    return removeIdx
+    
+def shift_spectrum(inputSpec, shift):
+    
+    initialX = np.arange(inputSpec.shape[0])
+    finalX = initialX + shift
+    print "about to interp"
+    
+#     f2 = interp1d(finalX, inputSpec, kind='cubic', bounds_error=False, fill_value=np.nan)
+    np.interp(initialX, finalX, inputSpec)
+    print "Ax`fter interp, about to produce output"
+    xMin, xMax =  np.min(initialX), np.max(initialX)
+    xFMin, xFMax =  np.min(finalX), np.max(finalX)
+    print xMin, xMax
+    print xFMin, xFMax
+#     inputSpecOut = f2(initialX)
+    print "After produce output"
+    
+#     return inputSpecOut
+
+
+# In[279]:
+
+cleanLinLogThCube = clean_linLogThCube(linLogThCube)
+
+
+# In[280]:
 
 legs = np.arange(-(linLogThCube.shape[1]-1), linLogThCube.shape[1])
 
 
-# In[ ]:
+# In[281]:
 
 from scipy import constants
 
@@ -124,20 +354,115 @@ from scipy import constants
 valStep = (np.exp(logAxis)[9]-np.exp(logAxis)[8])/np.exp(logAxis)[8]*constants.c
 
 
-# In[ ]:
+# In[282]:
 
 #this is an axis of the 2*size of each spectrum in linLogThCube in km/s
 valAxis = valStep * legs /1000
 
 
-# In[ ]:
+# In[283]:
 
 #mask to slice the CCResult for gaussian fitting
-W = ((valAxis > -25) &  (valAxis < 25))
-W = ((valAxis > -10) &  (valAxis < 10))
+centPeak=0
+W = ((valAxis > (centPeak-25)) &  (valAxis < (centPeak+25)))
+# W = ((valAxis > -85) &  (valAxis < 85))
+# W = ((valAxis > -10) &  (valAxis < 10))
+
+
+# In[284]:
+
+def cubic(x,a,b,c,d):
+    '''
+    Cubic function
+    '''
+    return a*x**3+b*x**2+c*x+d
+
+
+# In[285]:
+
+import pylab as plt
+from scipy import signal
+
+flux1 = cleanLinLogThCube[0,:] # the reference flux
+RVs = np.zeros((linLogThCube.shape[0]))
+
+for i in range(linLogThCube.shape[0]): #range (the amount of epochs)
+    flux2 = cleanLinLogThCube[i,:]
+
+#     plt.plot(flux1)
+#     plt.plot(flux2)
+#     plt.show()
+
+#     fFlux = optimize.curve_fit(cubic, range(flux1.shape[0]), flux1, p0 = [1,1,1,1])
+#     fittedCurve = cubic(np.arange(flux1.shape[0]), fFlux[0][0], fFlux[0][1], fFlux[0][2], fFlux[0][3])
+    cFlux1 = flux1 - np.mean(flux1)#/fittedCurve-1
+    cFlux1 = cFlux1 * signal.tukey(len(cFlux1), 0.2)
+
+#     fFlux = optimize.curve_fit(cubic, range(flux2.shape[0]), flux2, p0 = [1,1,1,1])
+#     fittedCurve = cubic(np.arange(flux2.shape[0]), fFlux[0][0], fFlux[0][1], fFlux[0][2], fFlux[0][3])
+    cFlux2 = flux2 - np.mean(flux2)# /fittedCurve-1
+    cFlux2 = cFlux2 * signal.tukey(len(cFlux2), 0.2)
+#     if i==1:
+#         plt.plot(cFlux1)
+#         plt.plot(cFlux2)
+#         plt.show()
+    weights = np.hstack((np.arange(1,flux1.shape[0]+1),np.arange(flux1.shape[0],1,-1))) 
+    ccResult = np.correlate(cFlux1, cFlux2, "full")/weights
+#     if i==1:
+#         plt.plot(ccResult)
+#         plt.plot(weights)
+#         plt.show()
+    
+    
+
+    centPeak = valAxis[np.where(ccResult==np.max(ccResult))[0]]
+    W = ((valAxis > (centPeak-25)) &  (valAxis < (centPeak+25)))
+
+    x = valAxis[W]
+    y = ccResult[W]
+    y /= np.max(y)
+#     plt.plot(valAxis,ccResult)
+#     plt.show()
+
+    plt.plot(x,y)
+    plt.plot(x,flexi_gaussian(x, centPeak, 10., 2., 1., 0))
+    plt.show()
+
+    
+    p,_ = fit_flexi_gaussian([float(centPeak), 10., 2. ,1., 0.], y, x )
+    
+    plt.plot(x,y)
+    plt.plot(x,flexi_gaussian(x, p[0], p[1], p[2], p[3], p[4]))
+    plt.show()
+    RVs[i]=p[0]
+    print p[0]
+    
+
+
+
+# In[286]:
+
+cameraNames = ['Blue', 'Green', 'Red', 'IR']
+colors = ['b.','g.','r.','c.']
+title = dataset + ' - ' +  cameraNames[cam] + ' Camera'
+
+plt.plot(Days,RVs*1000-baryVels, colors[cam])
+# plt.plot( Days,a[np.array([0,1,4,7,12])])
+
+plt.xlabel("MJD")
+plt.ylabel("RV [m/s]")
+
+
+plt.title(title)
+plt.show()
 
 
 # In[ ]:
+
+
+
+
+# In[40]:
 
 from scipy import optimize
 
@@ -177,37 +502,49 @@ def diff_flexi_gaussian(p, args):
 
 # In[ ]:
 
-for i in range(linLogThCube.shape[0])[:]:
+linLogThCube.shape
+
+
+# In[ ]:
+
+import pylab as plt 
+for i in range(linLogThCube.shape[0])[12:15]:
 #     plt.plot(logAxis,linLogThCube[i,:]/np.percentile(linLogThCube[i,:], 90))
-    plt.plot(logAxis,linLogThCube[i,:])
+    plt.plot(logAxis,linLogThCube[i,:], label=str(i))
+plt.ylim(0, 2e5)
+plt.legend()
 plt.show()
 
 
 # In[ ]:
 
-import pylab as plt
-
-flux1 =linLogThCube[0,:] # the reference flux
-RVs = np.zeros((linLogThCube.shape[0]))
-
-for i in range(linLogThCube.shape[0]): #range (the amount of epochs)
-    flux2 =linLogThCube[i,:]
-
-    ccResult = np.correlate(flux1, flux2, "full")
+# import pylab as plt 
+for i in range(linLogThCube.shape[0])[11:15]:
+#     plt.plot(logAxis,linLogThCube[i,:]/np.percentile(linLogThCube[i,:], 90))
+    plt.plot(linLogThCube[i,:])
+plt.ylim(0, 2e5)
+# plt.legend()
+plt.show()
 
 
-    x = valAxis[W]
-    y = ccResult[W]
-    y /= np.max(y)
+# In[ ]:
 
-    p,_ = fit_flexi_gaussian([0., 10., 2. ,1., 0.], y, x )
-    
-    plt.plot(x,y)
-    plt.plot(x,flexi_gaussian(x, p[0], p[1], p[2], p[3], p[4]))
-    plt.show()
-    print p[0]
-    
 
+
+
+# In[ ]:
+
+
+
+
+# In[ ]:
+
+a = np.load("/Users/Carlos/Documents/HERMES/reductions/6.5/HD285507/npy/baryVels.npy")
+
+
+# In[ ]:
+
+a
 
 
 # In[ ]:
@@ -253,4 +590,224 @@ for i in range(linLogThCube.shape[0]): #range (the amount of epochs)
 plt.plot(x, y)
 plt.plot(x,flexi_gaussian(x, p[0], p[1], p[2], p[3], p[4]) )
 plt.show()
+
+
+# In[ ]:
+
+vh, vb = toolbox.baryvel(59289811.5) 
+ra = (0+20/60+04/3600)*15
+dec = -64+52/60+30/3600
+-(vb[0]*np.cos(dec)*np.cos(ra) + vb[1]*np.cos(dec)*np.sin(ra) + vb[2]*np.sin(dec))*1000
+
+
+# In[ ]:
+
+Days[0]+2400000+0.5
+
+
+# In[ ]:
+
+toolbox.baryvel(59289811.5) 
+
+
+# In[ ]:
+
+
+
+
+# In[ ]:
+
+def clean_flux(wavelength, flux, minWL=0, maxWL=0, xStep = 10**-5, medianRange = 0, flatten = True):
+    '''
+    Clean a 1D spectrum. 
+    
+    Parameters
+    ----
+    wavelength : int or None, optional
+        Array of wavelengths 
+        
+    flux : int or None, optional
+        Array of fluxes 
+        
+    minWL : int, optional
+        Minimum walength value to return 
+        
+    maxWL : int, optional
+        Maximum wavelength value to return 
+        
+    xStep : float, optional
+        Coeficient to resample. Final array will be flux.shape[0]*xDef long. 
+        
+    medianRange : int, optional
+        Number of pixels to median over. 0 will skip this step. Optional.
+
+    flatten : boolean, optional
+        Divides flux by a fitted 3rd ord polynomial if True. Optional.
+        
+    Returns
+    ----
+    wavelength : numpy, floats
+        Array of wavelengths 
+        
+    flux : numpy, floats
+        Array of fluxes 
+        
+
+    '''
+    
+
+    #median outliers
+    if medianRange>0:
+        fluxMed = signal.medfilt(flux,medianRange)
+        fluxDiff = abs(flux-fluxMed)
+#         fluxDiff = flux-fluxMed
+        fluxDiffStd = np.std(fluxDiff)
+        mask = fluxDiff> 3 * fluxDiffStd
+        flux[mask] = fluxMed[mask]
+
+
+#     if ((wavelength[-np.isnan(flux)].shape[0]>0) &  (flux[-np.isnan(flux)].shape[0]>0)):
+        
+    if flatten==True:#flatten curve by fitting a 3rd order poly
+        fFlux = optimize.curve_fit(cubic, range(flux.shape[0]), flux, p0 = [1,1,1,1])
+        print fFlux
+#         fittedCurve = cubic(range(flux.shape[0]), fFlux[0][0], fFlux[0][1], fFlux[0][2], fFlux[0][3])
+#         flux = flux/fittedCurve-1
+    else:
+        flux = flux/fluxMedian-1
+
+    #apply tukey
+    flux = flux * signal.tukey(len(flux), 0.2)
+
+    #resample
+#     wavelength,flux = resample_sp(wavelength, flux, minWL, maxWL, xStep)
+
+#     else: #if not enough data return NaNs
+#         wavelength = np.ones(4096)*np.nan
+#         flux = np.ones(4096)*np.nan
+        
+    return flux
+
+
+
+# In[ ]:
+
+#Load the thxe arrays.
+#pack them into a cube [exp, px, [wl,flux]] [15,4095,2]
+#load the days (mayeb for use in interpolating the rv)
+
+# Th1 = np.loadtxt("ThXe_0.txt")
+# Th2 = np.loadtxt("ThXe_1.txt")
+# Th3 = np.loadtxt("ThXe_2.txt")
+# Th4 = np.loadtxt("ThXe_3.txt")
+# Th5 = np.loadtxt("ThXe_4.txt")
+
+
+#HD285507
+# Th1 = np.loadtxt("ThXe_0_1.txt")
+# Th2 = np.loadtxt("ThXe_0_1.txt")
+# Th3 = np.loadtxt("ThXe_0_3.txt")
+# Th4 = np.loadtxt("ThXe_1_1.txt")
+# Th5 = np.loadtxt("ThXe_1_2.txt")
+# Th6 = np.loadtxt("ThXe_1_3.txt")
+# Th7 = np.loadtxt("ThXe_2_1.txt")
+# Th8 = np.loadtxt("ThXe_2_2.txt")
+# Th9 = np.loadtxt("ThXe_2_3.txt")
+# Th10 = np.loadtxt("ThXe_3_1.txt")
+# Th11 = np.loadtxt("ThXe_3_2.txt")
+# Th12 = np.loadtxt("ThXe_3_3.txt")
+# Th13 = np.loadtxt("ThXe_4_1.txt")
+# Th14 = np.loadtxt("ThXe_4_2.txt")
+# Th15 = np.loadtxt("ThXe_4_3.txt")
+
+#rhoTuc
+# Th1 = np.loadtxt("ThXe_0_1.txt")
+# Th2 = np.loadtxt("ThXe_0_1.txt")
+# Th3 = np.loadtxt("ThXe_0_3.txt")
+# Th4 = np.loadtxt("ThXe_0_4.txt")
+# Th5 = np.loadtxt("ThXe_0_5.txt")
+# Th6 = np.loadtxt("ThXe_0_6.txt")
+# Th7 = np.loadtxt("ThXe_0_7.txt")
+# Th8 = np.loadtxt("ThXe_0_8.txt")
+# Th9 = np.loadtxt("ThXe_1_1.txt")
+# Th10 = np.loadtxt("ThXe_1_2.txt")
+# Th11 = np.loadtxt("ThXe_1_3.txt")
+# Th12 = np.loadtxt("ThXe_2_1.txt")
+# Th13 = np.loadtxt("ThXe_3_1.txt")
+# Th14 = np.loadtxt("ThXe_3_2.txt")
+# Th15 = np.loadtxt("ThXe_3_3.txt")
+# Th16 = np.loadtxt("ThXe_4_1.txt")
+# Th17 = np.loadtxt("ThXe_4_2.txt")
+# Th18 = np.loadtxt("ThXe_5_1.txt")
+# Th19 = np.loadtxt("ThXe_5_2.txt")
+# Th20 = np.loadtxt("ThXe_5_3.txt")
+# Th21 = np.loadtxt("ThXe_6_1.txt")
+# Th22 = np.loadtxt("ThXe_6_2.txt")
+# Th23 = np.loadtxt("ThXe_6_3.txt")
+# Th24 = np.loadtxt("ThXe_7_1.txt")
+
+
+
+# Th1 = np.loadtxt("ThXe_0_53.56889811.txt")
+# Th2 = np.loadtxt("ThXe_1_41.56890804.txt")
+# Th3 = np.loadtxt("ThXe_1_42.56890807.txt")
+# Th4 = np.loadtxt("ThXe_1_43.56890809.txt")
+# Th5 = np.loadtxt("ThXe_2_36.56891707.txt")
+# Th6 = np.loadtxt("ThXe_2_37.56891709.txt")
+# Th7 = np.loadtxt("ThXe_2_38.56891711.txt")
+# Th8 = np.loadtxt("ThXe_3_58.56893765.txt")
+# Th9 = np.loadtxt("ThXe_3_59.56893767.txt")
+# Th10 = np.loadtxt("ThXe_3_60.56893768.txt")
+# Th11 = np.loadtxt("ThXe_3_61.56893769.txt")
+# Th12 = np.loadtxt("ThXe_3_62.56893771.txt")
+# Th13 = np.loadtxt("ThXe_4_44.56894743.txt")
+# Th14 = np.loadtxt("ThXe_4_45.56894745.txt")
+# Th15 = np.loadtxt("ThXe_4_46.56894746.txt")
+
+# Th1 = np.loadtxt("HD1581_0.txt")
+# Th2 = np.loadtxt("HD1581_1.txt")
+# Th3 = np.loadtxt("HD1581_2.txt")
+# Th4 = np.loadtxt("HD1581_3.txt")
+# Th5 = np.loadtxt("HD1581_4.txt")
+
+# Th1 = np.loadtxt("HD1581_0_53.56889811.txt")
+# Th2 = np.loadtxt("HD1581_1_41.56890804.txt")
+# Th3 = np.loadtxt("HD1581_1_42.56890807.txt")
+# Th4 = np.loadtxt("HD1581_1_43.56890809.txt")
+# Th5 = np.loadtxt("HD1581_2_36.56891707.txt")
+# Th6 = np.loadtxt("HD1581_2_37.56891709.txt")
+# Th7 = np.loadtxt("HD1581_2_38.56891711.txt")
+# Th8 = np.loadtxt("HD1581_3_58.56893765.txt")
+# Th9 = np.loadtxt("HD1581_3_59.56893767.txt")
+# Th10 = np.loadtxt("HD1581_3_60.56893768.txt")
+# Th11 = np.loadtxt("HD1581_3_61.56893769.txt")
+# Th12 = np.loadtxt("HD1581_3_62.56893771.txt")
+# Th13 = np.loadtxt("HD1581_4_44.56894743.txt")
+# Th14 = np.loadtxt("HD1581_4_45.56894745.txt")
+# Th15 = np.loadtxt("HD1581_4_46.56894746.txt")
+
+# version of 5 objs
+# Days = np.array([56889811,56890804,
+#                  56891711,56893771,56894743])
+# ThCube = np.array([Th1, Th2, Th3, Th4, Th5])
+
+
+# 15 objs
+Days = np.array([56889811,56890804,56890807,56890809,56891707,56891709,
+                 56891711,56893765,56893767,56893768,56893769,56893771,56894743,
+                 56894745,56894746])
+
+# ThCube = np.array([Th1, Th2, Th3, Th4, Th5, Th6, Th7, Th8, Th9, Th10, Th11, Th12, Th13, Th14, Th15])
+
+
+# 24 objs
+# Days = np.array([56889811,56890804,56890807,56890807,56890807,56890807,56890807,56890807,
+#                  56890809,56891707,56891709,
+#                  56891711,
+#                  56893765,56893767,56893768,
+#                  56893769,56893771,56893771,56893771,56893771,
+#                  56894743,56894745,56894746,56894746])
+
+# ThCube = np.array([Th1, Th2, Th3, Th4, Th5, Th6, Th7, Th8, Th9, Th10, Th11, Th12, Th13, Th14, Th15,
+#                    Th16, Th17, Th18, Th19, Th20, Th21, Th22, Th23, Th24])
 
